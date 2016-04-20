@@ -1,0 +1,113 @@
+% Andrew secure RPC protocol.
+% Source: the SBC tool examples by Borgstrom and Briais. The commented codes are the original SBC specification. 
+%  
+
+% agent A(agent_A, agent_B, kab) = 
+% (^na)
+% 'agent_B<<agent_A, enc(na, kab)>>.
+% agent_A(x_1).
+% {(* 1 test *)[na = fst(dec(x_1, kab))]}
+% 'agent_B<enc(snd(dec(x_1, kab)), kab)>.
+% agent_A(x_3).
+% {(* 2 tests *)wff(snd(dec(x_1, kab))) /\ wff(snd(dec(x_3, kab)))}
+% 'agent_A
+
+A(agent_A, agent_B, kab) :=
+ nu(na). 
+ agent_B< <agent_A, enc(na, kab)> >.
+ agent_A(x1).
+ case x1 of enc(m,kab) in 
+ let <m1,m2> = m in 
+ [na = m1]
+ agent_B<enc(m2, kab)>.
+ agent_A(x3).
+ case x3 of enc(u, kab) in
+ let <u1, u2> = u in 
+ agent_A<agent_A>;
+
+
+% agent B(agent_A, agent_B, kab) = 
+% (^nb)(^nnb)(^kkab)
+% agent_B(x_0).
+% {(* 2 tests *)[agent_A = fst(x_0)] /\ wff(dec(snd(x_0), kab))}
+% 'agent_A<enc(<dec(snd(x_0), kab), nb>, kab)>.
+% agent_B(x_2).
+% {(* 1 test *)[nb = dec(x_2, kab)]}
+% 'agent_A<enc(<kkab, nnb>, kab)>.0
+
+B(agent_A, agent_B, kab) :=
+  nu(nb, nnb, kkab).
+  agent_B(x0).
+  let <y1,y2> = x0 in 
+  [agent_A = y1] 
+  case y2 of enc(m, kab) in
+  agent_A< enc(<m, nb>, kab) >.
+  agent_B(x2).
+  case x2 of enc(u,kab) in
+  [nb = u]
+  agent_A< enc(<kkab, nnb>, kab) >;
+
+    
+
+% agent System(agent_A, agent_B) = 
+% (^kab)(B(agent_A, agent_B, kab) | A(agent_A, agent_B, kab))
+
+System(agent_A, agent_B) :=
+  nu(kab).(B{agent_A, agent_B, kab} | A{agent_A, agent_B, kab});
+
+
+% agent ASpec(agent_A, agent_B, kab, kkab) = 
+% (^na)
+% 'agent_B<<agent_A, enc(na, kab)>>.
+% agent_A(x_1).
+% {(* 1 test *)[na = fst(dec(x_1, kab))]}
+% 'agent_B<enc(snd(dec(x_1, kab)), kab)>.
+% agent_A(x_3).
+% {(* 2 tests *)[kkab = fst(dec(x_3, kab))] /\ wff(snd(dec(x_1, kab)))}
+% 'agent_A
+
+ASpec(agent_A, agent_B, kab, kkab) :=
+  nu(na).
+  agent_B< <agent_A, enc(na, kab)> >.
+  agent_A(x1).
+  case x1 of enc(m, kab) in
+  let <m1,m2> = m in 
+  [na = m1]
+  agent_B< enc(m2, kab) >. 
+  agent_A(x3).
+  case x3 of enc(u,kab) in
+  let <u1,u2> = u in
+  [kkab = u1]
+  agent_A< agent_A >;
+
+
+% agent BSpec(agent_A, agent_B, kab, kkab) = 
+% (^nb)(^nnb)
+% agent_B(x_0).
+% {(* 2 tests *)[agent_A = fst(x_0)] /\ wff(dec(snd(x_0), kab))}
+% 'agent_A<enc(<dec(snd(x_0), kab), nb>, kab)>.
+% agent_B(x_2).
+% {(* 1 test *)[nb = dec(x_2, kab)]}
+% 'agent_A<enc(<kkab, nnb>, kab)>.0
+
+BSpec(agent_A, agent_B, kab, kkab) :=
+  nu(nb, nnb).
+  agent_B(x0).
+  let <y1,y2> = x0 in
+  case y2 of enc(m,kab) in
+  agent_A< enc(<m, nb>, kab) >.
+  agent_B(x2).
+  case x2 of enc(u, kab) in
+  agent_A< enc(<kkab, nnb>, kab) >; 
+
+
+% agent SystemSpec(agent_A, agent_B) = 
+% (^kab, kkab)(BSpec(agent_A, agent_B, kab, kkab) | ASpec(agent_A, agent_B, kab, kkab))
+
+SystemSpec(agent_A, agent_B) :=
+  nu(kab, kkab).(BSpec{agent_A, agent_B, kab, kkab} | ASpec{agent_A, agent_B, kab, kkab});
+
+% sbisim System(agent_A, agent_B) SystemSpec(agent_A, agent_B) with (agent_A, agent_B)
+
+% bisim(System{agent_A, agent_B}, SystemSpec{agent_A, agent_B});
+

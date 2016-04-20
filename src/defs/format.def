@@ -1,0 +1,77 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "bisim.def".
+
+Type parl  list proc -> proc.
+Type plusl  list proc -> proc. 
+
+Define print_str_list : string -> list string -> prop
+by 
+print_str_list File nil ; 
+print_str_list File (cons X L) := fprintstr File X /\ fprintstr File " " /\ print_str_list File L.
+
+Define collapse_par : proc -> list proc -> prop
+by 
+collapse_par P (cons P nil) := _not(P = (par Q R)) ; 
+collapse_par (par P Q) R := 
+  collapse_par P P1 /\ 
+  collapse_par Q Q1 /\ 
+  append P1 Q1 R.
+
+Define collapse_plus : proc -> list proc -> prop
+by 
+collapse_plus P (cons P nil) := _not(P = (plus Q R)) ; 
+collapse_plus (plus P Q) R := 
+  collapse_plus P P1 /\ 
+  collapse_plus Q Q1 /\ 
+  append P1 Q1 R.
+
+
+Define norm : proc -> proc -> prop, 
+       norm_list : list proc -> list proc -> prop
+by 
+norm zero zero ; 
+norm (par P Q) R :=
+  collapse_par (par P Q) L /\ 
+  norm_list L M /\ 
+  R = (parl M) ; 
+norm (plus P Q) R :=
+  collapse_plus (plus P Q) L /\ 
+  norm_list L M /\ 
+  R = (plusl M) ; 
+norm (nu x\P x) (nu x\ R x) :=
+  nabla x, norm (P (bn x)) (R x) ; 
+norm (match X Y P) (match U V R) :=  
+  simp_cp X U /\ simp_cp Y V /\ norm P R ; 
+norm (inp A (x\ P x)) (inp B (x\ R x)) := 
+  simp_cp A B /\ nabla x, norm (P (bn x)) (R x) ; 
+norm (outp A M P) (outp B N Q) :=
+  simp_cp A B /\ simp_cp M N /\ norm P Q ; 
+norm (case M N (x\ P x)) (case U V (x\ Q x)) :=
+  simp_cp M U /\ simp_cp N V /\ 
+  nabla x, norm (P (bn x)) (Q x) ; 
+norm (let M (x\y\ P x y)) (let N (x\y\ Q x y)) :=
+  simp_cp M N /\ 
+  nabla x y, norm (P (bn x) (bn y)) (Q x y) ; 
+norm (bang P) (bang Q) := norm P Q ; 
+
+norm_list nil nil ; 
+norm_list (cons X L) (cons Y R) :=
+  norm X Y /\ norm_list L R.

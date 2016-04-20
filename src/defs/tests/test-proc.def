@@ -1,0 +1,66 @@
+#include "../proc.def".
+
+% examples
+ 
+ex_cp 1 Vs P :=
+  Vs = cons (var x) nil,
+  P = bang (nu k\ outp (var x) (en (nm m) k) zero).
+
+ex_cp 2 Vs P :=
+  Vs = cons (var x) nil,
+  P = (nu k\ match (var x) (nm a) (outp (var x) (en (nm m) k) zero)).
+
+ex_cp 3 Vs P := 
+  Vs = cons (var x) (cons (var y) nil),
+  P = inp (var y) (u\ case u (nm k) (v\ outp (var x) v zero)).
+
+ex_cp 4 Vs P :=
+  Vs = cons (var u) nil,
+  P = (inp (var u) (x\ nu k\ outp (nm c) (en x k) (outp (nm c) (en (nm m) (en (nm c) k)) zero))).
+
+ex_cp 5 nil P := 
+  R = (k\ outp (nm c) (en (nm m) k) (inp k (y\ outp (nm c) y zero))),
+  T = (k\ inp (nm c) (x\ case x k (m\ nu l\ outp k l (outp (nm c) (en m l) zero)))),
+  P = (nu k\ par (R k) (T k)).
+
+ex_cp 6 Vs P := 
+  Vs = (cons (var n1) nil), 
+  P = (par zero
+      (par (case (var n1) (nm n5)
+           (x1\
+            let x1
+              (x2\x3\
+               let x3
+                 (x4\x5\
+                  match (nm agent_A) x4
+                    (match (nm tt) x2 (outp (nm agent_B) (nm agent_B) zero))))))
+      zero)). 
+
+ex_cp 7 Vs P := 
+Vs = (cons (var n13) nil), 
+P = (par (let (var n13)
+        (x1\x2\
+         match (nm agent_A) x1
+           (case x2 (nm n6)
+              (x3\
+               let x3
+                 (x4\x5\
+                  let x5
+                    (x6\x7\
+                     match (nm agent_B) x6
+                       (match (nm tt) x4
+                          (outp (nm agent_B)
+                             (en (pr (nm tt) (pr (nm agent_A) x7)) (nm n7))
+                             zero))))))))
+   (par (inp (nm agent_B)
+           (x1\
+            case x1 (nm n7)
+              (x2\
+               let x2
+                 (x3\x4\
+                  let x4
+                    (x5\x6\
+                     match (nm agent_A) x5
+                       (match (nm tt) x3
+                          (outp (nm agent_B) (nm agent_B) zero)))))))
+      zero)).

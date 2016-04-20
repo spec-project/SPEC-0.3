@@ -1,0 +1,428 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% The main module for the bisimulation checker for the spi-calculus.
+% This implementation is based on the procedures described in the following paper:
+
+% [TD10] Alwen Tiu and Jeremy Dawson. "Automating Open Bisimulation Checking for the Spi-Calculus".
+% In Proceedings of the 23rd IEEE Computer Security Foundations Symposium, pp. 307 - 321, 2010. 
+
+#include "basic.def".
+#include "bitrace.def".
+#include "proc.def".
+
+Kind refinement type.
+Kind configuration type.
+
+Type conRefProc		list sub_pair -> list sub_pair -> action -> proc -> refinement. 
+Type conRefAgent 	list sub_pair -> list sub_pair -> action -> agent -> refinement. 
+Type absRef 		(name -> refinement) -> refinement.
+Type conf      		list tm -> proc -> configuration. 
+
+% [fun_RSRC1,fun_RSRC2] These procedures combine the (left/right) refinement functions 
+% RS and RC described in [TD10]. 
+
+Define fun_RSRC1 : list bt_pair -> list tm -> list sub_pair -> constraint -> 
+ 		      list sub_pair -> list sub_pair -> list sub_pair -> prop
+by 
+fun_RSRC1 H OriVars Sub C Sol Sub1 Sub2 :=
+  bitrace_cst 1 H nil Cs /\
+  apply_list Sub Cs Ds /\ 
+  append Ds (cons C nil) Constraints /\
+  constraints_vars Constraints CstVars /\ 
+  _distinct (solve_constraints CstVars Constraints Sol) /\ 
+  compose OriVars Sub Sol Sub1 /\ 
+  fun_CS1 OriVars H Sub1 Sub2.
+
+Define fun_RSRC2 : list bt_pair -> list tm -> list sub_pair -> constraint -> 
+      		      list sub_pair -> list sub_pair -> list sub_pair -> prop
+by
+fun_RSRC2 H OriVars Sub C Sol Sub1 Sub2 :=
+  bitrace_cst 2 H nil Cs /\ 
+  apply_list Sub Cs Ds /\
+  append Ds (cons C nil) Constraints /\ 
+  constraints_vars Constraints CstVars /\ 
+  _distinct (solve_constraints CstVars Constraints Sol) /\ 
+  compose OriVars Sub Sol Sub2 /\ 
+  fun_CS2 OriVars H Sub1 Sub2. 
+
+
+
+% [ref1_cont,ref2_cont] These predicates computes the refinement substitution pairs
+% induced by a transition of a process in the bisimulation tuple. 
+
+Define ref1_cont : list bt_pair -> list tm -> continuation -> refinement -> prop
+by 
+ref1_cont H Vs (contProc A Q Sub) (conRefProc Sub1 Sub2 A P) :=
+  fun_RS1 H Sub Sol Sub1 Sub2 /\ 
+  copyproc Sol Q P ; 
+ref1_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) := 
+  bt2thy H Thy /\ 
+  split_thy Thy S1 S2 /\ 
+  copylist Sub S1 S /\ 
+  C = (dedl S M) /\ 
+  fun_RSRC1 H Vs Sub C Sol Sub1 Sub2 /\ 
+  copyterm Sol M N /\ 
+  copyagent Sol Q P ; 
+ref1_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) := 
+  nabla x, ref1_cont H Vs (Cont x) (Cts x).
+
+Define ref2_cont : list bt_pair -> list tm -> continuation -> refinement -> prop
+by 
+ref2_cont H Vs (contProc A Q Sub) (conRefProc Sub1 Sub2 A P) :=
+  fun_RS2 H Sub Sol Sub1 Sub2 /\ 
+  copyproc Sol Q P ; 
+ref2_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) := 
+  bt2thy H Thy /\ 
+  split_thy Thy S1 S2 /\ 
+  copylist Sub S2 S /\ 
+  C = (dedl S M) /\ 
+  fun_RSRC2 H Vs Sub C Sol Sub1 Sub2 /\ 
+  copyterm Sol M N /\ 
+  copyagent Sol Q P ; 
+ref2_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) := 
+  nabla x, ref2_cont H Vs (Cont x) (Cts x).
+
+% [check_consistency] Calls the procedure for checking bi-trace consistency. 
+
+Define inductive check_consistency : list bt_pair -> list thy_pair -> list bt_pair -> prop
+by 
+check_consistency H Thy L := bt_consistent_iter H Thy L. 
+
+
+Define get_var_inp : bt_pair -> list tm -> list tm -> prop
+by
+get_var_inp (in X Y) Vin Vout := get_var X Vin Vs /\ get_var Y Vs Vout.
+
+Define closed_inp : bt_pair -> prop
+by 
+closed_inp (in X Y) := closed X /\ closed Y.
+
+% remove redundant information from bitraces:
+% pairs of constants are redundant; 
+% input pairs which contain no new variables are redundant.
+
+Define trim_history : list tm -> list bt_pair -> list bt_pair -> prop
+by 
+trim_history Vs nil nil ; 
+trim_history Vs (cons X L) R :=
+  _if (X = (in (ct Y) (ct Y)) \/ X = (out (ct Y) (ct Y)))
+      (trim_history Vs L R)
+      (
+        _if (X = in (pr U V) (pr S T))
+            (trim_history Vs (cons (in U S) (cons (in V T) L)) R)
+            (
+             _if (X = out (pr U V) (pr S T))
+                 (trim_history Vs (cons (in U S) (cons (in V T) L)) R)
+                 (
+                   _if (get_var_inp X Vs Vs1) 
+                   (
+                     _if (Vs = Vs1)
+                         (trim_history Vs L R)
+                         (trim_history Vs1 L K /\ R = (cons X K)) 
+                   )
+                   (trim_history Vs L K /\ R = (cons X K)) 
+                 )
+           )
+      ).
+
+
+% Toggle debug on/off
+% Define debug_opt : option -> prop
+% by 
+%   debug_opt trace_opt := false ; 
+%   debug_opt refl_opt := false. 
+
+% Debugging related predicates: 
+
+% Toggle reflexivity checking on/off. It's on by default.
+% This clause is changed from the SPEC interface.
+Define refl_opt : prop
+by
+   refl_opt := true.
+
+% Toggle printing of traces on/off
+Define trace_opt : prop
+by 
+   trace_opt := false.
+
+Define print_bisim : list bt_pair -> proc -> proc -> prop
+by 
+print_bisim H P Q := 
+   _if (trace_opt) 
+       (
+          printstr "[bisim] Checking bisimilarity for: \n" /\ 
+          printstr "[bisim] Bitrace: " /\ print_bitrace H /\ printstr "\n" /\
+          printstr "[bisim] First process: " /\ print_proc P /\ printstr "\n" /\
+          printstr "[bisim] Second process: " /\ print_proc Q /\ printstr "\n" /\
+          printstr "------\n"
+       )
+       (printstr ".").
+
+
+% Split a bitrace into its component traces.
+Define split_bt : list bt_pair -> list tm -> list tm -> prop
+by 
+split_bt nil nil nil ; 
+split_bt (cons (in X Y) L) (cons X L1) (cons Y L2) := split_bt L L1 L2 ; 
+split_bt (cons (out X Y) L) (cons X L1) (cons Y L2) := split_bt L L1 L2.
+
+
+
+% Check for reflexivity.
+% Note that we need to use equality modulo renaming to compare
+% processes and their traces.
+
+Define reflexive : list bt_pair -> proc -> proc -> prop
+by 
+reflexive H P Q :=
+  _if (P = zero /\ Q = zero) (true)
+      (
+       split_bt H H1 H2 /\ _eqvt (conf H1 P) (conf H2 Q) 
+       % /\ 
+       % _if (debug_opt trace_opt) 
+       % (
+       %  println " " /\
+       %  print "[reflexive] Bitrace: " /\ print_bitrace H /\ println " " /\ 
+       %  print "[reflexive] First process: " /\ print_proc P /\ println " " /\
+       %  print "[reflexive] Second process: " /\ print_proc Q /\ println " "
+       % )
+       % ( true )
+     ).
+
+
+
+% [decomp_bt_pair] 
+% decomp_bt_pair Thy Acc M N L
+% Simplifies a pair of (output) messages M and N
+% with respect to a given observer theory Thy. It outputs
+% the list of irreducible components in L. The variable
+% Acc is used as an accumulator. 
+
+Define decomp_bt_pair : list thy_pair -> list bt_pair -> tm -> tm -> list bt_pair -> prop
+by 
+decomp_bt_pair Thy Acc (var X) (var X) Acc ; 
+decomp_bt_pair Thy Acc (ct X) (ct X) Acc ; 
+decomp_bt_pair Thy Acc (nm X) (nm Y) L :=
+  _if (det_mem (mp (nm X) (nm Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (nm X) (nm Y)) Acc)) ; 
+% decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
+%   _if (det_mem (mp (hs X) (hs Y)) Thy)
+%       (L = Acc)
+%       (L = (cons (out (hs X) (hs Y)) Acc)).
+decomp_bt_pair Thy Acc (pr X Y) (pr U V) L :=
+  decomp_bt_pair Thy Acc X U Acc1 /\ 
+  decomp_bt_pair Thy Acc1 Y V L ; 
+decomp_bt_pair Thy Acc (en X K) (en Y M) L :=
+  _if (deduce_r Thy K M)
+      ( 
+        decomp_bt_pair Thy Acc X Y L
+      )
+      (
+        _if (det_mem (mp (en X K) (en Y M)) Thy)
+            (L = Acc)
+            (L = (cons (out (en X K) (en Y M)) Acc))
+      ).
+
+
+Define bisimTau1, bisimTau2, bisimAbs1, bisimAbs2,
+       bisimCon1, bisimCon2 : list bt_pair -> proc -> refinement -> prop, 
+       bisimAgent : list bt_pair -> list thy_pair -> agent -> agent -> prop, 
+       bisim_upto : list bt_pair -> proc -> proc -> prop,
+       coinductive bisim : list bt_pair -> proc -> proc -> prop
+by 
+
+% [bisimTau1,bisimTau2] These deal with the case where the cases involving the tau transitions
+% in the definition of bisimulation; see [TD10].
+
+bisimTau1 H Q (conRefProc Sub1 Sub2 A P1) :=
+  copyproc Sub2 Q Q1 /\
+  one Q1 A Q2 /\ 
+  % _rigid Q2 /\ 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  % print_bisim H1 P1 Q2 /\ 
+  bisim_upto H1 P1 Q2 ; 
+bisimTau1 H Q (absRef x\ Cts x) :=
+  nabla x, bisimTau1 H Q (Cts x) ;
+
+bisimTau2 H P (conRefProc Sub1 Sub2 A Q1) := 
+  copyproc Sub1 P P1 /\ 
+  one P1 A P2 /\
+  % _rigid (one P1 A P2) /\
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bisim_upto H1 P2 Q1 ; 
+bisimTau2 H P (absRef x\ Cts x) :=
+  nabla x, bisimTau2 H P (Cts x) ; 
+
+% [bisimAbs1,bisimAbs2] These deal with the case where the cases involving the input transitions
+% in the definition of bisimulation; see [TD10] and the predicate bisim below. 
+% The continuation of a transition in this case is an abstraction (agent). 
+
+bisimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  oneAbs Q1 (act N) Q2 /\ 
+  % _rigid (oneAbs Q1 (act N) Q2) /\ 
+  bisimAgent H1 ThyRed P1 Q2 ; 
+bisimAbs1 H Q (absRef x\ Cts x) :=
+  nabla x, bisimAbs1 H Q (Cts x) ; 
+
+bisimAbs2 H P (conRefAgent Sub1 Sub2 (act N) Q1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\
+  reduce Thy ThyRed /\ 
+  deduce_inv_r ThyRed N M /\ 
+  copyproc Sub1 P P1 /\ 
+  oneAbs P1 (act M) P2 /\ 
+  % _rigid (oneAbs P1 (act M) P2) /\ 
+  bisimAgent H1 ThyRed P2 Q1 ; 
+bisimAbs2 H P (absRef x\ Cts x) :=
+  nabla x, bisimAbs2 H P (Cts x) ; 
+
+% [bisimCon1,bisimCon2] These deal with the case where the cases involving the output transitions
+% in the definition of bisimulation. The continuation in this case is an agent. 
+
+bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\ 
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  oneCon Q1 (act N) Q2 /\ 
+  % _rigid (oneCon Q1 (act N) Q2) /\ 
+  bisimAgent H1 ThyRed P1 Q2 ; 
+bisimCon1 H Q (absRef x\ Cts x) :=
+  nabla x, bisimCon1 H Q (Cts x) ; 
+
+bisimCon2 H P (conRefAgent Sub1 Sub2 (act N) Q1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\ 
+  reduce Thy ThyRed /\ 
+  deduce_inv_r ThyRed N M /\  
+  copyproc Sub1 P P1 /\ 
+  oneCon P1 (act M) P2 /\ 
+  % _rigid (oneCon P1 (act M) P2) /\ 
+  bisimAgent H1 ThyRed P2 Q1 ; 
+bisimCon2 H P (absRef x\ Cts x) :=
+  nabla x, bisimCon2 H P (Cts x) ; 
+
+ 
+% [bisim_upto] This simplifies the bisimulation triples before calling 
+% the real bisimulation procedure. 
+  
+bisim_upto H P Q :=
+  trim_history nil H H1 /\ 
+  simplify P P1 /\ 
+  simplify Q Q1 /\ 
+  _if (refl_opt) 
+      (
+         _if (reflexive H1 P1 Q1) (true) (bisim H1 P1 Q1)
+      )
+      (bisim H1 P1 Q1) ;
+%   _if (reflexive H1 P1 Q1) (true) (bisim H1 P1 Q1) ;
+
+
+% [bisimAgent] A helper procedure to instantiate all the abstractions
+% in the agents (i.e., those bound via the 'abs' and the 'new' constructs) 
+% in the argument of bisimulation procedure. Variables bound by 'abs' are 
+% instantiated as object-level variables (e.g., (var x) below), whereas
+% variables bound by 'new' are instantiated as object-level new names. 
+
+bisimAgent H Thy (abs x\P x) (abs x\Q x) := 
+  nabla x, exists H1, 
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   % print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   bisim_upto H1 (P (var x)) (Q (var x)) ; 
+
+bisimAgent H Thy (con M P) (con N Q) := 
+    decomp_bt_pair Thy nil M N L /\ 
+    _if (L = nil)
+        (bisim_upto H P Q)
+        (
+         check_consistency H Thy L /\  
+         append H L H1 /\ 
+         bisim_upto H1 P Q
+        ) ;    
+bisimAgent H Thy (con M P) (new x\ Q x) :=
+  nabla x, bisimAgent H Thy (con M P) (Q (nm x)) ; 
+bisimAgent H Thy (new x\ P x) (con N Q) := 
+  nabla x, bisimAgent H Thy (P (nm x)) (con N Q) ; 
+
+% It's more efficient to disassociate fresh names generated for output
+% actions of the first and the second processes; this way we can
+% exploit the equivariant tabling property to reduce bisim size. 
+
+bisimAgent H Thy (new x\ P x) (new x\ Q x) := 
+  nabla x, bisimAgent H Thy (P (nm x)) (Q (nm x)) ; 
+
+% [bisim] The main procedure for bisimulation checking. See [TD10] for the
+% corresponding definition.
+
+bisim H P Q := 
+  print_bisim H P Q /\ 
+  bitrace_vars H Vs /\ 
+  % _rigid P /\ _rigid Q /\ _rigid Vs /\ 
+  (forall Cont, _distinct (c_one Vs P Cont) ->
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (bisimTau1 H Q Cts)
+      )
+  ) 
+  /\ 
+  (forall Cont,  _distinct (c_one Vs Q Cont)  -> 
+      (forall Cts, 
+          _distinct (ref2_cont H Vs Cont Cts) -> (bisimTau2 H P Cts)
+      )
+  ) 
+  /\ 
+  (forall Cont, _distinct (c_oneAbs Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (bisimAbs1 H Q Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneAbs Vs Q Cont) -> 
+      (forall Cts, 
+        _distinct (ref2_cont H Vs Cont Cts) -> (bisimAbs2 H P Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneCon Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (bisimCon1 H Q Cts)
+      )
+  )
+  /\ 
+  (forall Cont, _distinct (c_oneCon Vs Q Cont) -> 
+      (forall Cts, 
+        _distinct (ref2_cont H Vs Cont Cts) -> (bisimCon2 H P Cts)
+      )
+  ).
+  
+
+Define toplevel_bisim : list bt_pair -> proc -> proc -> prop
+by
+toplevel_bisim H P Q :=
+  _if (bt_consistent H) 
+      (bisim H P Q)
+      (println "Inconsistent bitrace!").

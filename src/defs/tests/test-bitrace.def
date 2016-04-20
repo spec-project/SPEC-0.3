@@ -1,0 +1,123 @@
+#include "../bitrace.def". 
+
+% Tests
+
+#type test_const (num -> o).
+
+#type a tm.
+#type b tm.
+#type k tm.
+#type l tm.
+#type m tm. 
+#type n tm.
+#type x tm.
+#type y tm.
+
+test_const 1 :=
+  P1 = out (nm a) (nm a),
+  P2 = out (nm b) (nm b),
+  P3 = in (var x) (var x),
+  P4 = out (en (var x) (nm k)) (en (nm a) (nm k)),
+  H = cons P1 (cons P2 (cons P3 (cons P4 nil))),
+  bt_consistent H.
+
+test_const 2 :=
+  P1 = out (nm a) (nm a),
+  P2 = out (nm b) (nm b),
+  P3 = in (var x) (var x),
+  P4 = out (en (var x) (nm k)) (en (nm a) (nm k)),
+  P5 = out (en (nm b) (nm k)) (en (var x) (nm k)), 
+  H = cons P1 (cons P2 (cons P3 (cons P4 (cons P5 nil)))),
+  bt_consistent H.
+
+test_const 3 :=
+  P1 = out (nm a) (nm b),
+  P2 = in (var x) (var x),
+  P3 = out (en (var x) (nm k)) (en (var x) (nm l)),
+  P4 = out (en (nm m) (en (nm a) (nm k)))
+           (en (nm n) (en (nm b) (nm l))),
+  H = cons P1 (cons P2 (cons P3 (cons P4 nil))),
+  bt_consistent H.
+
+
+#type btex (num -> list bt_pair -> list sub_pair -> o).
+
+% [out a a, out (en a k) (en b k), in (en x a) (en x a)]
+% sub = x |--> a
+
+btex 1 Bt Sub :=
+  Bt = cons (out (nm a) (nm b)) 
+       (cons (out (en (nm a) (nm k)) (en (nm b) (nm k)))
+       (cons (in (en (var x) (nm a)) (en (var x) (nm b))) nil)),
+  Sub = cons (sub (var x) (nm a)) nil.
+  
+btex 2 Bt Sub :=
+  P1 = out (nm a) (nm b),
+  P2 = in (var x) (var x),
+  P3 = out (en (var x) (nm a)) (en (var x) (nm b)),
+  P4 = in (var y) (var y),
+  Bt = cons P1 (cons P2 (cons P3 (cons P4 nil))),
+  Sub = cons (sub (var x) (var x)) 
+        (cons (sub (var y) (en (nm b) (nm b))) nil).
+
+btex 3 Bt Sub :=
+  P1 = out (nm a) (nm b),
+  P2 = in (var x) (var x),
+  P3 = out (en (var x) (nm a)) (en (var x) (nm b)),
+  P4 = in (var y) (var y),
+  P5 = out (nm k) (nm k), 
+  P6 = in (pr (var x) (var y)) (pr (var x) (var y)), 
+  Bt = cons P1 (cons P2 (cons P3 (cons P4 (cons P5 (cons P6 nil))))),
+  Sub = cons (sub (var x) (var x)) 
+        (cons (sub (var y) (en (nm a) (nm k))) nil).
+
+btex 4 Bt Sub :=
+  P1 = out (nm a) (nm b),
+  P2 = in (var x) (var x),
+  P3 = out (en (var x) (nm a)) (en (var x) (nm b)),
+  P4 = out (nm k) (nm k), 
+  P5 = in (var y) (var y),
+  P6 = in (pr (var x) (var y)) (pr (var x) (var y)), 
+  Bt = cons P1 (cons P2 (cons P3 (cons P4 (cons P5 (cons P6 nil))))),
+  Sub = cons (sub (var x) (var x)) 
+        (cons (sub (var y) (en (nm a) (nm k))) nil).
+
+btex 5 Bt Sub :=
+  P1 = out (nm a) (nm b),
+  P2 = in (var x) (var x),
+  P3 = out (en (var x) (nm a)) (en (var x) (nm b)),
+  P4 = out (nm k) (nm k), 
+  P5 = in (var y) (var y),
+  P6 = in (pr (var x) (var y)) (pr (var x) (var y)), 
+  Bt = cons P1 (cons P2 (cons P3 (cons P4 (cons P5 (cons P6 nil))))),
+  Sub = cons (sub (var x) (var x)) 
+        (cons (sub (var y) (en (nm b) (nm k))) nil).
+
+#type test_RC (num -> list sub_pair -> list sub_pair -> o).
+
+test_RC 1 Sub1 Sub2 :=
+  btex 3 Bt S,
+  C = (dedl (cons (nm a) (cons (en (var x) (nm a)) (cons (nm k) nil)))
+            (en (nm a) (nm k))),
+  fun_RC1 Bt C Sub1 Sub2.
+
+test_RC 2 Sub1 Sub2 :=
+  btex 3 Bt S,
+  C = (dedl (cons (nm b) (cons (en (var x) (nm b)) (cons (nm k) nil)))
+            (en (nm b) (nm k))),
+  fun_RC2 Bt C Sub1 Sub2.
+
+
+#type test_RS (num -> list sub_pair -> list sub_pair -> o).
+  
+test_RS 1 Sub1 Sub2 := 
+  btex 4 Bt Sub, 
+  print "Bitrace : ", print_bitrace Bt, println " ",
+  print "Intial subst : ", print_subst Sub, println " ",
+  fun_RS1 Bt Sub Sol Sub1 Sub2.
+
+test_RS 2 Sub1 Sub2 := 
+  btex 5 Bt Sub, 
+  print "Bitrace : ", print_bitrace Bt, println " ",
+  print "Intial subst : ", print_subst Sub, println " ",
+  fun_RS2 Bt Sub Sol Sub1 Sub2.

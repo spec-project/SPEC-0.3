@@ -1,0 +1,82 @@
+
+all: bedwyr spec
+
+# DEFINITIONS
+
+cmo = @cmo@
+cma = @cma@
+OCAMLC = @OCAMLC@ -c -I ndcore -I ndcore/tests
+OCAMLL = @OCAMLC@
+OCAMLDEP = @OCAMLDEP@ -I ndcore -I ndcore/tests
+OCAMLDOC = ocamldoc
+OCAMLYACC = @OCAMLYACC@ -v
+OCAMLLEX = @OCAMLLEX@
+
+# SOURCE FILES
+
+CORE_ML    = ndcore/term.ml ndcore/norm.ml ndcore/pprint.ml ndcore/unify.ml \
+             ndcore/index.ml typing.ml input.ml config.ml table.ml system.ml \
+             parser.ml lexer.ml prover.ml 
+BEDWYR_ML  = bedwyr.ml
+SPEC_ML    = spi.ml spiparser.ml spilexer.ml spec.ml
+
+CORE_SRC   = $(CORE_ML)   $(wildcard $(CORE_ML:.ml=.mli))
+BEDWYR_SRC = $(BEDWYR_ML) $(wildcard $(BEDWYR_ML:.ml=.mli))
+SPEC_SRC   = $(SPEC_ML)   $(wildcard $(SPEC_ML:.ml=.mli))
+
+BEDWYR = $(CORE_ML:.ml=.$(cmo)) $(BEDWYR_ML:.ml=.$(cmo))
+SPEC   = $(CORE_ML:.ml=.$(cmo)) $(SPEC_ML:.ml=.$(cmo))
+
+# BUILDING
+
+bedwyr: $(BEDWYR)
+	$(OCAMLL) unix.$(cma) $(BEDWYR) -o bedwyr
+
+spec:   $(SPEC)
+	$(OCAMLL) unix.$(cma) $(SPEC) -o spec
+
+-include depend
+depend: $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML) $(SPEC_SRC)
+	$(OCAMLDEP) $(CORE_SRC) $(BEDWYR_SRC) $(TEST_ML) $(SPEC_SRC) > depend
+
+%.cmx: %.ml
+	$(OCAMLC) $<
+%.cmo: %.ml
+	$(OCAMLC) $<
+%.cmi: %.mli
+	$(OCAMLC) $<
+spi%.ml: spi%.mly Makefile
+	$(OCAMLYACC) $<
+spi%.mli: spi%.mly Makefile
+	$(OCAMLYACC) $<
+spi%.ml: spi%.mll
+	$(OCAMLLEX) $<
+%.ml: %.mly Makefile
+	$(OCAMLYACC) $<
+%.mli: %.mly Makefile
+	$(OCAMLYACC) $<
+%.ml: %.mll 
+	$(OCAMLLEX) $<
+
+# TARGETS FOR CORE LLAMBDA MODULES
+
+doc:
+	$(OCAMLDOC) -stars -d ../doc -html $(BEDWYR_SRC)
+
+# MISC
+
+run: bedwyr
+	ledit ./bedwyr
+
+.PHONY: clean superclean
+
+clean:
+	rm -f spec
+	rm -f bedwyr
+	rm -f parser.ml parser.mli lexer.ml parser.output spiparser.ml spiparser.mli spilexer.ml spiparser.output
+	rm -f *.cm[ixo] *.o
+	rm -f ndcore/*.cm[ixo] ndcore/*.o
+superclean: clean
+	find . -name '*~' -exec rm \{\} \;
+	rm -f depend
+	rm -f ndcore/depend

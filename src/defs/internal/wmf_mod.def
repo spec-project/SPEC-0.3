@@ -1,0 +1,18 @@
+#include "../bisim.def".
+
+agent_A P :=
+P = (c\kas\
+nu na\
+outp c na (
+inp c (za\
+case za kas (m\
+let m (m1\m2\
+match m1 na (
+outp c c zero
+)))))).
+
+agent_B P :=
+P = (c\x\a\kbs\
+inp c (zb\
+nu r\
+outp c (en (pr zb (pr a x))

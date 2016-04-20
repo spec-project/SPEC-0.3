@@ -1,0 +1,91 @@
+% Denning-Sacco-Lowe protocol. 
+% Source: the SBC tool examples by Borgstrom and Briais. 
+
+A(a,b,s,kas,minusone,tt) :=
+  s< <a,b> >.
+  a(x).
+  case x of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  let <o1,o2> = n2 in
+  [b = m1]
+  [tt = o1]
+  b <o2>.
+  a(y).
+  case y of enc(s,n1) in 
+  b < enc(<minusone,s>, n1) >;
+
+B(a,b,kbs,minusone,tt) :=
+  nu(nb).
+  b(x).
+  case x of enc(m,kbs) in
+  let <m1,m2> = m in
+  let <m21,m22> = m2 in
+  [a = m21]
+  [tt = m22]
+  a<enc(nb,m1)>.
+  b(y).
+  case y of enc(u,m1) in
+  let <u1,u2> = u in
+  [minusone = u1] 
+  [nb = u2] 
+  b<b>;
+
+S(a,b,s,kas,kbs,tt) :=
+  nu(kab).
+  s(x).
+  let <x1,x2> = x in
+  [a = x1]
+  [b = x2]
+  a< enc(<b, <kab, <tt, enc(<kab, <a, tt>>, kbs)>>>, kas) >;
+
+System(a,b,s,minusone,tt) := 
+  nu(kas,kbs).(S{a,b,s,kas,kbs,tt} | A{a,b,s,kas,minusone,tt} | B{a,b,kbs,minusone,tt});
+
+
+% specifications
+
+A_spec(a,b,s,kab,kas,minusone,tt) :=
+  s< <a,b> >.
+  a(x).
+  case x of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  let <u1,u2> = n2 in
+  [kab = n1] 
+  [tt = u1]
+  b<u2>. 
+  a(y).
+  case y of enc(s,kab) in 
+  b< enc(<minusone, s>, kab) >;
+
+B_spec(a,b,kab,kbs,minusone,tt) :=
+  nu(nb).
+  b(x).
+  case x of enc(m,kbs) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  [kab = m1]
+  [tt = n2] 
+  a< enc(nb,kab) >.
+  b(y).
+  case y of enc(s,kab) in
+  let <s1,s2> = s in
+  [minusone = s1] 
+  [nb = s2] 
+  b<b>;
+
+S_spec(a,b,s,kab,kas,kbs,tt) :=
+  s(x).
+  let <x1,x2> = x in
+  [a = x1]
+  [b = x2]
+  a < enc(<b, <kab, <tt, enc(<kab, <a,tt>>, kbs)>>>, kas) >;
+
+
+System_spec(a,b,s,minusone,tt) :=
+  nu(kas,kbs,kab).
+   ( S_spec{a,b,s,kab,kas,kbs,tt} | A_spec{a,b,s,kab,kas,minusone,tt} | B_spec{a,b,kab,kbs,minusone,tt} );
+
+% Query:
+% bisim(System{a,b,s,minusone,tt}, System_spec{a,b,s,minusone,tt});

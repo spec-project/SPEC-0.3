@@ -1,0 +1,311 @@
+#include "../bisim.def".
+
+% original:
+% agent A(agent_A, agent_B, agent_S, kas, minusone) = 
+% (^na)
+% 'agent_B<agent_A>.
+% agent_A(x_1).
+% 'agent_S<<agent_A, <agent_B, <na, x_1>>>>.
+% agent_A(x_3).
+% {(* 3 tests *)[agent_B = fst(snd(dec(x_3, kas)))] 
+%   /\ [na = fst(dec(x_3, kas))] 
+%   /\ wff(snd(snd(snd(dec(x_3, kas)))))}
+% 'agent_B<snd(snd(snd(dec(x_3, kas))))>.
+% agent_A(x_5).
+% {(* 1 test *)wff(dec(x_5, fst(snd(snd(dec(x_3, kas))))))}
+% 'agent_B<enc(<minusone, dec(x_5, fst(snd(snd(dec(x_3, kas)))))>, fst(snd(snd(dec(x_3, kas)))))>.0
+
+agent_A_def Proc :=
+Proc = (A\B\S\kas\minusone\
+(nu na\
+outp B A (
+inp A (x\
+outp S (pr A (pr B (pr na x))) (
+inp A (y\
+case y kas (m\
+let m (m1\m2\ 
+let m2 (n1\n2\ 
+let n2 (s1\s2\
+match B n1 (
+match na m1 (
+outp B s2 (
+inp A (z\
+case z s1 (u\
+outp B (en (pr minusone u) s1) zero
+))))))))))))))).
+
+% original
+% agent B(agent_A, agent_B, kbs, minusone) = 
+% (^nb)
+%  agent_B(x_0).
+%  {(* 1 test *)[agent_A = x_0]}
+%  'agent_A<enc(<agent_A, nb>, kbs)>.
+%  agent_B(x_4).
+%  {(* 2 tests *)[agent_A = snd(snd(dec(x_4, kbs)))] 
+%    /\ [nb = fst(snd(dec(x_4, kbs)))]}
+%  'agent_A<enc(nb, fst(dec(x_4, kbs)))>.
+%  agent_B(x_6).
+%  {(* 2 tests *)[minusone = fst(dec(x_6, fst(dec(x_4, kbs))))] 
+%    /\ [nb = snd(dec(x_6, fst(dec(x_4, kbs))))]}
+%  'agent_B
+
+agent_B_def Proc :=
+Proc = (A\B\kbs\minusone\ 
+(nu nb\
+  inp B (x\ 
+  match A x (
+  outp A (en (pr A nb) kbs) (
+  inp B (y\
+  case y kbs (m\ 
+  let m (m1\m2\ 
+  let m2 (n1\n2\
+  match A n2 (
+  match nb n1 (
+  outp A (en nb m1) (
+  inp B (z\
+  case z m1 (s\ 
+  let s (s1\s2\ 
+  match minusone s1 (
+  match nb s2 (
+  outp B B zero
+))))))))))))))))).
+
+
+
+% agent S(agent_A, agent_B, agent_S, kas, kbs) = 
+% (^kab)agent_S(x_2).
+% {(* 3 tests *)[agent_A = fst(x_2)] /\ 
+% [agent_A = fst(dec(snd(snd(snd(x_2))), kbs))] /\ 
+% [agent_B = fst(snd(x_2))]}
+% 'agent_A<enc(<fst(snd(snd(x_2))), <
+%        agent_B, <kab, enc(<kab, <snd(dec(snd(snd(snd(x_2))), kbs)), agent_A>>, kbs)>>>, kas)>.0
+
+agent_S_def Proc :=
+Proc = (A\B\S\kas\kbs\
+(nu kab\
+inp S (x\
+let x (y1\y2\
+let y2 (s1\s2\
+let s2 (r1\r2\
+case r2 kbs (m\
+let m (m1\m2\
+match A y1 (
+match B s1 (
+outp A 
+ (en 
+  (pr r1 
+      (pr B
+        (pr kab (en (pr kab (pr m2 A)) kbs))
+      )
+  )
+  kas
+ ) 
+zero
+)))))))))).
+
+
+
+
+% original
+% agent System(agent_A, agent_B, agent_S, minusone) = 
+% (^kas, kbs)(
+% S(agent_A, agent_B, agent_S, kas, kbs) 
+% | B(agent_A, agent_B, kbs, minusone) 
+% | A(agent_A, agent_B, agent_S, kas, minusone))
+
+agent_System_def Proc :=
+agent_S_def ProcS,
+agent_A_def ProcA,
+agent_B_def ProcB, 
+Proc = (A\B\S\minusone\
+(nu kas\ nu kbs\ 
+par (ProcS A B S kas kbs) (
+par (ProcB A B kbs minusone) 
+    (ProcA A B S kas minusone)
+))).
+
+
+
+% original:
+% agent ASpec(agent_A, agent_B, agent_S, kab, kas, minusone) = 
+% (^na)'agent_B<agent_A>.
+% agent_A(x_1).
+% 'agent_S<<agent_A, <agent_B, <na, x_1>>>>.
+% agent_A(x_3).
+% {(* 3 tests *)[agent_B = fst(snd(dec(x_3, kas)))] 
+%   /\ [kab = fst(snd(snd(dec(x_3, kas))))] 
+%   /\ [na = fst(dec(x_3, kas))]}
+% 'agent_B<snd(snd(snd(dec(x_3, kas))))>.
+% agent_A(x_5).
+% {(* 2 tests *)wff(snd(snd(snd(dec(x_3, kas))))) 
+%  /\ wff(dec(x_5, kab))}'agent_B<enc(<minusone, dec(x_5, kab)>, kab)>.0
+
+
+agent_ASpec_def Proc :=
+Proc = (A\B\S\kab\kas\minusone\
+(nu na\
+outp B A (
+inp A (x\
+outp S (pr A (pr B (pr na x))) (
+inp A (y\
+case y kas (m\ 
+let m (m1\m2\ 
+let m2 (n1\n2\
+let n2 (s1\s2\
+match B n1 (
+match kab s1 (
+match na m1 (
+outp B s2 (
+inp A (z\
+case z kab (u\ 
+outp B (en (pr minusone u) kab) zero
+)))))))))))))))).
+
+
+% original: 
+% agent BSpec(agent_A, agent_B, kab, kbs, minusone) = 
+% (^nb)
+% agent_B(x_0).
+% {(* 1 test *)[agent_A = x_0]}
+% 'agent_A<enc(<agent_A, nb>, kbs)>.
+% agent_B(x_4).
+% {(* 3 tests *)[agent_A = snd(snd(dec(x_4, kbs)))] 
+%  /\ [kab = fst(dec(x_4, kbs))] 
+%  /\ [nb = fst(snd(dec(x_4, kbs)))]}
+% 'agent_A<enc(nb, kab)>.
+% agent_B(x_6).
+% {(* 2 tests *)[minusone = fst(dec(x_6, kab))] 
+%  /\ [nb = snd(dec(x_6, kab))]}
+% 'agent_B
+
+% agent BSpec(agent_A, agent_B, kab, kbs, minusone) = 
+% (^nb)
+% agent_B(x_0).
+% {(* 1 test *)[agent_A = x_0]}
+% 'agent_A<enc(<agent_A, nb>, kbs)>.
+% agent_B(x_4).
+% {(* 3 tests *)[agent_A = n2] 
+%  /\ [kab = m1] 
+%  /\ [nb = n1]}
+% 'agent_A<enc(nb, kab)>.
+% agent_B(x_6).
+% {(* 2 tests *)[minusone = s1] 
+%  /\ [nb = s2]}
+% 'agent_B
+
+
+agent_BSpec_def Proc :=
+Proc = (A\B\kab\kbs\minusone\
+(nu nb\
+inp B (x\
+match A x (
+outp A (en (pr A nb) kbs) (
+inp B (y\
+case y kbs (m\
+let m (m1\m2\
+let m2 (n1\n2\
+match A n2 (
+match kab m1 (
+match nb n1 (
+outp A (en nb kab) (
+inp B (z\
+case z kab (s\ 
+let s (s1\s2\
+match minusone s1 (
+match nb s2 (
+outp B B zero
+)))))))))))))))))).
+
+
+% original: 
+% agent SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) = 
+% agent_S(x_2).
+% {(* 3 tests *)
+%  [agent_A = fst(x_2)] 
+%  /\ [agent_A = fst(dec(snd(snd(snd(x_2))), kbs))]
+%  /\ [agent_B = fst(snd(x_2))]}
+% 'agent_A
+% <
+%   enc
+%   (
+%    <
+%     fst(snd(snd(x_2))), 
+%     <
+%      agent_B, 
+%      <
+%       kab, enc(<kab, <snd(dec(snd(snd(snd(x_2))), kbs)), agent_A>>, kbs)
+%      >
+%     >
+%    >, 
+%    kas
+%   )
+% >.0
+
+
+agent_SSpec_def Proc :=
+Proc = (A\B\S\kab\kas\kbs\
+inp S (x\
+let x (y1\y2\
+let y2 (z1\z2\
+let z2 (s1\s2\
+case s2 kbs (m\
+let m (m1\m2\
+match A y1 (
+match A m1 (
+match B z1 (
+outp A 
+(
+ en
+  (pr s1
+      (pr B (pr kab (en (pr kab (pr m2 A)) kbs))))
+  kas
+)
+zero
+)))))))))).
+
+
+% original:
+% agent SystemSpec(agent_A, agent_B, agent_S, minusone) = 
+% (^kas, kbs, kab)(
+% SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) 
+% | BSpec(agent_A, agent_B, kab, kbs, minusone) 
+% | ASpec(agent_A, agent_B, agent_S, kab, kas, minusone))
+
+agent_SystemSpec_def Proc :=
+agent_SSpec_def ProcS,
+agent_ASpec_def ProcA,
+agent_BSpec_def ProcB,
+Proc = (A\B\S\minusone\
+(nu kas\ nu kbs\ nu kab\
+par (ProcS A B S kab kas kbs) (
+par (ProcB A B kab kbs minusone)
+    (ProcA A B S kab kas minusone)))).
+
+check_bisim :=
+  H = nil, 
+  agent_System_def System,
+  agent_SystemSpec_def SystemSpec,
+  P = (System (ct agent_A) (ct agent_B) (ct agent_S) (ct minusone)),
+  Q = (SystemSpec (ct agent_A) (ct agent_B) (ct agent_S) (ct minusone)),
+  println "Checking triple: ",
+  print "- bitrace: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ",
+  bisim H P Q.
+
+% check_bisim :=
+%   H = (cons (out (nm agent_A) (nm agent_A)) (
+%        cons (out (nm agent_B) (nm agent_B)) (
+%        cons (out (nm agent_S) (nm agent_S)) (
+%        cons (out (nm minusone) (nm minusone)) nil)))),
+%   agent_System_def System,
+%   agent_SystemSpec_def SystemSpec,
+%   P = (System (nm agent_A) (nm agent_B) (nm agent_S) (nm minusone)),
+%   Q = (SystemSpec (nm agent_A) (nm agent_B) (nm agent_S) (nm minusone)),
+%   println "Checking triple: ",
+%   print "- bitrace: ", print_bitrace H, println " ",
+%   print "- P: ", print_proc P, println " ",
+%   print "- Q: ", print_proc Q, println " ",
+%   bisim H P Q.
+
+#assert (check_bisim).

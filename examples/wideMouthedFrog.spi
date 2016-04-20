@@ -1,0 +1,57 @@
+% Wide Mouthed Frog protocol. 
+% Source: the SBC tool examples by Borgstrom and Briais. 
+
+% A --> S : A, enc(<T,B,Kab>, Kas). 
+% S --> B : enc(<T, A, Kab>, Kbs).
+% A --> 
+A(a,b,s,kas,t) := nu(kab).s< <a,enc(<t,<b,kab>>, kas)> >;
+
+
+B(a,b,kbs,t)   := 
+  b(x).
+  case x of enc(m,kbs) in 
+  let <u,v> = m in 
+  let <s,w> = v in 
+  [a = s] [t = u] b<b>;
+
+
+S(a,b,s,kas,kbs,t) := 
+  s(x).
+  let <x1,x2> = x in
+  [a = x1] 
+  case x2 of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in 
+  [b = n1] 
+  [t = m1]
+  b<enc(<t, <a,n2>>, kbs)>;
+
+System(a,b,s,t) :=
+  nu(kas,kbs).(S{a,b,s,kas,kbs,t} | A{a,b,s,kas,t} | B{a,b,kbs,t}) ;
+
+
+A_spec(a,b,s,kab,kas,t) := s< <a, enc(<t, <b, kab>>, kas)> > ;
+
+B_spec(a,b,kab,kbs,t) := 
+  b(x). 
+  case x of enc(m,kbs) in
+  let <m1,m2> = m in 
+  let <n1,n2> = m2 in
+  [a=n1][kab=n2][t=m1]
+  b<b>;
+
+S_spec(a,b,s,kab,kas,kbs,t) :=
+  s(x).
+  let <x1,x2> = x in
+  case x2 of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  [a=x1][b=n1][kab=n2][t=m1]
+  b<enc(<t, <a,kab>>,kbs)>;
+
+
+System_spec(a,b,s,t) :=
+  nu(kas,kbs,kab).( S_spec{a,b,s,kab,kas,kbs,t} | A_spec{a,b,s,kab,kas,t} | B_spec{a,b,kab,kbs,t});
+
+% Query:
+% bisim(System{a,b,s,t}, System_spec{a,b,s,t}); 

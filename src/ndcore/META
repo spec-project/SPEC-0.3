@@ -1,0 +1,9 @@
+# Specifications for the "ndcore" library
+# src/ndcore/META.  Generated from META.in by configure.
+name = "ndcore"
+requires = ""
+version = "1.4-alpha2"
+description = "Higher-Order Pattern Unification with Non-Destructive Normalization"
+#directory = "^"
+archive(byte) = "ndcore.cma"
+archive(native) = "ndcore.cmxa"

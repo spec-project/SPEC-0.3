@@ -1,0 +1,57 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "print_latex.def".
+
+Define bt2latex : string -> list bt_pair -> prop
+by 
+bt2latex File nil ; 
+bt2latex File (cons (in M N) L) :=
+ fprintstr File "(" /\ term2latex File M /\ 
+ fprintstr File "~ , ~ " /\ term2latex File N /\ 
+ fprintstr File ")^i. \\\\ \n" /\
+ bt2latex File L ; 
+bt2latex File (cons (out M N) L) := 
+ fprintstr File "(" /\ term2latex File M /\ 
+ fprintstr File "~ , ~ " /\ term2latex File N /\ fprintstr File ")^o. \\\\ \n" /\
+ bt2latex File L.
+
+Define print_bt_latex : string -> list bt_pair -> prop
+by 
+print_bt_latex File nil := 
+ fprintstr File "$[~]$\n" ; 
+print_bt_latex File (cons X L) :=
+ fprintstr File "$$\n" /\ 
+ fprintstr File "\\begin{array}{l}\n" /\ 
+ bt2latex File (cons X L) /\ 
+ fprintstr File "\\end{array}\n" /\ 
+ fprintstr File "$$\n\n\n".
+
+Define bisim2latex : string -> prop -> prop
+by 
+bisim2latex File (bisim H P Q) :=
+ fprintstr File "Bi-trace: \n" /\ 
+ print_bt_latex File H /\ 
+ fprintstr File "\n" /\
+ fprintstr File "First process: \n" /\ 
+ print_proc_latex File P /\ 
+ fprintstr File "\n" /\ 
+ fprintstr File "Second process: \n" /\
+ print_proc_latex File Q /\ 
+ fprintstr File "\n".

@@ -1,0 +1,115 @@
+% Kao Chow authentication protocol v.2.
+% Source: the SBC tool examples by Borgstrom and Briais.
+
+
+A(a,b,s,kas) :=
+  nu(na).
+  s< <a,b,na> >.
+  a(x2).
+  let <y1,y2> = x2 in
+  let <z1,z2> = y2 in
+  case z1 of enc(m,kas) in
+  let <m1,m2> = m in 
+  [a = m1]
+  [b = y1]
+  let <n1,n2> = m2 in
+  let <u1,u2> = n2 in 
+  [na = u1]
+  let <r1,r2> = z2 in
+  let <s1,s2> = u2 in
+  case r1 of enc(t,s2) in
+  let <t1,t2> = t in
+  [na = t1]
+  [s1 = t2]
+  b< enc(<r2,s1>, s2) >;
+
+B(a,b,kbs) :=
+  nu(nb).
+  b(x1).
+  let <y1,y2> = x1 in
+  case y2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = m1]
+  let <n1,n2> = m2 in
+  [b = n1]
+  let <u1,u2> = n2 in
+  let <r1,r2> = u2 in
+  a < <b,y1,enc(<u1,r1>, r2),nb> >.
+  b(x3).
+  case x3 of enc(w,r2) in
+  let <s1,s2> = w in
+  [nb = s1]
+  [r1 = s2]
+  b<b>;
+
+S(a,b,s,kas,kbs) :=
+  nu(kt,kab).
+  s(x0).
+  let <y1,y2> = x0 in
+  [a = y1]
+  let <z1,z2> = y2 in
+  [b = z1]
+  b < < enc(<a,b,z2,kab,kt>, kas), enc(<a,b,z2,kab,kt>, kbs) > >;
+
+System(a,b,s) :=
+  nu(kas,kbs).( S{a,b,s,kas,kbs} | A{a,b,s,kas} | B{a,b,kbs} );
+
+
+A_spec(a,b,s,kab,kas,kt) :=
+  nu(na).
+  s< <a,b,na> >.
+  a(x2).
+  let <y1,y2> = x2 in
+  let <z1,z2> = y2 in
+  case z1 of enc(m,kas) in
+  let <m1,m2> = m in
+  [a = m1]
+  [b = y1]
+  let <n1,n2> = m2 in
+  [b = n1]
+  let <u1,u2> = n2 in
+  let <r1,r2> = u2 in
+  [kab = r1]
+  let <s1,s2> = z2 in
+  case s1 of enc(t,kt) in 
+  let <t1,t2> = t in
+  [kab = t2] 
+  [kt = r2]
+  [na = u1]
+  [na = t1]
+  b< enc(<s2,kab>, kt) >;
+
+B_spec(a,b,kab,kbs,kt) := 
+  nu(nb).
+  b(x1).
+  let <y1,y2> = x1 in
+  case y2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = m1]
+  let <n1,n2> = m2 in
+  [b = n1]
+  let <u1,u2> = n2 in
+  let <s1,s2> = u2 in
+  [kab = s1]
+  [kt = s2]
+  a < <b, y1, enc(<u1,kab>,kt), nb> >.
+  b(x3).
+  case x3 of enc(r,kt) in
+  let <r1,r2> = r in
+  [kab = r2]
+  [nb = r1] 
+  b<b>;
+
+S_spec(a,b,s,kab,kas,kbs,kt) :=
+  s(x0).
+  let <y1,y2> = x0 in
+  [a = y1]
+  let <z1,z2> = y2 in 
+  [b = z1] 
+  b< < enc(<a, b, z2, kab, kt>, kas), enc(<a, b, z2, kab, kt>, kbs) > >;
+
+System_spec(a,b,s) :=
+  nu(kas,kbs,kt,kab).( S_spec{a,b,s,kab,kas,kbs,kt} | A_spec{a,b,s,kab,kas,kt} | B_spec{a,b,kab,kbs,kt} );
+
+% Query:
+% bisim(System_spec{a,b,s}, System{a,b,s});

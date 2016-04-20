@@ -1,0 +1,247 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "uni.def".
+#include "pprint.def".
+
+Kind constraint type. 
+
+Type dedl list tm -> tm -> constraint. 
+Type dedr list tm -> tm -> constraint.
+
+% Get the list of variables from a deducibility constraint system.
+% Assume wellformed constraint systems, so only need to check
+% the right hand side of the constraints. 
+
+Define get_var_cst : constraint -> list tm -> list tm -> prop by 
+get_var_cst (dedl S M) VarIn VarOut := get_var M VarIn VarOut ; 
+get_var_cst (dedr S M) VarIn VarOut := get_var M VarIn VarOut.
+
+
+Define get_var_csts : list constraint -> list tm -> list tm -> prop by 
+get_var_csts nil VarIn VarIn ; 
+get_var_csts (cons C L) VarIn VarOut :=
+  get_var_cst C VarIn Vs /\ 
+  get_var_csts L Vs VarOut.
+
+Define constraints_vars : list constraint -> list tm -> prop by 
+constraints_vars Cs Vars :=
+  get_var_csts Cs nil Vs /\ reverse Vs Vars.
+  
+Define apply : list sub_pair -> constraint -> constraint -> prop by 
+apply Subst (dedr S M) (dedr T N) :=
+  copylist Subst S T /\ copyterm Subst M N ;
+apply Subst (dedl S M) (dedl T N) := 
+  copylist Subst S T /\ copyterm Subst M N.
+
+Define apply_list : list sub_pair -> list constraint -> list constraint -> prop by 
+apply_list Subst nil nil ; 
+apply_list Subst (cons C L) (cons D R) :=
+  apply Subst C D /\ apply_list Subst L R.
+
+% right-hand side of a constraint
+Define rhs_cst : constraint -> tm -> prop by 
+rhs_cst (dedl S M) M ; 
+rhs_cst (dedr S M) M.
+
+% remove redundant constraints
+
+Define trim_cst : list constraint -> list tm -> list constraint -> prop by 
+trim_cst nil Rhs nil ; 
+trim_cst (cons C L) Rhs Ds :=
+  rhs_cst C M /\ 
+  _if (M = (ct X))
+      (trim_cst L Rhs Ds)
+      (
+        _if (det_mem M Rhs) 
+            (trim_cst L Rhs Ds)
+            (trim_cst L (cons M Rhs) Cs /\ Ds = (cons C Cs))
+      ).
+
+Define redundant_aux : constraint -> list constraint -> prop by 
+redundant_aux C (cons D L) :=
+  _if (rhs_cst C M /\ rhs_cst D M)
+      true
+      (redundant_aux C L). 
+
+Define redundant : constraint -> list constraint -> prop by 
+
+redundant C L :=
+  _if (rhs_cst C (ct X))
+      true 
+      (redundant_aux C L).
+
+
+Define red1 : list tm -> constraint -> list constraint -> list constraint -> 
+              list constraint -> list sub_pair -> prop 
+by 
+red1 Vs (dedr S M) Pre Post Cs Subst :=
+  unify_list Vs S M Subst /\ 
+  append Pre Post L /\ 
+  apply_list Subst L Cs. 
+
+Define red : nat -> list tm -> constraint -> list constraint -> list constraint -> prop 
+by 
+
+% red 2 Vs (dedr S M) Cs Ds :=
+%   (M = pr X Y ; M = en X Y),
+%   Ds = (cons (dedr S X) (cons (dedr S Y) Cs)).
+
+% red 2 Vs (dedr S (hs X)) Cs Ds :=
+%   Ds = (cons (dedr S X) Cs) ; 
+% red 2 Vs (dedr S (pub X)) Cs Ds :=
+%   Ds = (cons (dedr S X) Cs) ; 
+% red 2 Vs (dedr S (vk X)) Cs Ds :=
+%   Ds = (cons (dedr S X) Cs) ; 
+red 2 Vs (dedr S (pr X Y)) Cs Ds := 
+  Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ; 
+red 2 Vs (dedr S (en X Y)) Cs Ds := 
+  Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ; 
+% red 2 Vs (dedr S (aen X Y)) Cs Ds := 
+%   Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ; 
+% red 2 Vs (dedr S (sign X Y)) Cs Ds := 
+%   Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ; 
+
+red 3 Vs (dedl S M) Cs Ds :=
+  Ds = (cons (dedr S M) Cs) ; 
+
+% Note: (en U V) is not needed to derive the key V here; this is because we insist
+% on right-derivability of V, which means V can be composed only using smaller terms,
+% and (en U V) will always be bigger than V (because of occur-check in unification of
+% first-order terms). 
+% So we add (dedr T V) instead of (dedr S V) to the constraints Cs. 
+red 5 Vs (dedl S M) Cs Ds :=
+  select S (en U V) T /\ 
+  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\ 
+  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\ 
+  Ds = cons (dedr T V) (cons (dedl T2 M) Cs).   
+
+% % asymmetric encryption
+% red 5 Vs (dedl S M) Cs Ds :=
+%   select S (aen U (pub X)) T /\ 
+%   _if (msg_type X ct_type) (T1 = T) (insert X T T1) /\ 
+%   _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\ 
+%   Ds = cons (dedr T X) (cons (dedl T2 M) Cs) ; 
+
+% % signing. keep the signed message. 
+% red 5 Vs (dedl S M) Cs Ds :=
+%   select S (sign U V) T /\ 
+%   _not (msg_type U ct_type \/ det_mem U T) ; 
+%   Ds = cons (dedr T (vk V)) (cons (dedl (cons U T) M) Cs).
+
+% #type red5_aen_var (constraint -> list constraint -> list constraint -> list constraint -> list sub_pair -> o).
+
+% % asymmetric encryption: special case where the key is a variable. 
+% red5_aen_var (dedl S M) Pre Post Cs Subst :=
+%   select S (aen U (var X)) T,
+%   Subst = (cons (sub (var X) (pub (var X))) nil), 
+%   _if (msg_type U ct_type) (T1 = T) (insert U T T1),
+%   apply_list Subst Pre Pre1,
+%   apply_list Subst Post Post1,
+%   apply Subst (dedl T1 M) C,
+%   copylist Subst T R, 
+%   append Pre1 (cons (dedr R (var X)) (cons C Post1)) Cs.
+  
+
+% red 4 Vs (dedl S M) Cs Ds :=
+%   select S (pr U V) T,
+%   insert V T T1, insert U T1 T2, 
+%   Ds = (cons (dedl T2 M) Cs).
+
+Define decpr : list tm -> list tm -> prop by 
+decpr nil nil ; 
+decpr (cons (pr U V) L) R :=
+  _if (msg_type V ct_type) (L1 = L)  (insert V L L1) /\ 
+  _if (msg_type U ct_type) (L2 = L1) (insert U L1 L2) /\ 
+  decpr L2 R ; 
+decpr (cons C L) (cons C R) :=
+  _not(C = pr U V) /\ decpr L R. 
+
+% step 4 is asyncronous; we can always eagerly decompose pairs. 
+
+Define iter_red4 : constraint -> constraint -> prop
+by
+iter_red4 (dedl S M) (dedl T M) := decpr S T ; 
+iter_red4 (dedr S M) (dedr S M).
+
+% rewriting deducibility constraints to a solved form.
+% we relax the condition of the solved form a bit; we shall
+% allow both (dedl S (var V)) and (dedr S (var V)) in the solved form.
+
+Define solved_form : constraint -> prop
+by
+solved_form (dedl S (var V)) ; 
+solved_form (dedr S (var V)).
+
+Define solve : list tm -> list sub_pair -> list constraint -> 
+               list constraint -> list sub_pair -> prop
+by
+solve Vs Subst P nil Subst ; 
+solve Vs S_In Pre (cons C Post) S_Out :=
+  _if (redundant C Pre)
+      ( solve Vs S_In Pre Post S_Out)
+      (
+        _if (solved_form C)
+            (  append Pre (cons C nil) Pre1 /\ solve Vs S_In Pre1 Post S_Out)
+            (
+             iter_red4 C D /\ 
+             (
+                (red1 Vs D Pre Post Cs Subst /\ compose Vs S_In Subst NewSubst 
+                  /\ NewPre = nil /\ NewPost = Cs /\ Rule = 1
+                ) 
+                \/
+                (red I Vs D Post NewPost /\ NewSubst = S_In /\ NewPre = Pre /\ Rule = I) 
+             ) /\ 
+             solve Vs NewSubst NewPre NewPost S_Out
+            )
+      ). 
+
+
+Define solve_constraints : list tm -> list constraint -> list sub_pair -> prop
+by
+solve_constraints Vs Cs Subst :=
+  trim_cst Cs nil Ds /\ 
+%  println "Simplified input: ", 
+%  print_list_cst Ds, println " ",
+  id_subst Vs IdSubst /\ 
+  solve Vs IdSubst nil Ds Subst.
+
+Define print_cst : constraint -> prop 
+by 
+print_cst (dedr S M) :=
+  print "(" /\ plist S /\ print " |-_R " /\ print_term M /\ print ")" ; 
+print_cst (dedl S M) :=
+  print "(" /\ plist S /\ print " |- " /\ print_term M /\ print ")".
+ 
+Define plist_cst : list constraint -> prop 
+by 
+plist_cst nil ; 
+plist_cst (cons X nil) := print_cst X ; 
+plist_cst (cons X (cons Y L)) :=
+  print_cst X /\ 
+  print " ; " /\ 
+  plist_cst (cons Y L).
+
+Define print_list_cst : list constraint -> prop 
+by 
+print_list_cst L := 
+  print "[" /\ plist_cst L /\ print "]".
+
+
+

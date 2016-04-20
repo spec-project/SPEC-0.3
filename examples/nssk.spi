@@ -1,0 +1,91 @@
+% Needham-Schroeder symmetric key protocol.
+% Source: the SBC tool examples by Borgstrom and Briais.
+
+A(a,b,s,kas,minusone) := 
+  nu (na).
+  s< <a,b,na> >.
+  a(x1).
+  case x1 of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  [b = n1]
+  [na = m1]
+  let <u1,u2> = n2 in
+  b< u2 >.
+  a(x3).
+  case x3 of enc(r,u1) in
+  b< enc(<minusone, r>, u1) >;
+
+B(a,b,kbs,minusone) :=
+  nu (nb).
+  b(x2).
+  case x2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = m2]
+  a< enc(nb,m1) >.
+  b(x4).
+  case x4 of enc(n,m1) in
+  let <n1,n2> = n in
+  [minusone = n1]
+  [nb = n2]
+  b< b >;
+
+S(a,b,s,kas,kbs) :=
+  nu (kab).
+  s(x0).
+  let <x1,x2> = x0 in
+  let <y1,y2> = x2 in
+  [a = x1] 
+  [b = y1] 
+  a< enc(<y2,b,kab, enc(<kab, a>, kbs)>, kas) >;
+
+System(a,b,s,minusone) :=
+  nu (kas,kbs).(S{a,b,s,kas,kbs} | B{a,b,kbs,minusone} | A{a,b,s,kas,minusone});
+
+A_spec(a,b,s,kab,kas,minusone) :=
+  nu (na). 
+  s< <a,b,na> >.
+  a(x1).
+  case x1 of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  let <u1,u2> = n2 in
+  [b = n1]
+  [kab = u1]
+  [na = m1]
+  b< u2 >.
+  a(x2).
+  case x2 of enc(r,kab) in
+  b< enc(<minusone,r>, kab) >;
+
+  
+B_spec(a,b,kab,kbs,minusone) :=
+  nu (nb).
+  b(x2).
+  case x2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = m2]
+  [kab = m1]
+  a< enc(nb, kab) >.
+  b(x4).
+  case x4 of enc(n, kab) in
+  let <n1,n2> = n in
+  [minusone = n1]
+  [nb = n2]
+  b< b >;
+
+S_spec(a,b,s,kab,kas,kbs) := 
+  s(x0).
+  let <y1,y2> = x0 in
+  let <z1,z2> = y2 in
+  [a = y1]
+  [b = z1]
+  a< enc(<z2,b, kab, enc(<kab,a>, kbs)>, kas) >;
+
+System_spec(a,b,s,minusone) :=
+  nu (kas,kbs,kab).( 
+     S_spec{a,b,s,kab,kas,kbs} | B_spec{a,b,kab,kbs,minusone} | A_spec{a,b,s,kab,kas,minusone}
+  ) ;
+  
+%Query:
+% bisim(System_spec{a,b,s,minusone}, System{a,b,s,minusone});

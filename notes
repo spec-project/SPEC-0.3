@@ -1,0 +1,114 @@
+SPEC (Spi Equivalence Checker)
+
+Some notes:
+- The #include <filename> directive simply accumulates clauses defined in <filename>.
+  Including a file twice, either directly or indirectly (e.g., including file A, then
+  including file B which already includes A), results in repeated clauses. 
+
+
+- SBC cannot handle non-atomic keys. It's accepting keys which are not headed by the
+ enc operator, for example, the following process is accepted:
+  'a<enc(a,<a, enc(b,k)>)
+ but not
+  'a<enc(a,enc(a,k))>
+
+ As a consequence, its sbisim is unsound if one uses this trick to disguise 
+ compound keys. For example, the following processes are not bisimilar,
+ but SBC says they are: 
+
+sbc > agent P(a) = a(x).(^k)('a<<x,enc(x,k)>>.(^m)('a<enc(m,<a,enc(a,k)>)>.'m<a>.'a))
+Agent P is defined.
+sbc > agent Q(a,b) = a(x).(^k)('a<<x,enc(x,k)>>.(^m)('a<enc(m,<a,enc(a,k)>)>.{[x = a]}'m<a>.'b))
+Agent Q is defined.
+sbc > sbisim P(a) Q(a,b) with (a,b)
+  The two agents are strongly bisimilar.
+
+
+Extensions to bedwyr:
+=====================
+
+All non-logical predicates are prefixed with _ (underscore). 
+Added the following new commands: 
+- _not : o -> o. 
+  This is the standard negation-as-failure as in prolog.
+
+- _if: o -> o -> o -> o.
+  If-Then-Else: 
+  (_if P Q R) is basically equivalent to (P /\ Q) \/ (not(P) /\ Q).
+  The slight difference is that the second disjunct will not be tried if P is successful.
+
+- _distinct: o -> o.
+  Calling (_distinct P) directs bedwyr to produce only distinct answer substitutions.
+
+- _abstract: a -> (b -> a) -> a -> o.
+  (_abstract T Abs T') abstracts the logic variables in T of type b,
+  and apply the constructor Abs to each abstraction, and unify the result with T'.
+
+  Example query: 
+  ?= _abstract (pr X Y) abs T.
+  Solution found:
+  X = X
+  Y = Y
+  T = (abs (x1\ abs (x2\ pr x1 x2)))
+  More [y] ? y
+  No more solutions.
+
+  WARNING: Because '_abstract' can abstract any logic variables, and because the underlying
+  abstract machine of bedwyr is untyped, the abstraction produced by 'abstract' may not
+  always respect the type of the constructor Abs. For example, consider the above example.
+  If pr is of type  alpha -> beta -> alpha, for some distinct types alpha and beta, and
+  abs is of type alpha -> alpha, then the above query will still succeed despite the fact
+  that abs is applied to terms of both types. Hence type checking does not guarantee
+  runtime type soundness ('well typed programs don't go wrong'). 
+  A solution to this would be to make the bedwyr engine aware of the type constraints, so that
+  it only abstracts variables of the correct types. 
+
+- _cut : o -> o. Applying the predicate cut to a query removes the backtracking
+  for that query. That is, a query such as (cut P) will produce the first solution
+  (if any) to P, and terminates. 
+
+- _rigid : A -> o. This is a meta-level assertion predicate.
+  (_rigid X) will throw an assertion (hence causes the prover to abort) if
+  X is not a ground term.
+
+- _eqvt : A -> A -> o. This predicate checks that its arguments are syntatically equivalent
+  modulo renaming of nabla variables. 
+
+- _option: A -> o. This is SPEC specific predicate. It is not part of the Bedwyr codes.
+
+  This predicate is used to encode SPEC specific options. The SPEC interface will dynamically
+  add definitions for this predicate upon user's request, via the #set command in SPEC.
+
+- ***Obsolete **
+  ** This is now replaced with #set command.
+
+  #trace: this system-level command sets the trace flag.
+  Syntax: #trace <on/off>
+  Note: the system only sets the flag to true/false. The use of this flag is up to the
+  program. Its value can be read off by a program via the predicate _trace (see next),
+  which can then use it for its own purpose, e.g., to toggle on/off printing of certain
+  information.
+
+- **Obsolete*** 
+  **This is now replaced with _option **
+  _trace: this predicate returns the value of the trace flag set via #trace above. 
+  It can be used by programs to toggle on/off printing of traces or other debugging information. 
+
+- _abort: this predicate aborts the proof search and returns to the toplevel query (if in
+  interactive mode). 
+ 
+- #save_table <predicate> <filename>: This will save the table for a predicate to
+  a definition file. A proved entry will become the argument of a predicate called 'proved'. 
+  Similarly, an unproved entry will be the argument of an 'unproved' predicate. 
+  
+Some internal modifications to bedwyr:
+- Tabling: now allows equivariant matching in tabling. 
+
+- Implication: in proving implication a => b, copies of b are
+  made prior to tempting to prove b. This is the correct behavior
+  (see discussion with David). This correction is needed to
+  implement the enumeration predicate (see basic.def).
+
+ 
+
+

@@ -1,0 +1,168 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011 David Baelde and Alwen Tiu 
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% A modified version of Bedwyr's type checking program by Baelde. 
+
+% Type checking module: 
+
+% The __ prefix is used to avoid collision with user definitions.
+% We use the #type declarations to fill the environment, and check
+% definition's clauses against that.
+% For now, type information are mandatory.
+% Polymorphic types are supported only at the basic level, via the
+% the 'all' constructor in type declarations. 
+
+print_env nil. 
+print_env (bind X Y L) :=
+  print X, print " : ", println Y,  
+  print_env L. 
+
+
+__constant_env E :=
+E = (bind true (ty o) (
+     bind false (ty o) (
+     bind _not (ty (o -> o)) (
+     bind _if (ty (o -> o -> o -> o)) (
+     bind _distinct (ty (o -> o)) (
+     bind _abstract (all a\ all b\ ty (a -> (b -> a) -> a -> o)) (
+     bind _cut (ty (o -> o)) (
+     bind _eqvt (all x\ ty (x -> x -> o)) (
+     nil))))))))).
+   
+% A non-logical hack to force termination of search.
+
+% type checking a def file, with signature given in the sig file. 
+% This does not expand the include directives in the def file. 
+__typecheck SigFile DefFile := 
+   print "Parsing signature file ", print SigFile, print " ... ", 
+   parse SigFile Sig, 
+   println "OK", 
+   print "Parsing definition file ", print DefFile, print " ... ", 
+   simp_parse DefFile Defs, 
+   println "OK",
+   print "Getting constant types ... ", 
+   __constant_env E1,
+   println "OK", 
+   print "Accumulating signatures ... ", 
+   __accum_sig Sig E1 Env, 
+   println "OK",
+   __check Env Defs.
+
+% type checking; same as above but fully expand the def file. 
+__fulltypecheck SigFile DefFile := 
+   print "Parsing signature file ", print SigFile, print " ... ", 
+   parse SigFile Sig, 
+   println "OK", 
+   print "Parsing definition file ", print DefFile, print " ... ", 
+   parse DefFile Defs, 
+   println "OK",
+   print "Getting constant types ... ", 
+   __constant_env E1,
+   println "OK", 
+   print "Accumulating signatures ... ", 
+   __accum_sig Sig E1 Env, 
+   println "OK",
+   __check Env Defs.
+
+__accum_sig nil Env Env.
+__accum_sig (cons (command "kind" K T) L) EnvI EnvO :=
+  __accum_sig L EnvI EnvO.
+__accum_sig (cons (command "type" X T) L) EnvI (bind X T EnvO) :=
+  __accum_sig L EnvI EnvO.
+__accum_sig (cons (command "assert" X) L) EnvI EnvO :=
+  __accum_sig L EnvI EnvO.
+__accum_sig (cons (clause Head Body) L) EnvI EnvO :=
+  __accum_sig L EnvI EnvO. 
+
+__check Env nil.
+__check Env (cons (command "kind" K T) L)   := __check Env L.
+__check Env (cons (command "type" X T) L) := __check (bind X T Env) L.
+__check Env (cons (command "assert" X) L) :=
+  % print (checking assertion),
+  __typed Env X o,
+  __check Env L.
+__check Env (cons (clause Head Body) L) :=
+  print "Checking clause for ", print Head, print " ... ", 
+  _if (__lookup Env Head T) 
+      (
+        __typed Env Body T,
+        println "OK",      
+        __check Env L
+      )
+     (print "Couldn't find type declaration for ", print Head, println " ", _abort).
+     
+
+% Matching (polymorphic) types.
+__match (ty T) T. 
+__match (all x\ S x) T := __match (S X) T.
+
+__lookup (bind X S L) X T := __match S T.
+__lookup (bind Y Z L) X T := __lookup L X T.
+
+__typed Env (X ,  Y) o := __typed Env X o, __typed Env Y o.
+__typed Env (X ;  Y) o := __typed Env X o, __typed Env Y o.
+__typed Env (X => Y) o := __typed Env X o, __typed Env Y o.
+
+__typed Env (pi    X) o :=
+  pi x\ __typed (bind x (ty T) Env) (X x) o.
+__typed Env (nabla X) o :=
+  pi x\ __typed (bind x (ty T) Env) (X x) o.
+__typed Env (sigma X) o :=
+  pi x\ __typed (bind x (ty T) Env) (X x) o.
+
+% Equality, lambda terms, atomic formulae. 
+__typed Env (A = B) o :=
+   __typed Env A T, __typed Env B T.
+
+__typed Env (lam X) (I->O) :=
+  pi x\ __typed (bind x (ty I) Env) (X x) O.
+__typed Env (app X Y) O := 
+  _if ( (atom print) = X ; (atom println) = X ; 
+        (app (atom fprint) Z) = X ; (app (atom fprintln) Z) = X ; 
+        (atom _rigid) = X ; (atom _option) = X)
+      (true)
+      (__typed Env X (I->O), __typed Env Y I).
+__typed Env (atom X) T := 
+   _if (__lookup Env X T)
+       true
+       (print "Atom lookup  failed: ", print X, print " of type ", println T, _abort).
+
+
+
+sigfile "sig/basic.sig"     	    "basic.def".
+sigfile "sig/bisim2latex.sig"	    "bisim2latex.def".
+sigfile "sig/bisim2text.sig"	    "bisim2text.def".
+sigfile "sig/bisim.sig" 	    "bisim.def".
+sigfile "sig/bitrace.sig" 	    "bitrace.def".
+sigfile "sig/format.sig"	    "format.def".
+sigfile "sig/intruder.sig"	    "intruder.def".
+sigfile "sig/obsthy.sig"	    "obsthy.def".
+sigfile "sig/pprint.sig"	    "pprint.def".
+sigfile "sig/print_latex.sig"	    "print_latex.def".
+sigfile "sig/print_text.sig"	    "print_text.def".
+sigfile "sig/proc.sig"		    "proc.def".
+sigfile "sig/spec.sig"		    "spec.def".
+sigfile "sig/spi.sig"		    "spi.def".
+sigfile "sig/uni.sig"		    "uni.def".
+
+
+typecheck F := sigfile S F, __typecheck S F. 
+
+typecheckall := 
+  pi S\ pi F\ sigfile S F => (print "Checking ", println F, __typecheck  S F). 

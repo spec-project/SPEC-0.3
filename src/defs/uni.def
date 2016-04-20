@@ -1,0 +1,133 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "basic.def".
+#include "spi.def".
+
+Kind tm_type type.
+
+Type nm_type	tm_type.
+Type ct_type 	tm_type.
+Type var_type 	tm_type. 
+Type pr_type	tm_type.
+Type en_type	tm_type.
+
+% substitutions
+Kind sub_pair type. % substitution pair
+
+Type sub (tm -> tm -> sub_pair). 
+
+
+
+Define closed : tm -> prop by 
+closed (ct X) ; 
+closed (nm X) ; 
+closed (pr U V) := closed U /\ closed V ; 
+closed (en U V) := closed U /\ closed V.
+
+
+% get_var Term VarIn VarOut
+Define get_var : tm -> list tm -> list tm -> prop by 
+  get_var (ct X) VarIn VarIn ; 
+  get_var (nm X) VarIn VarIn ;
+  get_var (var V) VarIn VarOut  := insert (var V) VarIn VarOut ;
+  get_var (pr X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut ;
+  get_var (en X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut.
+
+Define msg_type : tm -> tm_type -> prop by 
+  msg_type (nm X) nm_type ; 
+  msg_type (ct X) ct_type ; 
+  msg_type (var X) var_type ;
+  msg_type (pr U V) pr_type ;
+  msg_type (en U V) en_type.
+
+Define free : tm -> tm -> prop by 
+  free (var V) (var V) ;
+  free V (pr X Y) := free V X \/ free V Y ;
+  free V (en X Y) := free V X \/ free V Y.
+
+Define not_free : tm -> tm -> prop by 
+  not_free (var V) (ct A) ;
+  not_free (var V) (nm A) ;
+  not_free (var V) (var W) := _not(V = W) ;
+  not_free V (pr X Y) := not_free V X /\ not_free V Y ;
+  not_free V (en X Y) := not_free V X /\ not_free V Y.
+
+% A simple procedure for copying terms. 
+
+Define simp_cp : tm -> tm -> prop by 
+  simp_cp (var X) (var X) ; 
+  simp_cp (bn X)  X ;      % bound name
+  simp_cp (nm X) (nm X) ;  % free name
+  simp_cp (ct X) (ct X) ;  % constants
+  simp_cp (pr X Y) (pr U V) := simp_cp X U /\ simp_cp Y V ; 
+  simp_cp (en X Y) (en U V) := simp_cp X U /\ simp_cp Y V. 
+
+% copyterm L S T:
+% L : a mapping from variables to terms
+% S, T: source and target terms, respectively
+% The constructor bn is used only in recursion over binders.
+
+Define copyterm : list sub_pair  -> tm -> tm -> prop by 
+  copyterm L (var X) T :=  
+    _if (det_mem (sub (var X) S) L)
+        (T = S)
+        (T = (var X)) ; 
+  copyterm L (bn X)  X ;      % bound name
+  copyterm L (nm X) (nm X) ;  % free name
+  copyterm L (ct X) (ct X) ;  % constants
+  copyterm L (pr X Y) (pr U V) := copyterm L X U /\ copyterm L Y V ; 
+  copyterm L (en X Y) (en U V) := copyterm L X U /\ copyterm L Y V. 
+
+% generate an identity substitution from a list of variables.
+Define id_subst : list tm -> list sub_pair -> prop by  
+  id_subst nil nil ; 
+  id_subst (cons V Vs) (cons (sub V V) L) := id_subst Vs L.
+
+Define copylist : list sub_pair -> list tm -> list tm -> prop by 
+  copylist Subst nil nil ; 
+  copylist Subst (cons X L) (cons Y R) :=
+    copyterm Subst X Y /\ copylist Subst L R.
+
+Define compose : list tm -> list sub_pair -> list sub_pair -> list sub_pair -> prop by 
+  compose nil S1 S2 nil ; 
+  compose (cons (var V) Vs) S1 S2 S3 :=
+    compose Vs S1 S2 S /\ 
+    copyterm S1 (var V) M /\ 
+    copyterm S2 M N /\
+    S3 = cons (sub (var V) N) S. 
+  
+% unify L A B Vs Subst:
+% L : accumulator for storing substitution pairs (containing logic variables)
+% A, B: terms to be unified
+% Vs : the list of variables in the terms
+% Subst: the resulting unifier
+
+Define unify : list sub_pair -> tm -> tm -> list tm -> list sub_pair -> prop by 
+  unify L A B (cons (var V) Vs) Subst :=
+    unify (cons (sub (var V) XV) L) A B Vs Rest /\ 
+    _if (XV = (var V)) 
+        (Subst = (cons (sub (var V) XV) Rest))
+        (Subst = (cons (sub (var V) XV) Rest)) ; 
+  unify L A B nil nil := 
+    copyterm L A N /\ copyterm L B N.
+
+Define unify_list : list tm -> list tm ->  tm -> list sub_pair -> prop by 
+  unify_list Vs (cons X L) Y Subst := 
+    unify nil X Y Vs Subst \/ unify_list Vs L Y Subst.

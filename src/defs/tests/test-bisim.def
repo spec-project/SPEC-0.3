@@ -1,0 +1,240 @@
+#include "../bisim.def".
+
+% Examples
+
+% P(a) = a(x).(^k)('a<enc(x,k)>.(^m)('a<enc(m,enc(a,k))>.'m<a>))
+% Q(a) = a(x).(^k)('a<enc(x,k)>.(^m)('a<enc(m,enc(a,k))>.{[x = a]}'m<a>))
+% yes
+test 1 := 
+  H = cons (out (nm a) (nm a)) nil,
+  P = inp (nm a) (x\
+        nu k\ outp (nm a) (en x k) (
+          nu m\ outp (nm a) (en m (en (nm a) k))
+                (outp m (nm a) zero)
+        )
+      ),
+  Q = inp (nm a) (x\
+        nu k\ outp (nm a) (en x k) ( 
+          nu m\ outp (nm a) (en m (en (nm a) k)) (
+            match x (nm a) (outp m (nm a) zero)
+          )
+        )
+      ),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+% yes
+test 2 := 
+  H = cons (out (nm a) (nm a)) nil,
+  P = (nu x\ outp (nm a) x zero),
+  Q = P,
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+
+% P(a) = a(x).(^k)('a<<x, enc(x,k)>>.(^m)('a<enc(m,<a, enc(a,k)>)>.'m<a>.'a))
+% Q(a) = a(x).(^k)('a<<x, enc(x,k)>>.(^m)('a<enc(m,<a, enc(a,k)>)>.{[x = a]}'m<a>.'b))
+% no
+test 3 := 
+  H = cons (out (nm a) (nm a)) (cons (out (nm b) (nm b)) nil),
+  P = inp (nm a) (x\
+        nu k\ outp (nm a) (pr x (en x k)) (
+          nu m\ outp (nm a) (pr (nm a) (en m (en (nm a) k)))
+                (outp m (nm a) (outp (nm a) (nm b) zero))
+        )
+      ),
+  Q = inp (nm a) (x\
+        nu k\ outp (nm a) (pr x (en x k)) ( 
+          nu m\ outp (nm a) (pr (nm a) (en m (en (nm a) k))) (
+            match x (nm a) (outp m (nm a) (outp (nm b) (nm b) zero))
+          )
+        )
+      ),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+
+% Examples from Abadi and Gordon's paper: A Bisimulation Method for Cryptographic Protocols.
+
+% nu k\ !c<{m}k>  = nu k\ !c <{n}k>
+% yes
+test 4 :=
+  H = cons (out (nm c) (nm c)) nil,
+  P = (nu k\ bang (outp (nm c) (en (nm m) k) zero)),
+  Q = (nu k\ bang (outp (nm c) (en (nm n) k) zero)),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+% no
+test 5 :=
+  H = (cons (out (nm c) (nm c)) nil),
+  P = (nu k\ outp (nm c) (pr (en (nm m) k) (en (nm m) k)) zero),
+  Q = (nu k\ outp (nm c) (pr (en (nm n) k) (en (nm o) k)) zero),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+% yes
+test 6 :=
+  H = (cons (out (nm c) (nm c)) nil),
+  P = (nu k1\ nu k2\ outp (nm c) (en (pr (nm m1) (en (nm m2) k2)) k1)
+                      (outp (nm c) k1 zero)),
+  Q = (nu k1\ nu k2\ outp (nm c) (en (pr (nm n1) (en (nm n2) k2)) k1)
+                      (outp (nm c) k1 zero)),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+% yes
+test 7 :=
+  H = (cons (out (nm c) (nm c)) (cons (out (nm d) (nm d)) nil)),
+  P = (nu k\ outp (nm c) (en (nm d) k) 
+            (inp (nm c) (x\ match x k (outp (nm c) (en (nm d) k) zero)))),
+  Q = (nu k\ 
+        outp (nm c) (en (nm d) k) (inp (nm c) (x\ zero))),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q. 
+
+% yes
+test 8 :=
+  H = (cons (out (nm c) (nm c)) (cons (out (nm d) (nm d)) nil)),
+  P = (nu k\
+        outp (nm c) (en (nm d) k) (
+        inp (nm c) (x\ 
+        par (outp (nm c) k zero)
+            (match x k (outp (nm c) (en (nm d) k) zero))
+        )
+        )
+       ), 
+  Q = (nu k\ 
+        outp (nm c) (en (nm d) k)
+       (inp (nm c) (x\ outp (nm c) k zero))),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+        
+% yes
+test 9 :=
+  H = (cons (out (nm c) (nm c)) (cons (out (nm 0) (nm 0)) 
+       (cons (out (nm 1) (nm 1)) nil))),
+  P = (nu k1\ nu k2\ outp (nm c) (en (nm m1) k1) 
+       (outp (nm c) (en (nm m2) k2) zero)), 
+  Q = (nu k\ outp (nm c) (en (nm n1) (en (nm 0) k))
+       (outp (nm c) (en (nm n2) (en (nm 1) k)) zero)),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H P Q.
+
+% loop
+test 10 := 
+  H =  nil,
+  P = (bang (nu k\ outp (ct c) (en (nm m) k) zero)),
+  Q = (nu k\ bang (nu k1\ outp (ct c) (en (pr k1 (nm m)) k) zero)),
+  println "Checking triples: ",
+  print "- H: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ",
+  bisim H P Q.
+
+% yes
+test 11 :=
+  H = (cons (out (nm a) (nm a)) nil),
+  P = (nu k\ inp (nm a) (x\ outp (nm a) (en x k) 
+          (inp (nm a) (y\ case y k (u\ match u (nm a) (outp (nm a) (nm a) zero)))))),
+  Q = (nu k\ inp (nm a) (x\ outp (nm a) (en (nm a) k)
+          (inp (nm a) (y\ case y k (u\ match x (nm a) (match u (nm a) (outp (nm a) (nm a) zero))))))),
+  println "Checking triples: ",
+  print "- H: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ",
+  bisim H P Q.
+
+% yes
+test 12 := 
+  H = (cons (out (nm a) (nm a)) nil),
+  P = (nu k\ outp (nm a) (en (nm a) (pr (nm a) k)) zero),
+  Q = (nu k\ outp (nm a) (en (nm a) k) zero), 
+  println "Checking triples: ",
+  print "- H: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ",
+  bisim H P Q.
+
+% no
+test 13 := 
+  H = (cons (out (nm a) (nm a)) (cons (out (nm b) (nm b)) nil)),
+  P = (nu k\ inp (nm a) (x\ outp (nm a) (en x k) 
+          (inp (nm a) (y\ case y k (u\ outp (nm a) u zero))))), 
+  Q = (nu k\ inp (nm a) (x\ outp (nm a) (en (nm a) k)
+          (inp (nm a) (y\ case y k (u\ outp (nm a) u zero))))), 
+  println "Checking triples: ",
+  print "- H: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ",
+  bisim H P Q.
+
+% no
+test 14 :=
+  H = (cons (out (nm a) (nm a)) (cons (in (var x) (var x)) nil)),
+  P = (nu k\ outp (nm a) (en (var x) k) (outp (nm a) k zero)),
+  Q = (nu k\ outp (nm a) (en (nm a) k) (outp (nm a) k zero)),
+  bisim H P Q.
+
+% yes
+test 15 :=
+ P = (c\
+ (par 
+  (nu k\ inp c (x\
+    let x (y\z\ 
+    outp c (en y k) (
+    outp c (en z k) zero))))
+  (outp c (pr c c) zero)
+ )),
+ Q = (c\
+ (par 
+  (nu k\ 
+   inp c (x\
+   let x (y\ z\ 
+   outp c (en z k) (
+   outp c (en y k) zero))))
+  (outp c (pr c c) zero))),
+  H = (cons (out (nm c) (nm c)) nil),
+  print_proc (P (nm c)), println " ",
+  print_proc (Q (nm c)), println " ",
+  bisim H (P (nm c)) (Q (nm c)).
+
+% yes
+test 16 := 
+  H = nil,
+  P = inp (ct a) (x\
+        nu k\ outp (ct a) (en x k) (
+          nu m\ outp (ct a) (en m (en (ct a) k))
+                (outp m (ct a) zero)
+        )
+      ),
+  Q = inp (ct a) (x\
+        nu k\ outp (ct a) (en x k) ( 
+          nu m\ outp (ct a) (en m (en (ct a) k)) (
+            match x (ct a) (outp m (ct a) zero)
+          )
+        )
+      ),
+  print "H : ", print_bitrace H, println " ",
+  print "P : ", print_proc P, println " ", 
+  print "Q : ", print_proc Q, println " ",
+  bisim H (par P P) (par Q Q).

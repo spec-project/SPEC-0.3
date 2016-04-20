@@ -1,0 +1,166 @@
+% BAN simplified version of Yahalom protocol.
+% Source: the SBC tool examples by Borgstrom and Briais. The commented codes are the original SBC specification. 
+
+
+% agent A(agent_A, agent_B, kas) = 
+%   (^na)
+%    'agent_B<<agent_A, na>>.
+%    agent_A(x_2).
+%    {(* 2 tests *)[agent_B = fst(dec(fst(snd(x_2)), kas))] /\ [na = snd(snd(dec(fst(snd(x_2)), kas)))]}
+%    'agent_B<<snd(snd(x_2)), enc(fst(x_2), fst(snd(dec(fst(snd(x_2)), kas))))>>.0
+
+
+A(agent_A, agent_B, kas) :=
+  nu (na).
+  agent_B< <agent_A, na> >.
+  agent_A(x2).
+  let <y1,y2> = x2 in
+  let <z1,z2> = y2 in 
+  case z1 of enc(m, kas) in
+  let <m1,m2> = m in 
+  let <n1,n2> = m2 in 
+  [agent_B = m1] 
+  [na = n2]
+  agent_B< <z2, enc(y1, n1)> >;
+
+
+% agent B(agent_A, agent_B, agent_S, kbs) = 
+%   (^nb)
+%   agent_B(x_0).
+%   {(* 1 test *)[agent_A = fst(x_0)]}
+%   'agent_S<<agent_B, <nb, enc(<agent_A, snd(x_0)>, kbs)>>>.
+%   agent_B(x_3).
+%   {(* 4 tests *)[agent_A = fst(dec(fst(x_3), kbs))] /\
+%    [nb = snd(snd(dec(fst(x_3), kbs)))] /\ 
+%    [nb = dec(snd(x_3), fst(snd(dec(fst(x_3), kbs))))] /\ wff(snd(x_0))}
+%    'agent_B
+
+B(agent_A, agent_B, agent_S, kbs) := 
+  nu (nb).
+  agent_B(x0).
+  let <y1,y2> = x0 in 
+  [agent_A = y1]
+  agent_S< <agent_B, nb, enc(<agent_A, y2>, kbs)> >.
+  agent_B(x3).
+  let <u1,u2> = x3 in 
+  case u1 of enc(m, kbs) in
+  let <m1,m2> = m in 
+  let <n1,n2> = m2 in
+  case u2 of enc(w, n1) in
+  [agent_A = m1] 
+  [nb = n2] 
+  [nb = w]
+  agent_B< agent_B >;
+
+
+% agent S(agent_A, agent_B, agent_S, kas, kbs) = 
+%   (^kab)agent_S(x_1).
+%   {(* 2 tests *)[agent_A = fst(dec(snd(snd(x_1)), kbs))] /\ 
+%   [agent_B = fst(x_1)]}
+%   'agent_A<<fst(snd(x_1)), <enc(<agent_B, <kab, snd(dec(snd(snd(x_1)), kbs))>>, kas), enc(<agent_A, <kab, fst(snd(x_1))>>, kbs)>>>.0
+
+S(agent_A, agent_B, agent_S, kas, kbs) := 
+  nu (kab). 
+  agent_S(x1).
+  let <y1,y2> = x1 in 
+  let <z1,z2> = y2 in
+  case z2 of enc(m, kbs) in 
+  let <m1,m2> = m in
+  [agent_A = m1] 
+  [agent_B = y1]
+  agent_A< <z1, enc(<agent_B, kab, m2>, kas), enc(<agent_A, kab, z1>, kbs)> > ;
+
+
+% agent System(agent_A, agent_B, agent_S) = 
+%   (^kas, kbs)
+%   (S(agent_A, agent_B, agent_S, kas, kbs) | B(agent_A, agent_B, agent_S, kbs) | A(agent_A, agent_B, kas))
+
+System(agent_A, agent_B, agent_S) := 
+  nu (kas, kbs).
+  (S{agent_A, agent_B, agent_S, kas, kbs} | B{agent_A, agent_B, agent_S, kbs} | A{agent_A, agent_B, kas}) ;
+
+
+% agent ASpec(agent_A, agent_B, kab, kas) = 
+%   (^na)
+%   'agent_B<<agent_A, na>>.agent_A(x_2).
+%   {(* 3 tests *)[agent_B = fst(dec(fst(snd(x_2)), kas))] /\ 
+%    [kab = fst(snd(dec(fst(snd(x_2)), kas)))] /\ 
+%    [na = snd(snd(dec(fst(snd(x_2)), kas)))]}
+%   'agent_B<<snd(snd(x_2)), enc(fst(x_2), kab)>>.0
+
+ASpec(agent_A, agent_B, kab, kas) := 
+  nu (na). 
+  agent_B< <agent_A, na> >.
+  agent_A(x2).
+  let <y1,y2> = x2 in 
+  let <z1,z2> = y2 in
+  case z1 of enc(m, kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in 
+  [agent_B = m1] 
+  [kab = n1]  
+  [na = n2]
+  agent_B< <z2, enc(y1, kab)> > ;
+
+% agent BSpec(agent_A, agent_B, agent_S, kab, kbs) = 
+%   (^nb)
+%   agent_B(x_0).
+%   {(* 1 test *)[agent_A = fst(x_0)]}
+%   'agent_S<<agent_B, <nb, enc(<agent_A, snd(x_0)>, kbs)>>>.
+%   agent_B(x_3).
+%   {(* 5 tests *)
+%     [agent_A = fst(dec(fst(x_3), kbs))] /\ 
+%     [kab = fst(snd(dec(fst(x_3), kbs)))] /\ 
+%     [nb = snd(snd(dec(fst(x_3), kbs)))] /\ 
+%     [nb = dec(snd(x_3), kab)] /\ wff(snd(x_0))}
+%   'agent_B
+
+BSpec(agent_A, agent_B, agent_S, kab, kbs) := 
+  nu (nb).
+  agent_B(x0).
+  let <y1,y2> = x0 in 
+  [agent_A = y1]
+  agent_S< <agent_B, nb, enc(<agent_A, y2>, kbs)> >.
+  agent_B(x3).
+  let <z1,z2> = x3 in
+  case z1 of enc(m, kbs) in
+  let <m1,m2> = m in 
+  let <n1,n2> = m2 in 
+  case z2 of enc(u, kab) in 
+  [agent_A = m1]
+  [kab = n1]
+  [nb = n2]
+  [nb = u] 
+  agent_B< agent_B > ;
+
+
+% agent SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) = 
+%   agent_S(x_1).
+%   {(* 2 tests *)[agent_A = fst(dec(snd(snd(x_1)), kbs))] /\ [agent_B = fst(x_1)]}
+%   'agent_A<<fst(snd(x_1)), <enc(<agent_B, <kab, snd(dec(snd(snd(x_1)), kbs))>>, kas), enc(<agent_A, <kab, fst(snd(x_1))>>, kbs)>>>.0
+
+SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) := 
+  agent_S(x1).
+  let <y1,y2> = x1 in 
+  let <z1,z2> = y2 in
+  case z2 of enc(m,kbs) in 
+  let <m1,m2> = m in 
+  [agent_A = m1]
+  [agent_B = y1]
+  agent_A< <z1, enc(<agent_B, kab, m2>, kas), enc(<agent_A, kab, z1>, kbs)> > ; 
+
+% SystemSpec(agent_A, agent_B, agent_S) = 
+%   (^kas, kbs, kab)
+%   (SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) | 
+%    BSpec(agent_A, agent_B, agent_S, kab, kbs) | ASpec(agent_A, agent_B, kab, kas))
+
+SystemSpec(agent_A, agent_B, agent_S) := 
+  nu (kas, kbs, kab). 
+  (SSpec{agent_A, agent_B, agent_S, kab, kas, kbs} | 
+   BSpec{agent_A, agent_B, agent_S, kab, kbs} | ASpec{agent_A, agent_B, kab, kas}) ;
+
+% sbisim System(agent_A, agent_B, agent_S) SystemSpec(agent_A, agent_B, agent_S) with (agent_A, agent_B, agent_S)
+% Query:
+% bisim(System{agent_A, agent_B, agent_S}, SystemSpec{agent_A, agent_B, agent_S}) 
+
+

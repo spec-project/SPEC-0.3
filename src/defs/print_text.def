@@ -1,0 +1,124 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "basic.def".
+#include "uni.def".
+#include "format.def".
+
+Define term2text : string -> tm -> prop
+by 
+term2text File (ct X) := fprintstr File X ; 
+term2text File (var X) := fprintstr File "?" /\ fprint File X ; 
+term2text File (bn X) := fprint File X ; 
+term2text File (nm X) := fprint File X ; 
+term2text File (pr M N) := 
+   fprintstr File "< " /\ term2text File M /\ 
+   fprintstr File " , " /\ term2text File N /\ fprintstr File ">" ; 
+term2text File (en M N) := 
+   fprintstr File "enc(" /\ term2text File M /\ 
+   fprintstr File " , " /\ term2text File N /\ fprintstr File ")".
+
+Define proc2text, proc2text_aux, print_nu_text : string -> list string -> proc -> prop
+by 
+proc2text_aux File L P := 
+  _if ((P = (parl R)) \/ (P = (plusl R)) ) 
+      ( 
+        print_str_list File L /\ fprintstr File "( \n" /\
+        proc2text File L P /\  
+        print_str_list File L /\ fprintstr File ") \n"
+      )
+      ( proc2text File L P ) ; 
+
+print_nu_text File L P := 
+  _not(P = (nu Q)) /\ fprintstr File "). \n" /\
+  proc2text_aux File L P ; 
+
+print_nu_text File L (nu x\ P x) :=
+  nabla x,
+  term2text File (bn x) /\ 
+  _if (P (bn x) = (nu (R x))) (fprintstr File ",") (true) /\  % don't fprint File the comma if this is the last nu
+  print_nu_text File L (P (bn x)) ;  
+
+proc2text File L zero := print_str_list File L /\ fprintstr File "0 \n" ;
+proc2text File L (parl (cons P R)) :=
+  proc2text File (cons " " L) P /\ 
+  all
+    (Q\
+       ( print_str_list File L /\ fprintstr File "| \n" /\ 
+         proc2text File (cons " " L) Q 
+       )
+     )  
+     R ; 
+
+proc2text File L (plusl (cons P R)) :=
+  proc2text File (cons " " L) P /\ 
+  all
+    (Q\
+       ( print_str_list File L /\ fprintstr File "+ \n" /\ 
+         proc2text File (cons " " L) Q 
+       )
+     )  
+     R ; 
+
+proc2text File L (nu x\ P x) :=
+  print_str_list File L /\ fprintstr File "nu (" /\ print_nu_text File L (nu x\ P x) ; 
+
+proc2text File L (match X Y P) := 
+  print_str_list File L /\  fprintstr File "[" /\  term2text File X /\ 
+  fprintstr File " = " /\  term2text File Y /\  fprintstr File " ]\n" /\ 
+  proc2text_aux File L P ;  
+
+proc2text File L (inp A (x\ P x)) :=
+  print_str_list File L /\  
+  nabla x, term2text File A /\  fprintstr File "(" /\  term2text File (bn x) /\  fprintstr File ").\n" /\  
+  proc2text_aux File L (P (bn x)) ; 
+
+proc2text File L (outp A M P) :=
+  print_str_list File L /\  
+  term2text File A /\  fprintstr File "< " /\  term2text File M /\  fprintstr File " >.\n" /\ 
+  proc2text_aux File L P ; 
+
+proc2text File L (case M N (x\ P x)) :=
+  print_str_list File L /\  
+  nabla x, 
+  fprintstr File "case " /\  term2text File M /\  
+  fprintstr File " of enc(" /\ term2text File (bn x) /\ 
+  fprintstr File " , " /\  term2text File N /\  fprintstr File ") in \n" /\ 
+  proc2text_aux File L (P (bn x)) ; 
+
+proc2text File L (let M (x\y\ P x y)) :=
+  print_str_list File L /\ 
+  nabla x y, 
+  fprintstr File "let < " /\  term2text File (bn x) /\  fprintstr File "," /\  
+  term2text File (bn y) /\  fprintstr File "> = " /\  term2text File M /\  fprintstr File " in \n" /\   
+  proc2text_aux File L (P (bn x) (bn y)) ; 
+
+proc2text File L (bang P) :=
+  print_str_list File L /\  
+  fprintstr File "! ( \n" /\  
+  proc2text File (cons " " L) P /\ 
+  fprintstr File ") \n". 
+
+Define print_proc_text : string -> proc -> prop
+by 
+print_proc_text File P :=
+  norm P Q /\  
+  proc2text File nil Q /\ 
+  fprintstr File "\n".
+

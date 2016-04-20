@@ -1,0 +1,236 @@
+#include "../src/defs/bisim.def".
+
+% Original: 
+% agent A(agent_A, agent_B, agent_S, kas) = 
+% (^na)
+% 'agent_S<<agent_A, <agent_B, na>>>.
+% agent_A(x_2).
+% {(* 4 tests *)[agent_A = fst(dec(fst(x_2), kas))] 
+%  /\ [agent_B = fst(snd(dec(fst(x_2), kas)))] 
+%  /\ [na = fst(snd(snd(dec(fst(x_2), kas))))] 
+%  /\ [na = dec(fst(snd(x_2)), snd(snd(snd(dec(fst(x_2), kas)))))]}
+% 'agent_B<enc(snd(snd(x_2)), snd(snd(snd(dec(fst(x_2), kas)))))>.0
+
+agent_A_def P :=
+ P = (A\ B\ S\ kas\
+      nu na\
+       outp S (pr A (pr B na)) (
+       inp A (x2\
+       let x2 (u\v\  
+       case u kas (m\
+       let m (m1\m2\  
+       match A m1 (
+       let m2 (n1\n2\ 
+       match B n1 (
+       let n2 (s1\s2\    
+       match na s1 (
+       let v (v1\v2\
+       case v1 s2 (r\ 
+       match na r (
+       outp B (en v2 s2) zero
+      )))))))))))))).
+  
+
+% Original: 
+% agent B(agent_A, agent_B, kbs) = 
+% (^nb)
+% agent_B(x_1).
+% {(* 3 tests *)[agent_A = fst(dec(snd(x_1), kbs))] /\ 
+%  [agent_B = fst(snd(dec(snd(x_1), kbs)))] /\ 
+%  wff(snd(snd(snd(dec(snd(x_1), kbs)))))}
+% 'agent_A<<fst(x_1), <enc(fst(snd(snd(dec(snd(x_1), kbs)))), snd(snd(snd(dec(snd(x_1), kbs))))), nb>>>.
+% agent_B(x_3).
+% {(* 1 test *)[nb = dec(x_3, snd(snd(snd(dec(snd(x_1), kbs)))))]}
+% 'agent_B
+
+% {(* 1 test *)[nb = r]}
+
+agent_B_def P :=
+P = (A\ B\ kbs\
+     nu nb\
+     inp B (x1\
+     let x1 (y1\y2\ 
+     case y2 kbs (m\ 
+     let m (m1\ m2\
+     match A m1 (
+     let m2 (n1\n2\
+     match B n1 (
+     let n2 (u1\u2\
+     outp A (pr y1 (pr (en u1 u2) nb)) (
+     inp B (x3\
+     case x3 u2 (r\
+     match nb r (
+     outp B B zero
+    ))))))))))))).
+
+% Original:
+% agent S(agent_A, agent_B, agent_S, kas, kbs) = 
+% (^kab)
+% agent_S(x_0).
+% {(* 2 tests *)[agent_A = fst(x_0)] /\ 
+%  [agent_B = fst(snd(x_0))]}
+% 'agent_B<<enc(<agent_A, <agent_B, <snd(snd(x_0)), kab>>>, kas), enc(<agent_A, <agent_B, <snd(snd(x_0)), kab>>>, kbs)>>.0
+
+% In spi-notation:
+% agent S(agent_A, agent_B, agent_S, kas, kbs) = 
+% (^kab)
+% agent_S(x_0).
+% {(* 2 tests *)[agent_A = y1] /\ 
+%  [agent_B = z1]}
+% 'agent_B<<enc(<agent_A, <agent_B, <z2, kab>>>, kas), enc(<agent_A, <agent_B, <z2, kab>>>, kbs)>>.0
+
+agent_S_def P :=
+P = (A\ B\ S\ kas\ kbs\
+      nu kab\
+      inp S (x0\
+      let x0 (y1\y2\
+      match A y1 (
+      let y2 (z1\z2\
+      match B z1 (
+      outp B (pr 
+                (en (pr A (pr B (pr z2 kab))) kas)
+                (en (pr A (pr B (pr z2 kab))) kbs)
+             ) zero
+)))))).
+
+
+
+% agent System(agent_A, agent_B, agent_S) = 
+% (^kas, kbs)(S(agent_A, agent_B, agent_S, kas, kbs) | B(agent_A, agent_B, kbs) | A(agent_A, agent_B, agent_S, kas))
+
+agent_System_def P :=
+agent_A_def ProcA,
+agent_B_def ProcB,
+agent_S_def ProcS,
+P = (A\B\S\
+  nu kas\ nu kbs\
+    par (ProcS A B S kas kbs) (
+    par (ProcB A B kbs) 
+        (ProcA A B S kas)
+  )).
+
+
+% Original:
+% agent ASpec(agent_A, agent_B, agent_S, kab, kas) = 
+% (^na)
+% 'agent_S<<agent_A, <agent_B, na>>>.
+% agent_A(x_2).
+% {(* 5 tests *)[agent_A = fst(dec(fst(x_2), kas))] 
+%  /\ [agent_B = fst(snd(dec(fst(x_2), kas)))] 
+%  /\ [kab = snd(snd(snd(dec(fst(x_2), kas))))] 
+%  /\ [na = fst(snd(snd(dec(fst(x_2), kas))))] 
+%  /\ [na = dec(fst(snd(x_2)), kab)]}
+% 'agent_B<enc(snd(snd(x_2)), kab)>.0
+
+agent_ASpec_def P :=
+P = (A\ B\ S\ kab\ kas\
+    nu na\
+    outp S (pr A (pr B na)) (
+    inp A (x2\
+    let x2 (y1\y2\ 
+    case y1 kas (m\
+    let m (m1\m2\
+    match A m1 (
+    let m2 (n1\n2\
+    match B n1 (
+    let n2 (u1\u2\ 
+    match kab u2 (
+    match na u1 (
+    let y2 (z1\z2\
+    case z1 kab (r\
+    match na r (
+    outp B (en z2 kab) zero
+))))))))))))))).
+
+
+% Original:
+% agent BSpec(agent_A, agent_B, kab, kbs) = 
+% (^nb)
+% agent_B(x_1).
+% {(* 3 tests *)[agent_A = fst(dec(snd(x_1), kbs))] /\
+%  [agent_B = fst(snd(dec(snd(x_1), kbs)))] /\
+%  [kab = snd(snd(snd(dec(snd(x_1), kbs))))]}
+% 'agent_A<<fst(x_1), <enc(fst(snd(snd(dec(snd(x_1), kbs)))), kab), nb>>>.
+% agent_B(x_3).
+% {(* 2 tests *)[nb = dec(x_3, kab)] /\ wff(fst(snd(snd(dec(snd(x_1), kbs)))))}
+% 'agent_B
+
+
+agent_BSpec_def P :=
+P = (A\ B\ kab\ kbs\
+    nu nb\
+    inp B (x1\
+    let x1 (y1\y2\
+    case y2 kbs (m\
+    let m (m1\m2\ 
+    match A m1 (
+    let m2 (n1\n2\
+    match B n1 (
+    let n2 (u1\u2\     
+    match kab u2 (
+    outp A (pr y1 (pr (en u1 kab) nb)) (
+    inp B (x3\
+    case x3 kab (r\ 
+    match nb r (
+    outp B B zero
+)))))))))))))).
+
+% Original:
+% agent SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) = 
+% agent_S(x_0).
+% {(* 2 tests *)[agent_A = fst(x_0)] /\ 
+% [agent_B = fst(snd(x_0))]}
+% 'agent_B<<enc(<agent_A, <agent_B, <snd(snd(x_0)), kab>>>, kas), enc(<agent_A, <agent_B, <snd(snd(x_0)), kab>>>, kbs)>>.0
+
+% agent SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) = 
+% agent_S(x_0).
+% {(* 2 tests *)[agent_A = y1] /\ 
+% [agent_B = z1]}
+% 'agent_B<<enc(<agent_A, <agent_B, <z2, kab>>>, kas), enc(<agent_A, <agent_B, <z2, kab>>>, kbs)>>.0
+
+agent_SSpec_def P :=
+P = (A\B\S\kab\kas\kbs\
+     inp S (x0\
+     let x0 (y1\y2\ 
+     match A y1 (
+     let y2 (z1\z2\
+     match B z1 (
+     outp B (pr 
+               (en (pr A (pr B (pr z2 kab))) kas) 
+               (en (pr A (pr B (pr z2 kab))) kbs)
+            ) zero
+)))))).
+
+% Original:
+% agent SystemSpec(agent_A, agent_B, agent_S) = 
+% (^kas, kbs, kab)
+% (SSpec(agent_A, agent_B, agent_S, kab, kas, kbs) 
+% | BSpec(agent_A, agent_B, kab, kbs) 
+% | ASpec(agent_A, agent_B, agent_S, kab, kas))
+
+agent_SystemSpec_def P :=
+ agent_ASpec_def ASpec,
+ agent_BSpec_def BSpec,
+ agent_SSpec_def SSpec, 
+ P = (A\B\S\
+      nu kas\ nu kbs\ nu kab\
+      par (SSpec A B S kab kas kbs) (
+      par (BSpec A B kab kbs)
+          (ASpec A B S kab kas)
+ )).
+
+% sbisim System(agent_A, agent_B, agent_S) SystemSpec(agent_A, agent_B, agent_S) with (agent_A, agent_B, agent_S)
+
+check_bisim := 
+  agent_System_def System,
+  agent_SystemSpec_def SystemSpec,
+  H = nil, 
+  P = (System (ct agent_A) (ct agent_B) (ct agent_S) ),
+  Q = (SystemSpec (ct agent_A) (ct agent_B) (ct agent_S) ),
+  println "Checking bisimulation for: ",
+  print "- history: ", print_bitrace H, println " ",
+  print "- P: ", print_proc P, println " ",
+  print "- Q: ", print_proc Q, println " ", 
+  bisim H P Q.
+
+#assert (check_bisim).

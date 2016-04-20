@@ -1,0 +1,290 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "uni.def".
+#include "spi.def".
+#include "pprint.def".
+
+Kind def_body type.
+
+Type def string -> list tm -> proc. 
+Type defProc proc -> def_body.
+Type defAbs  (tm -> def_body) -> def_body. 
+
+Define simplify : proc -> proc -> prop by 
+simplify zero zero ; 
+simplify (par P1 P2) Q := 
+  simplify P1 Q1 /\ 
+  simplify P2 Q2 /\ 
+  _if (Q1 = zero) 
+      (Q = Q2) 
+      (
+       _if (Q2 = zero)
+           (Q = Q1)
+           (Q = (par Q1 Q2))
+      ) ; 
+
+simplify (plus P Q) R :=
+  simplify P P1 /\
+  simplify Q Q1 /\
+  _if (P1 = zero)
+      (R = Q1) 
+      (
+       _if (Q1 = zero)
+           (R = P1)
+           (R = (plus P1 Q1))
+      ) ; 
+ 
+simplify (nu x\ P x) Q :=
+  (nabla x, simplify (P x) (R x)) /\  
+  _if (R = (x\ S))
+      (Q = S)
+      (Q = (nu R)) ; 
+
+simplify (match X Y P) Q :=
+  simplify P R /\ 
+  _if (R = zero)
+      (Q = zero)
+      (Q = (match X Y R)) ; 
+
+simplify (inp A P) Q :=
+  (nabla x, simplify (P x) (R x)) /\ 
+  Q = (inp A R) ; 
+ 
+simplify (outp A M P) Q :=
+  simplify P R /\ 
+  Q = (outp A M R) ; 
+
+simplify (case M N P) Q :=
+  (nabla x, simplify (P x) (R x)) /\ 
+  _if (R = (x\ zero))
+      (Q = zero)
+      (Q = (case M N R)) ; 
+
+simplify (let M (x\y\ P x y)) Q :=
+  (nabla x y, simplify (P x y) (R x y)) /\ 
+  _if (R = (x\y\ zero))
+      (Q = zero)
+      (Q = (let M R)) ;
+
+simplify (bang P) Q := 
+  simplify P R /\
+  _if (R = zero)
+      (Q = zero)
+      (Q = (bang R)).
+
+
+Define print_proc : proc -> prop, print_nu_proc : proc -> prop,
+  print_proc_aux : proc -> prop by 
+
+print_proc_aux P := 
+  _if (P = (par Q R)) 
+      ( printstr "(" /\ print_proc P /\ printstr ")")
+      ( 
+        _if (P = (plus Q R)) 
+            ( printstr "(" /\ print_proc P /\ printstr ")")
+            ( print_proc P ) 
+      ); 
+
+print_nu_proc P :=
+  _not(P = (nu Q)) /\ printstr ")." /\ print_proc_aux P ; 
+
+print_nu_proc (nu x\ P x) :=
+  nabla x, print x /\ 
+    _if (P (bn x) = (nu (R x))) (printstr ",") (true) /\ 
+    print_nu_proc (P (bn x)) ; 
+
+print_proc (def A L) := 
+  printstr A /\  
+  _if (L = nil) true (printstr "{" /\ plist L /\ printstr "}") ; 
+
+print_proc zero := printstr "0" ;
+
+print_proc (par P Q) :=
+   print_proc P /\ printstr " | " /\ print_proc Q ; 
+
+print_proc (plus P Q) :=
+   print_proc P /\ printstr " + " /\ print_proc Q ; 
+
+print_proc (nu x\ P x) :=
+  printstr "nu(" /\ print_nu_proc (nu x\ P x) ;
+
+print_proc (match X Y P) :=
+  printstr "[" /\ print_term X /\ printstr " = " /\ print_term Y /\ printstr "]" /\
+  print_proc_aux P ; 
+
+print_proc (inp A (x\ P x)) :=
+  print_term A /\ printstr "(" /\ 
+  nabla x, print x /\ printstr ")." /\ print_proc_aux (P (bn x)) ; 
+
+print_proc (outp A M P) :=
+  print_term A /\ printstr "<" /\ print_term M /\ printstr ">." /\ 
+  print_proc_aux P ;  
+
+print_proc (case M N (x\P x)) :=
+  printstr "case " /\ print_term M /\ printstr " of " /\ 
+  nabla x, 
+    printstr "enc(" /\ print x /\ printstr "," /\ 
+    print_term N /\ printstr ") in " /\ 
+    print_proc_aux (P (bn x)) ; 
+
+print_proc (let M (x\y\ P x y)) :=
+  nabla x y, 
+    printstr "let <" /\ 
+    print x /\ printstr "," /\ 
+    print y /\ printstr "> = " /\ print_term M /\ printstr " in " /\
+    print_proc_aux (P (bn x) (bn y)) ; 
+
+print_proc (bang P) :=
+  printstr "!" /\ printstr "(" /\ print_proc P /\ printstr ")".
+ 
+Define print_agent : agent -> prop by 
+print_agent (con M P) :=
+  printstr "<" /\ print_term M /\ printstr ">" /\ print_proc P ; 
+
+print_agent (abs x\P x) :=
+  printstr "(" /\ nabla x, print x /\ printstr ")" /\ print_proc (P (bn x)) ; 
+
+print_agent (new x\P x) := 
+  printstr "new " /\ nabla x, print x /\ printstr "." /\ print_agent (P (bn x)).
+
+% print_agent_header (con M P) := print "< ", print_term M, print " >".
+% print_agent_header (abs x\P x) :=
+%   print "( )". 
+% print_agent_header (new x\P x) := 
+%   print "new ", nabla x\ print x, print ".", print_agent_header (P (bn x)).
+
+Define print_act : action -> prop by 
+print_act tau := printstr "tau" ; 
+print_act (act M) := print_term M. 
+
+Define copyproc : list sub_pair -> proc -> proc -> prop by 
+
+copyproc L zero zero ; 
+
+copyproc L (par P Q) (par S T) :=
+  copyproc L P S /\ copyproc L Q T ; 
+
+copyproc L (plus P Q) (plus S T) :=
+  copyproc L P S /\ copyproc L Q T ; 
+
+
+copyproc L (nu x\P x) (nu x\Q x) :=
+  nabla x, copyproc L (P (bn x)) (Q x) ; 
+
+copyproc L (match X Y P) (match U V Q) :=
+  copyterm L X U /\ copyterm L Y V /\ copyproc L P Q ; 
+
+copyproc L (inp A (x\ P x)) (inp B (x\ Q x)) :=
+  copyterm L A B /\ nabla x, copyproc L (P (bn x)) (Q x) ;
+
+copyproc L (outp A M P) (outp B N Q) :=
+  copyterm L A B /\ copyterm L M N /\ copyproc L P Q ; 
+
+copyproc L (case M N (x\ P x)) (case U V (x\ Q x)) :=
+  copyterm L M U /\ copyterm L N V /\
+  nabla x, copyproc L (P (bn x))  (Q x) ; 
+
+copyproc L (let M (x\y\P x y)) (let N (x\y\ Q x y)) := 
+  copyterm L M N /\
+  nabla x y, copyproc L (P (bn x) (bn y)) (Q x y) ; 
+
+copyproc L (bang P) (bang Q) := copyproc L P Q. 
+
+Define copyagent : list sub_pair -> agent -> agent -> prop by 
+copyagent L (abs x\ P x) (abs x\ Q x) := 
+  nabla x, copyproc L (P (bn x)) (Q x) ; 
+
+copyagent L (new x\ P x) (new x\ Q x) :=
+  nabla x, copyagent L (P (bn x)) (Q x) ; 
+copyagent L (con M P) (con N Q) :=
+  copyterm L M N /\ copyproc L P Q.
+
+Define copyact : list sub_pair -> action -> action -> prop by 
+copyact L tau tau ; 
+copyact L (act M) (act N) := copyterm L M N.
+
+Define flex_subst : list tm -> list sub_pair -> prop by 
+flex_subst nil nil ; 
+flex_subst (cons (var V) Vs) (cons (sub (var V) X) Sub) := 
+  flex_subst Vs Sub. 
+
+% domain nil nil.
+% domain (cons (sub V T) L) (cons V R) := domain L R.
+
+Define concretize : list sub_pair -> prop by 
+concretize nil ; 
+concretize (cons (sub (var V) T) L) :=
+  _if ((var V) = T)
+      (concretize L)
+      (concretize L).
+
+
+Kind continuation type.
+Type contProc action -> proc -> list sub_pair -> continuation.
+Type contAgent action -> agent -> list sub_pair -> continuation.
+Type abscont (name -> continuation) -> continuation. 
+
+% c_one takes a list of 'concrete' free variables Vs, a concrete process P
+% and return a 'continuation' Cts, i.e., a triple x1\..\xn\(A, Q, Sub)
+% where P --A--> Q, with Sub the resulting substitution to Vs,
+% and x1 .. xn are new variables introduced in Sub.
+%
+% We use the following constructors to encode continuations:
+%
+% contProc  : action -> process -> substitution -> continuation
+% contAgent : action -> agent -> substitution -> continuation
+% abscont_var   : (tm -> continuation) -> continuation.
+
+Type abscont_var (tm -> continuation) -> continuation. 
+
+
+Define apply_var : continuation -> continuation -> prop by
+apply_var (contProc A P Sub) (contProc A P Sub) ; 
+apply_var (contAgent A P Sub) (contAgent A P Sub) ; 
+apply_var (abscont_var C1) (abscont C2) :=
+  nabla x, apply_var (C1 (var x)) (C2 x). 
+
+Define c_one : list tm -> proc -> continuation -> prop by 
+c_one Vs P Cont :=
+  flex_subst Vs FSub /\ 
+  copyproc FSub P P1 /\ % replace all var-terms with logic variables 
+  one P1 A Q /\ 
+  concretize FSub /\    
+  _abstract (contProc A Q FSub) abscont_var Cont1 /\ 
+  apply_var Cont1 Cont.
+
+Define c_oneAbs : list tm -> proc -> continuation -> prop by 
+c_oneAbs Vs P Cont  := 
+  flex_subst Vs FSub /\ 
+  copyproc FSub P P1 /\ 
+  oneAbs P1 A Q /\ 
+  concretize FSub /\  
+  _abstract (contAgent A Q FSub) abscont_var Cont1 /\
+  apply_var Cont1 Cont.
+
+Define c_oneCon : list tm -> proc -> continuation -> prop by 
+c_oneCon Vs P Cont := 
+  flex_subst Vs FSub /\
+  copyproc FSub P P1 /\ 
+  oneCon P1 A Q /\ 
+  concretize FSub /\ 
+  _abstract (contAgent A Q FSub) abscont_var Cont1 /\ 
+  apply_var Cont1 Cont.
+

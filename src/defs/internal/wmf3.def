@@ -1,0 +1,59 @@
+#include "../bisim.def".
+
+agent_S_def Proc :=
+ Proc = 
+ (A\B\S\Kas\Kbs\T\
+ (
+  inp S (x\
+  let x (x1\x2\
+   match A x1 (
+   case x2 Kas (m\
+   let m (m1\m2\
+   let m2 (n1\n2\
+   match B n1 (
+   match T m1 (
+   outp B (en (pr T (pr A n2)) Kbs) zero
+ )))))))))).
+
+agent_System_def Proc :=
+ agent_S_def ProcS,
+ Proc = (A\B\S\T\ 
+  (nu kas\ nu kbs\
+   (ProcS A B S kas kbs T) 
+  )
+ ).
+
+ 
+agent_SSpec_def Proc :=
+ Proc = (A\B\S\kab\kas\kbs\tt\
+   inp S (x\
+    let x (x1\x2\
+    case x2 kas (m\
+    let m (m1\m2\
+    let m2 (n1\n2\
+     match A x1 (
+     match B n1 (
+     match kab n2 (
+     match tt m1 (
+     outp B (en (pr tt (pr A kab)) kbs) zero
+  )))))))))).
+
+
+
+agent_SystemSpec_def Proc :=
+ agent_SSpec_def ProcS,
+ Proc = (A\B\S\tt\
+  (nu kas\ nu kbs\ nu kab\
+    (ProcS A B S kab kas kbs tt) 
+ )).
+
+check_bisim :=
+ agent_System_def System, 
+ agent_SystemSpec_def SystemSpec,
+ H = nil,
+ P = (System (ct agent_A) (ct agent_B) (ct agent_S) (ct tt)),
+ Q = (SystemSpec (ct agent_A) (ct agent_B) (ct agent_S) (ct tt)),
+ bisim H (par P (par P Q)) (par (par P Q) P).
+
+
+#assert (check_bisim).

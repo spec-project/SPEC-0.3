@@ -1,0 +1,39 @@
+% Wide mouthed frog protocol. 
+
+A(m,kas) := 
+ nu(kab).
+ c_as<enc(kab,kas)>.
+ c_ab<enc(m,kab)> ;
+
+S(kas,ksb) := 
+ c_as(x).
+ case x of enc(y,kas) in
+ c_sb<enc(y,ksb)> ;
+
+B(ksb) :=
+ c_sb(x). 
+ case x of enc(y,ksb) in
+ c_ab(z).
+ case z of enc(w,y) in 
+ c_ab<ok> ;
+
+Inst(m) :=
+ nu(kas,ksb).
+ (A{m,kas} | S{kas,ksb} | B{ksb}) ;
+
+B_spec(m,ksb) := 
+ c_sb(x).
+ case x of enc(y,ksb) in 
+ c_ab(z).
+ case z of enc(w,y) in
+ [w = m] c_ab<ok> ;
+
+Inst_spec(m) := 
+ nu(kas,ksb).
+ (A{m,kas} | S{kas,ksb} | B_spec{m,ksb});
+ 
+% Authentication:
+% bisim(a(x).Inst_spec{x}, a(x).Inst{x});
+
+% Secrecy:
+% bisim(a(x).a(y).Inst{x}, a(x).a(y).Inst{y});

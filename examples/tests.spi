@@ -1,0 +1,104 @@
+% Some small examples; some of them taken from 
+% [AG98] Abadi and Gordon. A bisimulation method for cryptographic protocols. 
+%        Nordic Journal of Computing 5(4), 1998.
+
+% Bisimilar
+P1   := a(x).nu(k).a<enc(x,k)>.nu(m).a<enc(m,enc(a,k))>.m<a>;
+Q1   := a(x).nu(k).a<enc(x,k)>.nu(m).a<enc(m,enc(a,k))>.[x = a]m<a>;
+
+% Not bisimilar. 
+P2 := a(x).nu(k).a<<x, enc(x,k)>>.nu(m).a<enc(m,<a, enc(a,k)>)>.m<a>.a<z>;
+Q2 := a(x).nu(k).a<<x, enc(x,k)>>.nu(m).a<enc(m,<a, enc(a,k)>)>.[x=a]m<a>.b<z>;
+
+% From [AG98]. 
+% Bisimilar.
+
+P3 := nu(k).!c<enc(m,k)>;
+Q3 := nu(k).!c<enc(n,k)>;
+
+% Not bisimilar.
+P4 := nu(k).c<<enc(m,k), enc(m,k)>>;
+Q4 := nu(k).c<<enc(n,k), enc(o,k)>>;
+
+
+% Not bisimilar.
+P5 := nu(k1,k2). c<enc(<m1, enc(m2, k2)>, k1)>. c<k1>;
+Q5 := nu(k1,k2). c<enc(<n1, enc(n2, k2)>, k1)>. c<k1>;
+
+% Bisimilar.
+P6 := nu(k1,k2,m1,m2). c<enc(<m1, enc(m2, k2)>, k1)>. c<k1>;
+Q6 := nu(k1,k2,n1,n2). c<enc(<n2, enc(n1, k2)>, k1)>. c<k1>;
+
+% Bisimilar.
+
+P7 := nu(k). c <enc(d,k)>. c(x).[x = k] c<enc(d,k)>;
+Q7 := nu(k). c <enc(d,k)>. c(x);
+
+% Bisimilar. Note that x cannot be equated with d even though
+% k is later extruded to make decryption of enc(d,k) possible 
+% and x is in the scope of d. This is because
+% the input x happens before k is extruded, so at the time 
+% the input takes place, k is not yet available to decrypt enc(d,k). 
+
+P8 := nu(k,d). c <enc(d,k)>. c(x).(c<k> | [x=d]c<d>) ;
+Q8 := nu(k,d). c <enc(d,k)>. c(x).c<k>;
+
+
+% From [AG98]. 
+% Bisimilar.
+P9 := nu(k1,k2,m1,m2).c<enc(m1,k1)>.c<enc(m2,k2)>;
+Q9 := nu(k,n1,n2).c<enc(n1,enc(z0,k))>.c<enc(n2,enc(z1,k))>;
+
+
+% From [AG98].
+% Loop. 
+P10 := ! nu(k).c<enc(m,k)>;
+Q10 := nu(k). ! nu(k1). c<enc(<k1, m>,k)>;
+
+
+% Not bisimilar.
+P11 := nu(k). a(x).a<enc(x,k)>.a(y). case y of enc(u,k) in [u = a] a<a>;
+Q11 := nu(k). a(x).a<enc(a,k)>.a(y). case y of enc(u,k) in [u = a]  a<a>;
+
+% Bisimilar.
+P12 := nu(k). a(x).a<enc(x,k)>.a(y). case y of enc(u,k) in [u = a] a<a>;
+Q12 := nu(k). a(x).a<enc(a,k)>.a(y). case y of enc(u,k) in [x = a] [u = a]  a<a>;
+
+% Bisimilar.
+P13 := nu(k).a<enc(a,<a,k>)>;
+Q13 := nu(k).a<enc(a,k)>;
+
+% Not bisimilar.
+
+P14 := nu(k).a<enc(x,k)>. a<k>;
+Q14 := nu(k).a<enc(a,k)>. a<k>;
+
+% Bisimilar.
+
+P15 := nu(k).c(x).let <y,z> = x in c<enc(y,k)>.c<enc(z,k)> | c<<c,c>>;
+Q15 := nu(k).c(x).let <y,z> = x in c<enc(z,k)>.c<enc(y,k)> | c<<c,c>>;
+
+% Not bisimilar. 
+% This example formalises non-interference (strong secrecy). 
+
+P16 := a(x).a(y).a(u).a(v).nu(k).(a<enc(x,k)> | a<enc(y,k)>);
+Q16 := a(x).a(y).a(u).a(v).nu(k).(a<enc(u,k)> | a<enc(v,k)>);
+
+% Bisimilar.
+% Similar to the previous one, but use non-deterministic encryption, i.e.,
+% each message is appended with a unique nonce before encryption. 
+
+P17 := a(x).a(y).a(u).a(v).nu(w,z,k).(a<enc(<x,w>,k)> | a<enc(<y,z>,k)>); 
+Q17 := a(x).a(y).a(u).a(v).nu(w,z,k).(a<enc(<u,w>,k)> | a<enc(<v,z>,k)>); 
+
+% Bisimilar
+
+P18 := a(x).nu(b,k).( (nu(m).b<enc(<x,m>,k)>) | b(y).case y of enc(z,k) in 
+        let <u,v> = z in a<u>) ;
+Q18 := a(x).nu(b,k).( b<enc(x,k)> | b(y).case y of enc(z,k) in a<z>) ; 
+
+% Not bisimilar
+
+P19 := a(x).nu(b,k).( (nu(m).b<enc(<x,m>,k)>) | b(y).case y of enc(z,k) in 
+        let <u,v> = z in a<v>) ;
+Q19 := a(x).nu(b,k).( b<enc(x,k)> | b(y).case y of enc(z,k) in a<z>) ; 

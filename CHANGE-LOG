@@ -1,0 +1,92 @@
+Version 0.2
+-----------
+- 23/01/13:
+* Migrated to the syntax of Bedwyr 1.4.
+* Type checking is now built into Bedwyr, so typecheck.def is no
+  longer needed.
+* Changed slightly the syntax of 'let' construct to conform with
+  the original syntax of spi-calculus.
+* Various changes in the parsing of spi expressions. They are now
+  parsed into the intermediate term structure of Bedwyr 1.4.
+* Added a command to enable/disable reflexivity checking.
+* Added a command to enable/disable trace printing.
+
+Version 0.1.2
+-------------
+- 21/08/11: 
+ * [spi.def] 
+   Fix a minor problem in the operational semantics (spi.def). 
+   The original specification of spi-calculus does not allow
+   vacuous new binders in a concretion.
+   For example, the following (new x\ con a (a<x>.0)) should
+   be simplified to (con a (nu x\ a<x>.0)). 
+   This is achieved by adding a new predicate called 'push_new'.
+
+ * [bisim.def]
+   Since the freshly generated names in concretions in a first
+   process in a bisim pair is unrelated to the second process,
+   we can use two distinct names. This turns out to reduce
+   the table size, as it allows equivariant tabling to freely
+   rename the fresh names in each process independently of
+   the others. Note that variables names 
+   are still shared so equivariant tabling will still keep
+   a consistent renaming of these variables across both
+   processes. See the predicate bisimAgent in bisim.def.
+
+ * [term.ml, system.ml, prover.ml] 
+   Add a new function to check that two terms are equivalent modulo
+   renaming. Add a predicate '_eqvt' to invoke this function from
+   the bedwyr interface.
+
+ * [bisim.def]
+   Add reflexivity checking. Because the fresh names in the first
+   process and the second process are unrelated, to increase chance
+   of success, one needs to do comparison modulo renaming.
+   To do this, we use the _eqvt predicate above. 
+   Note that we also need to make sure that the bi-trace themselves
+   are equivariant. This simple checking is quite effective to rule
+   out trivial pairs, e.g., in the Denning-Sacco-Lowe example, it reduces
+   the number of bisim pairs by half.
+
+   NOTE: Note that object-level variables are also
+   encoded using nabla, so may be subject to renaming. But this is not a problem
+   as long as the bitrace is consistent, which is always the case. 
+
+
+ * Work in progress: adding a hash constructor
+
+- 23/08/2011:
+ * Added a general way of setting options. Introduced a unary predicate
+  '_option'. 
+  Clauses encoding various options will be added or retracted dynamically
+  by the SPEC interface, through the command #set.
+  For example,
+
+  #set trace on;
+
+  will add the clause
+
+  _option trace.
+
+  to the current session, whereas 
+
+  #set trace off;
+
+  will remove the clause (_option trace) if it's already present in the session.
+
+  The Bedwyr programs can now test various settings by testing 
+  _option predicate. 
+
+  Currently we have 2 options: trace and reflexive. The latter is used to
+  decide whether or not to use bisim upto reflexive checking.
+
+
+ * Fixed a bug in the 'simplify' procedure in 'proc.def'. 
+   The simplification for 'case' and 'let' was wrong. 
+
+- 24/08/2011:
+ * Remove the _trace flag. It's subsumed by _option predicate. Also take this out from
+   the main Bedwyr module and make it only local to SPEC.
+
+- 02/09/2011:
+ * Add asymmetric encryption, hash, signature to the spi parser. 

@@ -1,0 +1,49 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "basic.def".
+#include "spi.def".
+#include "uni.def".
+
+Define print_term : tm -> prop by 
+  print_term (ct X) := printstr X ; 
+  print_term (var X) := printstr "?" /\ print X ; 
+  print_term (bn X) := print X ; 
+  print_term (nm X) := print X ;
+  print_term (pr M N) := printstr "<" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ">" ; 
+  print_term (en M N) := printstr "enc(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")".
+
+Define plist : list tm -> prop by 
+  plist nil ; 
+  plist (cons X nil) := print_term X ; 
+  plist (cons X (cons Y L)) := print_term X /\ printstr " , " /\ plist (cons Y L).
+
+Define print_list : list tm -> prop by 
+  print_list L := printstr "[" /\ plist L /\ printstr "]".
+
+Define psubst : list sub_pair -> prop by 
+  psubst nil ; 
+  psubst (cons (sub V T) nil) :=
+    print_term V /\ printstr " |--> " /\ print_term T ; 
+  psubst (cons (sub V T) (cons X L)) :=
+    print_term V /\ printstr " |--> " /\ print_term T /\ 
+    printstr " , " /\ psubst (cons X L). 
+
+Define print_subst : list sub_pair -> prop by 
+  print_subst L := printstr "[" /\ psubst L /\ printstr "]".

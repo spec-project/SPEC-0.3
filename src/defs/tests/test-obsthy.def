@@ -1,0 +1,34 @@
+#include "../obsthy.def".
+
+% Tests 
+
+thyex 1 Thy :=
+  P1 = mp (pr (nm a) (nm b)) (pr (nm a) (nm b)),
+  P2 = mp (en (nm m) (nm a)) (en (nm n) (nm a)),
+  P3 = mp (en (nm m) (nm k)) (en (nm n) (nm k)),
+  Thy = (cons P1 (cons P2 (cons P3 nil))).
+
+thyex 2 Thy :=
+  P1 = mp (pr (nm a) (nm b)) (pr (nm c) (nm d)),
+  P2 = mp (en (nm a) (nm k)) (en (nm d) (nm k)),
+  Thy = cons P1 (cons P2 nil).
+
+thyex 3 Thy :=
+  P1 = mp (pr (nm a) (nm b)) (pr (nm c) (nm d)),
+  P2 = mp (en (nm a) (nm k)) (en (nm d) (nm k)),
+  P3 = mp (nm k) (nm k), 
+  Thy = cons P1 (cons P2 (cons P3 nil)).
+
+thyex 4 Thy := 
+  Thy = (cons (mp (nm a) (nm a)) 
+        (cons (mp (var x) (var x))
+        (cons (mp (en (var x) (nm k)) (en (nm a) (nm k)))
+        (cons (mp (nm k) (nm k)) nil)))).
+
+test_consist Thy :=
+  print_thy Thy, 
+  ite (thy_consistent Thy)
+      (println " is consistent")
+      (println " is not consistent").
+
+

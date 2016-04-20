@@ -1,0 +1,49 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "print_text.def".
+
+Define bt2text : string -> list bt_pair -> prop
+by 
+bt2text File nil ; 
+bt2text File (cons (in M N) L) :=
+ fprintstr File "(" /\  term2text File M /\ fprintstr File " , " /\ 
+ term2text File N /\ fprintstr File ")^i. \n" /\ 
+ bt2text File L ; 
+bt2text File (cons (out M N) L) := 
+ fprintstr File "(" /\ term2text File M /\ fprintstr File " , " /\ term2text File N /\ 
+ fprintstr File ")^o. \n" /\ bt2text File L.
+
+Define print_bt_text : string -> list bt_pair -> prop
+by 
+print_bt_text File nil := fprintstr File "[ ]\n" ; 
+print_bt_text File (cons X L) :=
+ bt2text File (cons X L) /\  
+ fprintstr File " \n".
+
+Define bisim2text : string -> prop -> prop
+by 
+bisim2text File (bisim H P Q) :=
+ fprintstr File "Bi-trace: \n" /\  
+ print_bt_text File H /\  
+ fprintstr File "First process: \n" /\  
+ print_proc_text File P /\  
+ fprintstr File "Second process: \n" /\ 
+ print_proc_text File Q /\ 
+ fprintstr File "\n".

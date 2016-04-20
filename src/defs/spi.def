@@ -1,0 +1,157 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011 - 2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% This implementation uses the definition of the operational semantics
+% by Abadi and Gordon. See the following paper for details
+%   
+%   Martin Abadi and Andrew Gordon. "A calculus for cryptographic protocols:
+%   The spi calculus". Information and Computation 148, 1 - 70 (1999)
+%
+%  
+% For simplicity, in this implementation we use only the encryption 
+% constructor and pairing; natural numbers constructors are not implemented.
+% But it is easy to add them.
+%
+
+% Message terms
+Kind tm type.
+Kind name type.
+
+Type ct	(string -> tm). % constants
+Type var	(name -> tm). % variables 
+Type nm	(name -> tm). % names
+Type bn	(tm -> tm).   % constructor for marking bound names; needed when recursing over binders. 
+Type en	(tm -> tm -> tm). % symmetric encryption
+Type pr	(tm -> tm -> tm). % pairing constructor
+
+% Currently not used: 
+% Type zz		tm. % zero
+% Type succ	(tm -> tm). % successor
+% Type hs	(tm -> tm). % hash function 
+% Type aen	(tm -> tm -> tm). % asymmetric encryption 
+% Type pub	(tm -> tm). % public key constructor
+% Type sign	(tm -> tm -> tm). % signature
+% Type vk	(tm -> tm). % verification key
+
+% process constructors
+Kind proc type.
+Type zero proc.
+Type par proc -> proc -> proc.
+Type nu  (tm -> proc) -> proc.
+Type match tm -> tm -> proc -> proc.
+Type inp tm -> (tm -> proc) -> proc.
+Type outp tm -> tm -> proc -> proc.
+Type bang proc -> proc.
+Type case tm -> tm -> (tm -> proc) -> proc.
+% e.g., [case L of {x}_k in Px] is translated to (case L k (x\Px)).
+Type let tm -> (tm -> tm -> proc) -> proc.
+%   e.g., [let (x,y) = M in Pxy] becomes (let M (x\y\Pxy).
+
+% non-deterministic choice
+Type plus proc -> proc -> proc. 
+
+% agent constructors
+Kind agent type.
+Type abs (tm -> proc) -> agent.
+Type con tm -> proc -> agent.
+Type new (tm -> agent) -> agent.
+
+% actions
+Kind action type.
+Type tau action.
+Type act tm -> action.
+
+Define red_proc : proc -> proc -> prop by
+   red_proc (match X X P) P ; 
+   red_proc (let (pr M N) P) R := R = (P M N) ; 
+   red_proc (case (en M K) K P) R := R = (P M).
+
+Define appAbs : agent -> agent -> proc -> prop by 
+   appAbs (abs M) (con X Q) R := R = (par (M X) Q) ; 
+   appAbs (abs M) (new A) (nu R) := nabla x, appAbs (abs M) (A x) (R x).
+
+Define appCon : agent -> agent -> proc -> prop by 
+   appCon (con X Q) (abs M) R := R = (par Q (M X)) ; 
+   appCon (new A) (abs M) (nu R) := nabla x, appCon (A x) (abs M) (R x).
+
+Define mergeRight : agent -> proc -> agent -> prop by 
+   mergeRight (con X P) Q (con X (par P Q)) ; 
+   mergeRight (new C) Q (new R) := nabla x, mergeRight (C x) Q (R x).
+
+Define mergeLeft : agent -> proc -> agent -> prop by 
+   mergeLeft (con X P) Q (con X (par Q P)) ; 
+   mergeLeft (new C) Q (new R) := nabla x, mergeLeft (C x) Q (R x).
+
+% NOTE: there is a danger that the symbolic transition produced
+% will miss some instances if the binder appears statically as an
+% argument of a logic variable.
+% For example, if we have a symbolic process such as
+% nu y. a<X y>.0
+% where X is a logic variable of a functional type. 
+% Then the pattern unification (y\ X y) = (y\ N) will succeed
+% and the first _if branch gets executed while the second _if branch
+% never does. So in this case a potential trace is excluded, i.e.,
+% the case where X is the identity function. 
+% This pathological case is ruled out if the input process, on
+% the left side of the transition, does not contain a logic variable
+% that is applied to statically bound names. This is the case
+% in the application of bisimulation considered here, since we always
+% start with ground processes. And transition always preserves
+% this property of not having a logic variable statically applied to
+% internal bound names of processes. 
+
+% push the outermost vacuous new binder in a concretion into processes
+Define push_new : agent -> agent -> prop by 
+   push_new (new (x\ con (M x) (P x))) R :=
+     _if ((x\ M x) = (x\ N)) 
+         (R = (con N (nu x\ P x)))
+         (R = (new (x\ con (M x) (P x)))) ; 
+   push_new (new (x\ new y\ R x y)) (new y\ C y) := nabla y, push_new (new (x\ R x y)) (C y). 
+
+Define one : proc -> action -> proc -> prop,      % free-action transitions
+       oneAbs : proc -> action -> agent -> prop,  % abstractions 
+       oneCon : proc -> action -> agent -> prop   % concretions
+by 
+  one (par P Q) tau R := exists x, oneAbs P x F /\ oneCon Q x C /\ appAbs F C R ;
+  one (par P Q) tau R := exists x, oneCon P x C /\ oneAbs Q x F /\ appCon C F R ; 
+  one (plus P Q) tau R := one P tau R ;
+  one (plus P Q) tau R := one Q tau R ; 
+  one (nu P) tau (nu R) := nabla x, one (P x) tau (R x) ;
+  one (bang P) tau (par (bang P) Q) := one P tau Q ;
+  one P tau R := red_proc P Q /\ one Q tau R ;
+
+  oneAbs (inp X A) (act X) (abs A) ; 
+  oneAbs P X (abs M) := red_proc P Q /\ oneAbs Q X (abs M) ; 
+  oneAbs (par P Q) X (abs x\(par (R x) Q)) := oneAbs P X (abs R) ; 
+  oneAbs (par P Q) X (abs x\(par P (R x))) := oneAbs Q X (abs R) ;
+  oneAbs (plus P Q) X R := oneAbs P X R ;
+  oneAbs (plus P Q) X R := oneAbs Q X R ;
+  oneAbs (nu P) A (abs x\(nu (R x))) := nabla y, oneAbs (P y) A (abs x\(R x y)) ; 
+  oneAbs (bang P) A (abs x\ (par (bang P) (Q x))) := oneAbs P A (abs Q) ; 
+
+  oneCon (outp X M P) (act X) (con M P) ; 
+  oneCon P X C := red_proc P Q /\ oneCon Q X C ; 
+  oneCon (par P Q) X R := oneCon P X C /\ mergeRight C Q R ; 
+  oneCon (par P Q) X R := oneCon Q X C /\ mergeLeft C P R ; 
+  oneCon (plus P Q) X R := oneCon P X R ;
+  oneCon (plus P Q) X R := oneCon Q X R ;
+  oneCon (nu P) X C := (nabla y, oneCon (P y) X (R y)) /\ push_new (new R) C ; 
+  oneCon (bang P) X R := oneCon P X C /\ mergeLeft C (bang P) R.
+
+

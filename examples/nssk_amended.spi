@@ -1,0 +1,119 @@
+% Amended Needham Schroeder symmetric key protocol
+% Source: the SBC tool examples by Borgstrom and Briais.
+
+A(a,b,s,kas,minusone) := 
+  nu(na).
+  b <a>.
+  a(x).
+  s < <a,b,na,x> >.
+  a(y).
+  case y of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  let <s1,s2> = n2 in
+  [b = n1]
+  [na = m1]
+  b<s2>.
+  a(z).
+  case z of enc(u,s1) in
+  b <enc(<minusone,u>, s1)>;
+
+
+B(a,b,kbs,minusone) :=
+  nu(nb).
+  b(x).
+  [a = x]
+  a<enc(<a,nb>,kbs)>.
+  b(y).
+  case y of enc(m,kbs) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  [a = n2] 
+  [nb = n1]
+  a <enc(nb,m1)>.
+  b(z).
+  case z of enc(w,m1) in
+  let <s1,s2> = w  in
+  [minusone = s1] 
+  [nb = s2]
+  b<b>;
+
+S(a,b,s,kas,kbs) :=
+  nu(kab).
+  s(x).
+  let <y1,y2> = x in
+  let <s1,s2> = y2 in
+  let <r1,r2> = s2 in 
+  case r2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = y1]
+  [b = s1] 
+  a< enc(<r1,b,kab,enc(<kab, m2, a>, kbs)>, kas) >; 
+
+
+System(a,b,s,minusone) := 
+  nu(kas,kbs).(S{a,b,s,kas,kbs} | A{a,b,s,kas,minusone} | B{a,b,kbs,minusone});
+
+
+A_spec(a,b,s,kab,kas,minusone) :=
+  nu(na).
+  b<a>.
+  a(x).
+  s< <a,b,na,x> >.
+  a(y).
+  case y of enc(m,kas) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  let <s1,s2> = n2 in
+  [b = n1]
+  [kab = s1]
+  [na = m1]
+  b<s2>.
+  a(z).
+  case z of enc(u,kab) in
+  b< enc(<minusone,u>, kab) >;
+
+B_spec(a,b,kab,kbs,minusone) :=
+  nu(nb).
+  b(x).
+  [a = x]
+  a< enc(<a,nb>, kbs) >.
+  b(y).
+  case y of enc(m,kbs) in
+  let <m1,m2> = m in
+  let <n1,n2> = m2 in
+  [a = n2]
+  [kab = m1]
+  [nb = n1]
+  a< enc(nb, kab) >.
+  b(z).
+  case z of enc(s,kab) in
+  let <s1,s2> = s in
+  [minusone = s1]
+  [nb = s2]
+  b<b>;
+
+S_spec(a,b,s,kab,kas,kbs) :=
+  s(x).
+  let <y1,y2> = x in
+  let <z1,z2> = y2 in
+  let <s1,s2> = z2 in
+  case s2 of enc(m,kbs) in 
+  let <m1,m2> = m in
+  [a = y1] 
+  [a = m1] 
+  [b = z1] 
+  a< enc(<s1, b, kab, enc(<kab, m2, a>, kbs)>, kas) >;
+
+System_spec(a,b,s,minusone) :=
+  nu(kas,kbs,kab).( 
+    S_spec{a,b,s,kab,kas,kbs} 
+  | A_spec{a,b,s,kab,kas,minusone} 
+  | B_spec{a,b,kab,kbs,minusone} );
+
+% Query:
+% bisim(System{a,b,s,minusone}, System_spec{a,b,s,minusone});
+
+
+
+

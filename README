@@ -1,0 +1,46 @@
+SPEC version 0.3
+----------------
+
+Webpage: http://users.cecs.anu.edu.au/~tiu/spec/
+
+About SPEC
+----------
+SPEC (for Spi-calculus Equivalence Checker) is an equivalence checker
+for a version of Abadi and Gordon's spi-calculus. The spi-calculus has
+been used to encode security protocols and, via a notion of
+observational equivalence, been used to reason about security
+properties such as secrecy and authentication.
+
+SPEC implements a process equivalence checking procedure based on the
+paper by Alwen Tiu and Jeremy Dawson (presented in the IEEE Computer
+Security Foundations symposium in 2010).
+
+SPEC is implemented on top of a modified version of the Bedwyr logical
+framework (see http://http://slimmer.gforge.inria.fr/bedwyr).  The
+modified Bedwyr codes are included in this distribution.
+
+
+Compiling SPEC
+--------------
+
+Download and unpack the distribution in a directory of your
+choice. Below we assume the directory is called `spec' in the user's
+home directory.
+
+SPEC, and the Bedwyr engine it relies on, are implemented using the
+Ocaml language, so you will need to have Ocaml installed to compile
+SPEC.
+
+To compile the system, use the following commands:
+# cd $HOME/spec
+# ./configure
+# make
+
+
+Running SPEC
+-------------
+# src/spec
+
+See the user manual included in the distribution (in the directory
+`doc') for more information.
+

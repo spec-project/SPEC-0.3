@@ -1,0 +1,9 @@
+# Specifications for the "ndcore" library
+# @configure_input@
+name = "ndcore"
+requires = ""
+version = "@PACKAGE_VERSION@"
+description = "Higher-Order Pattern Unification with Non-Destructive Normalization"
+#directory = "^"
+archive(byte) = "ndcore.cma"
+archive(native) = "ndcore.cmxa"

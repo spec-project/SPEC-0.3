@@ -1,0 +1,101 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+Kind list type -> type.
+
+Type nil  list A.
+Type cons A -> list A -> list A.
+
+
+% Some basic predicates for list manipulations.
+
+% checking membership of a list.
+
+Define member : A -> list A -> prop by
+member X (cons X L) ;
+member X (cons Y L) := member X L.
+
+% deterministic member predicate: stops as soon as a match is found. 
+
+Define det_mem : A -> list A -> prop by
+det_mem X (cons Y L) :=
+  _if (X = Y) true (det_mem X L).
+
+Define subset : list A -> list A -> prop by 
+subset nil L ; 
+subset (cons X L1) L2 := det_mem X L2 /\ subset L1 L2. 
+
+Define equal : list A -> list A -> prop by
+equal L R := subset L R /\ subset R L.
+
+Define append : list A -> list A -> list A -> prop by 
+append nil L L ;
+append (cons X L1) L2 (cons X L3) := append L1 L2 L3.
+
+Define rev : list A ->  list A -> list A -> prop by 
+rev nil L L ; 
+rev (cons X L1) L2 L3 := rev L1 (cons X L2) L3. 
+
+Define reverse : list A -> list A -> prop by 
+reverse L R := rev L nil R.
+
+Define select : list A -> A -> list A -> prop by 
+select (cons X L) X L ;
+select (cons Y L) X (cons Y R) := select L X R.
+
+% insert an element into a list, avoiding duplication. 
+Define insert : A -> list A -> list A -> prop by 
+insert X L R :=
+  _if (det_mem X L) 
+      (L = R)
+      (R = cons X L).
+
+
+Define ground_list : list A -> list A -> prop by 
+ground_list L R :=
+  _if (L = nil) 
+      (R = nil)
+      (L = cons X K /\ ground_list K M /\ R = cons X M).
+
+% deterministic OR: if P is true then Q is not executed.
+Define det_or : prop -> prop -> prop by 
+det_or P Q := _if P true Q.
+
+% enumerating solutions to a higher-order predicate
+
+Define enum : (A -> prop) -> list A -> prop by 
+enum P L := (forall x, P x -> det_mem x R) /\ ground_list R L.
+
+Define enuml : (A -> B -> prop) -> list A -> list B -> prop by
+enuml P nil L ; 
+enuml P (cons Y R) L :=  (forall x, P Y x -> det_mem x L) /\ enuml P R L. 
+
+Define enum_list : (A -> B -> prop) -> list A -> list B -> prop by
+enum_list P R L :=  enuml P R X /\ ground_list X L.
+
+Define map : (A -> B -> prop) -> list A -> list B -> prop by
+map P nil nil ; 
+map P (cons X L) (cons Y R) := P X Y /\ map P L R.
+
+Define all : (A -> prop) -> list A -> prop by 
+all P nil ; 
+all P (cons X L) :=  P X /\ all P L.
+
+

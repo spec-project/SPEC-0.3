@@ -1,0 +1,207 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "bisim.def".
+#include "print_latex.def".
+#include "print_text.def".
+#include "bisim2text.def".
+#include "bisim2latex.def".
+
+% Dummy definition; to be updated dynamically through the SPEC
+% frontend. 
+Define agent_def :  string -> def_body -> prop
+by
+agent_def X Y := false.
+
+% -------------------------------------------------------------------------
+% The following predicates are used for interactions with the SPEC frontend 
+
+ % show_bisim N B := 
+ %      print N, println ".", 
+ %      print B, println " ",
+ %      bisim2text B.
+
+Define show_bisim : string -> prop -> prop
+by 
+show_bisim N (bisim H P Q) := 
+     printstr N /\ printstr ". \n" /\
+     printstr "Bitrace: " /\ print_bitrace H /\ printstr "\n" /\
+     printstr "First process: " /\ print_proc P /\ printstr "\n" /\
+     printstr "Second process: " /\ print_proc Q /\ printstr "\n".
+
+Define save_bisim : X -> Y -> prop -> prop 
+by 
+save_bisim F N B :=
+  fprintstr F N /\ fprintstr F ".\n" /\
+  bisim2text F B.
+
+Define appdef : def_body -> list tm -> proc -> prop
+by 
+appdef (defProc P) nil P ; 
+appdef (defAbs M) (cons X L) P := appdef (M X) L P. 
+
+Define expand_defs : proc -> proc -> prop
+by 
+expand_defs (def A L) P := 
+  _if (agent_def A B) 
+      ( 
+        _if (appdef B L R) 
+            (expand_defs R P)
+            (
+              printstr "Wrong arity: " /\ printstr A /\ printstr "\n" /\
+              false 
+            )
+      )
+      (
+         printstr "Agent " /\ printstr A /\ printstr " undefined!\n" /\ 
+         false
+      ) ; 
+
+expand_defs zero zero ; 
+expand_defs (par P Q) (par S T) := 
+  expand_defs P S /\ expand_defs Q T ; 
+expand_defs (plus P Q) (plus S T) := 
+  expand_defs P S /\ expand_defs Q T ; 
+expand_defs (nu x\P x) (nu x\Q x) :=
+  nabla x, expand_defs (P (bn x)) (Q x) ;
+expand_defs (match X Y P) (match U V Q) :=
+  simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ; 
+expand_defs (inp A (x\ P x)) (inp B (x\ Q x)) :=
+  simp_cp A B /\ nabla x, expand_defs (P (bn x)) (Q x) ; 
+expand_defs (outp A M P) (outp B N Q) :=
+  simp_cp A B /\ simp_cp M N /\ expand_defs P Q ; 
+expand_defs (case M N (x\ P x)) (case U V (x\ Q x)) :=
+  simp_cp M U /\ simp_cp N V /\
+  nabla x, expand_defs (P (bn x))  (Q x) ; 
+expand_defs (let M (x\y\P x y)) (let N (x\y\ Q x y)) := 
+  simp_cp M N /\
+  nabla x y, expand_defs (P (bn x) (bn y)) (Q x y) ; 
+expand_defs (bang P) (bang Q) := expand_defs P Q.
+
+Kind oprop type.
+Type otrue oprop.
+Type ofalse oprop. 
+
+Define has_args : def_body -> oprop -> prop
+by 
+has_args (defAbs M) otrue ; 
+has_args (defProc M) ofalse. 
+ 
+Define print_agent_def : oprop -> def_body -> prop
+by 
+print_agent_def T (defProc P) :=
+  _if (T = otrue) (printstr ") := ") (printstr " := ") /\ 
+  print_proc P ; 
+print_agent_def T (defAbs M) :=
+  nabla x, 
+  print x /\ 
+  _if ((M x) = (defProc (R x))) (true) (printstr ",")  /\
+  print_agent_def T (M (bn x)). 
+
+Define show_def : string -> prop
+by 
+show_def A :=
+  agent_def A B /\
+  printstr A /\ 
+  has_args B T /\ 
+  _if (T = otrue) (printstr "(") (true) /\ 
+  print_agent_def T B /\ printstr "\n". 
+
+Define free_names_term : tm -> list tm -> list tm -> prop
+by 
+free_names_term (ct X) Acc L := insert (ct X) Acc L ;
+free_names_term (nm X) Acc L := insert (nm X) Acc L ;
+free_names_term (var X) Acc L := insert (var X) Acc L ;
+free_names_term (bn X) Acc Acc ; 
+free_names_term (pr X Y) Acc L :=
+  free_names_term X Acc L1 /\
+  free_names_term Y L1 L ; 
+free_names_term (en X Y) Acc L :=
+  free_names_term X Acc L1 /\
+  free_names_term Y L1 L.
+
+Define free_names_args : list tm -> list tm -> list tm -> prop
+by 
+free_names_args nil Acc Acc ; 
+free_names_args (cons X L) Acc R :=
+  free_names_term X Acc Acc1 /\
+  free_names_args L Acc1 R. 
+
+Define free_names_proc : proc -> list tm -> list tm -> prop
+by 
+free_names_proc (def A Args) Acc L :=  free_names_args Args Acc L ; 
+free_names_proc zero Acc Acc ; 
+free_names_proc (par P Q) Acc L :=
+  free_names_proc P Acc L1 /\ 
+  free_names_proc Q L1 L ; 
+free_names_proc (plus P Q) Acc L :=
+  free_names_proc P Acc L1 /\ 
+  free_names_proc Q L1 L ; 
+free_names_proc (nu P) Acc L :=
+  nabla x, free_names_proc (P (bn x)) Acc L ; 
+free_names_proc (match X Y P) Acc L :=
+  free_names_term X Acc Acc1 /\ free_names_term Y Acc1 Acc2 /\
+  free_names_proc P Acc2 L ; 
+free_names_proc (inp A (x\ P x)) Acc L :=
+  free_names_term A Acc Acc1 /\
+  nabla x, 
+  free_names_proc (P (bn x)) Acc1 L ; 
+free_names_proc (outp A M P) Acc L :=
+  free_names_term A Acc Acc1 /\
+  free_names_term M Acc1 Acc2 /\
+  free_names_proc P Acc2 L ; 
+free_names_proc (case M N P) Acc L := 
+  free_names_term M Acc Acc1 /\
+  free_names_term N Acc1 Acc2 /\
+  nabla x, 
+  free_names_proc (P (bn x)) Acc2 L ; 
+free_names_proc (let M P) Acc L :=
+  free_names_term M Acc Acc1 /\
+  nabla x y, 
+  free_names_proc (P (bn x) (bn y)) Acc1 L ; 
+free_names_proc (bang P) Acc L := 
+  free_names_proc P Acc L.
+
+Define free_names_def : def_body -> list tm -> prop
+by 
+free_names_def (defProc P) L := free_names_proc P nil L ; 
+free_names_def (defAbs M) L := 
+  nabla x, free_names_def (M (bn x)) L.
+
+Define check_def : string -> prop
+by 
+check_def A :=
+  agent_def A B /\
+  free_names_def B L /\ 
+  _if (L = nil) (true)
+      (
+        printstr "Warning: unbound name(s) " /\  print_list L /\ 
+        printstr " in the definition of " /\ print A /\ printstr "\n" 
+      ).
+
+Define  bisim_def : proc -> proc -> prop
+by 
+bisim_def P Q :=
+  expand_defs P R /\ 
+  expand_defs Q T /\
+  printstr "Checking bisimilarity for: \n" /\ 
+  print_proc R /\ printstr "\n" /\
+  printstr " and \n" /\ 
+  print_proc T /\ printstr "\n" /\
+  bisim nil R T.

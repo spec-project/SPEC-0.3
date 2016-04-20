@@ -1,0 +1,283 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2012 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Module for checking consistency of observer theories.
+
+#include "uni.def".
+#include "pprint.def".
+
+Kind thy_pair type.
+
+Type mp tm -> tm -> thy_pair. 
+
+
+Define split_thy : list thy_pair -> list tm -> list tm -> prop
+by
+split_thy nil nil nil ; 
+split_thy (cons (mp M N) L) (cons M R1) (cons N R2) :=
+  split_thy L R1 R2.
+
+Define apply_subst_thy : list sub_pair -> list sub_pair -> list thy_pair
+                         -> list thy_pair -> prop
+by 
+apply_subst_thy Sub1 Sub2 nil nil ; 
+apply_subst_thy Sub1 Sub2 (cons (mp M N) Thy1) (cons (mp R T) Thy2) :=
+  copyterm Sub1 M R /\ copyterm Sub2 N T /\ 
+  apply_subst_thy Sub1 Sub2 Thy1 Thy2.
+
+Define pthy : list thy_pair -> prop 
+by 
+pthy nil ; 
+pthy (cons (mp M N) nil) := 
+  print "(" /\ print_term M /\ print ", " /\ print_term N /\ print ") " ; 
+pthy (cons (mp M N) (cons P L)) :=
+  print "(" /\ print_term M /\ print ", " /\ print_term N /\ print "), " /\
+  pthy (cons P L).
+
+
+Define print_thy : list thy_pair -> prop 
+by 
+print_thy Thy :=
+  print "{" /\ pthy Thy /\ print "}".
+ 
+% right-deducibility relation for message indistinguishability
+
+Define deduce_r : list thy_pair -> tm -> tm -> prop 
+by 
+deduce_r Thy (var V) (var V) ;
+deduce_r Thy (ct C) (ct C) ; 
+deduce_r Thy M N := det_mem (mp M N) Thy ;
+deduce_r Thy (pr U V) (pr R T) := deduce_r Thy U R /\ deduce_r Thy V T ; 
+deduce_r Thy (en U V) (en R T) := deduce_r Thy U R /\ deduce_r Thy V T.
+% deduce_r Thy (hs X) (hs Y) := deduce_r Thy X Y ;
+% deduce_r Thy (pub X) (pub Y) := deduce_r Thy X Y ;
+% deduce_r Thy (vk X) (vk Y) := deduce_r Thy X Y ; 
+% deduce_r Thy (aen U V) (aen R T) := deduce_r Thy U R /\ deduce_r Thy V T ; 
+% deduce_r Thy (sign U V) (sign R T) := deduce_r Thy U R /\ deduce_r Thy V T.
+
+% right-deducibility relation for message indistinguishability
+% but with the order of M and N inversed. 
+% This is because deduce_r Thy M N is not symmetric in its input and output
+% (i.e., M and N), because of the depth-first-search implementation of bedwyr. 
+% M is always treated as input. 
+% 
+% It holds that:  deduce_r Thy M N  iff deduce_inv_r Thy N M.
+% 
+
+Define deduce_inv_r : list thy_pair -> tm -> tm -> prop 
+by
+deduce_inv_r Thy (var V) (var V) ; 
+deduce_inv_r Thy (ct C) (ct C) ; 
+deduce_inv_r Thy M N := det_mem (mp N M) Thy ; 
+deduce_inv_r Thy (pr U V) (pr R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ; 
+deduce_inv_r Thy (en U V) (en R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T.
+% deduce_inv_r Thy (hs X) (hs Y) := deduce_inv_r Thy X Y ; 
+% deduce_inv_r Thy (pub X) (pub Y) := deduce_inv_r Thy X Y ; 
+% deduce_inv_r Thy (vk X) (vk Y) := deduce_inv_r Thy X Y ; 
+% deduce_inv_r Thy (aen U V) (aen R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ; 
+% deduce_inv_r Thy (sign U V) (sign R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ;
+
+
+% right-deducibility relation for message synthesis
+Define ded1_r : list tm -> tm -> prop
+by
+ded1_r S (var V) ; 
+ded1_r S (ct C) ; 
+ded1_r S M := det_mem M S ; 
+% ded1_r S M := member M S ; 
+ded1_r S (pr U V) := ded1_r S U /\ ded1_r S V ; 
+ded1_r S (en U V) := ded1_r S U /\ ded1_r S V.
+% ded1_r S (hs X) := ded1_r S X ; 
+% ded1_r S (pub X) := ded1_r S X ; 
+% ded1_r S (vk X) := ded1_r S X ; 
+% ded1_r S (aen U V) := ded1_r S U /\ ded1_r S V ; 
+% ded1_r S (sign U V) := ded1_r S U /\ ded1_r S V.
+
+% saturation of theories
+
+Define id_pair : tm -> tm -> prop 
+by
+id_pair (var X) (var X) ; 
+id_pair (ct X) (ct X).
+
+  % insert (mp U R) Thy Thy1,
+  % insert (mp V T) Thy1 Thy2, 
+  % decom_pair Thy2 Res.
+
+Define decom_pair : list thy_pair -> list thy_pair -> prop
+by
+decom_pair nil nil ; 
+decom_pair (cons (mp (pr U V) (pr R T)) Thy) Res :=
+  _if (id_pair U R) (Thy1 = Thy) (insert (mp U R) Thy Thy1) /\ 
+  _if (id_pair V T) (Thy2 = Thy1) (insert (mp V T) Thy1 Thy2) /\ 
+  decom_pair Thy2 Res ;
+decom_pair (cons X Thy) Res :=
+  _not(X = mp (pr U V) (pr R T)) /\ 
+  decom_pair Thy Res1 /\ 
+  insert X Res1 Res.
+
+
+%%% TODO: add reduction rules for asymmetric encryption and signing.
+
+% [decom_enc]
+% decom_enc Thy NE1 E1 NE2 E2.
+% Thy is an input theory. 
+% The output is NE2 and E2, representing, respectively, the reduced
+% non-encrypted part of Thy, and the reduced encrypted part.
+% NE1 and E1 are accumulators.
+
+Define decom_enc : list thy_pair -> list thy_pair -> list thy_pair ->
+                  list thy_pair -> list thy_pair -> prop
+by
+% Try decomposition of encryption (symmetric or asymmetric) and signing.
+decom_enc nil NE E NE E ;
+decom_enc (cons (mp (en U V) (en R T)) Thy) NE1 E1 NE2 E2 :=
+  append NE1 E1 Thy1 /\ 
+  append Thy1 Thy Thy2 /\ 
+  _if (deduce_r Thy2 V T)
+      (
+        % decom_pair (cons (mp U R) (cons (mp V T) Thy)) NewThy,
+	decom_pair (cons (mp U R) Thy) NewThy /\ 
+        decom_enc NewThy NE1 E1 NE2 E2
+      )
+      (
+        insert (mp (en U V) (en R T)) E1 NewE1 /\ 
+        decom_enc Thy NE1 NewE1 NE2 E2
+      ) ;
+
+decom_enc (cons X Thy) NE1 E1 NE2 E2 :=
+  _not(X = mp (en U V) (en R T)) /\ 
+  insert X NE1 NewNE1 /\ 
+  decom_enc Thy NewNE1 E1 NE2 E2.
+
+
+% [filter_enc] Separate a theory into the encrypted part and the
+% non-encrypted part. 
+
+Define filter_enc : list thy_pair -> list thy_pair -> list thy_pair -> prop
+by 
+filter_enc nil nil nil ; 
+filter_enc (cons (mp (en U V) (en R T)) L) NE E :=
+  filter_enc L NE E1 /\ 
+  E =  cons (mp (en U V) (en R T)) E1 ; 
+filter_enc (cons X L) (cons X NE) E :=
+  _not(X = mp (en U V) (en R T)) /\ 
+  filter_enc L NE E. 
+
+Define iter_reduce : list thy_pair -> list thy_pair -> list thy_pair ->
+      		     list thy_pair -> prop
+by 
+iter_reduce NE1 E1 NE2 E2 := 
+  decom_enc E1 NE1 nil NE E /\ 
+  _if (equal E1 E)
+      (NE2 = NE /\ E2 = E)
+      (iter_reduce NE E NE2 E2).
+
+% remove variable pairs from a theory
+% remove_thy_vars ThyIn ThyOut
+
+Define remove_thy_vars : list thy_pair -> list thy_pair -> prop
+by
+remove_thy_vars nil nil ; 
+remove_thy_vars (cons P ThyIn) ThyOut :=
+   _if (P = (mp (var X) (var X)))
+       (remove_thy_vars ThyIn ThyOut)
+       (remove_thy_vars ThyIn Thy /\ ThyOut = (cons P Thy)).
+
+% remove constant pairs from a theory
+
+Define remove_thy_consts : list thy_pair -> list thy_pair -> prop
+by 
+remove_thy_consts nil nil ; 
+remove_thy_consts (cons P ThyIn) ThyOut :=
+  _if (P = (mp (ct X) (ct X)))
+      (remove_thy_consts ThyIn ThyOut)
+      (remove_thy_consts ThyIn Thy /\ ThyOut = (cons P Thy)).
+
+Define reduce : list thy_pair -> list thy_pair -> prop
+by
+reduce Thy1 Thy2 :=
+  decom_pair Thy1 Thy /\ 
+  filter_enc Thy NE1 E1 /\ 
+  iter_reduce NE1 E1 NE2 E2 /\
+  append NE2 E2 Thy3 /\ 
+  remove_thy_vars Thy3 Thy4 /\
+  remove_thy_consts Thy4 Thy2.
+
+
+
+Define eq_msg_type : tm -> tm -> prop
+by 
+eq_msg_type (var X) (var X) ; 
+eq_msg_type (ct X) (ct X) ; 
+eq_msg_type (nm X) (nm Y) ; 
+eq_msg_type (pr X Y) (pr U V) ;
+eq_msg_type (en X Y) (en U V).
+
+% Consistency condition 1: each pair in the theory has the same type 
+% Note: since variables and constants are assumed to be public knowledge,
+% they must be syntactically equal.
+
+Define thy_cc1 : list thy_pair -> prop 
+by
+thy_cc1 nil ; 
+thy_cc1 (cons (mp M N) L) :=
+  eq_msg_type M N /\ thy_cc1 L.
+ 
+% Consistency condition 2: 
+% We use an alternative characterisation here:
+% For every (M, N) in Gamma, if M = enc M1 M2 and N = enc N1 N2,
+% then not(pi_1(Gamma) ||-_R M2) and not(pi_2(Gamma) ||-_R N2).
+% The difference with the paper is the use of right-deducibility.
+% It can be proved that this alternative condition and the one in the paper
+% are interchangeable, using the properties of normal proofs.
+
+Define thy_cc2 : list thy_pair -> prop
+by
+thy_cc2 Thy :=
+  split_thy Thy S1 S2 /\ 
+  forall M1 N1 M2 N2, member (mp (en M1 N1) (en M2 N2)) Thy 
+      -> (ded1_r S1 N1 -> false) /\ (ded1_r S2 N2 -> false). 
+
+% Consistency condittion 3: 
+% thy_cc3 Thy :=
+%  pi M\ pi N\ pi U\ pi V\ 
+%   member (mp M N) Thy, member (mp U V) Thy =>
+%     (M = U => N = V), (N = V => M = U). 
+
+Define thy_cc3 : list thy_pair -> prop 
+by
+thy_cc3 nil ;
+thy_cc3 (cons (mp M N) L) :=
+  (forall U V, member (mp U V) L -> (M = U -> N = V) /\ (N = V -> M = U)) /\ 
+  thy_cc3 L.
+
+
+% Checking consistency of unreduced theories
+Define thy_consistent : list thy_pair -> prop
+by
+thy_consistent Thy :=
+  reduce Thy Thy1 /\ thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc3 Thy1. 
+
+% Checking consistency of reduced theories
+Define thy_red_consistent : list thy_pair -> prop 
+by
+thy_red_consistent Thy := 
+  thy_cc1 Thy /\ thy_cc2 Thy /\ thy_cc3 Thy. 
+

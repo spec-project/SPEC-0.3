@@ -1,0 +1,97 @@
+% Kao Chow authentication protocol v.2.
+% Source: the SBC tool examples by Borgstrom and Briais.
+
+
+A(a,b,s,kas) :=
+  nu(na).
+  s < <a,<b,na>> >.
+  a(x2).
+  let <u,v> = x2 in
+  case u of enc(m,kas) in
+  let <m1,m2> = m in
+  [a = m1] 
+  let <n1,n2> = m2 in
+  [b = n1]
+  let <s1,s2> = n2 in 
+  [na = s1]
+  let <v1,v2> = v in
+  case v1 of enc(r,s2) in 
+  [na = r] 
+  b <enc(v2,s2)> ;
+
+B(a,b,kbs) :=
+  nu(nb).
+  b(x1).
+  let <y1,y2> = x1 in
+  case y2 of enc(m,kbs) in
+  let <m1,m2> = m in
+  [a = m1] 
+  let <n1,n2> = m2 in 
+  [b = n1] 
+  let <u1,u2> = n2 in
+  a < <y1, <enc(u1,u2), nb>> >.
+  b(x3).
+  case x3 of enc(r,u2) in 
+  [nb = r]
+  b<b>;
+
+S(a,b,s,kas,kbs) :=
+  nu(kab).
+  s(x0).
+  let <y1,y2> = x0 in
+  [a = y1]
+  let <z1,z2> = y2 in
+  [b = z1]
+  b < <enc(<a, <b, <z2, kab>>>, kas), enc(<a, <b, <z2,kab>>>, kbs)> >;
+
+System(a,b,s) :=
+  nu(kas,kbs).(S{a,b,s,kas,kbs} | A{a,b,s,kas} | B{a,b,kbs}) ;
+
+A_spec(a,b,s,kab,kas) :=
+  nu(na).
+  s < <a,<b,na>> >.
+  a(x2).
+  let <y1,y2> = x2 in
+  case y1 of enc(m,kas) in
+  let <m1,m2> = m in
+  [a = m1]
+  let <n1,n2> = m2 in
+  [b = n1] 
+  let <u1,u2> = n2 in
+  [kab = u2] 
+  [na = u1] 
+  let <z1,z2> = y2 in
+  case z1 of enc(r,kab) in 
+  [na = r]
+  b < enc(z2,kab) >;
+
+B_spec(a,b,kab,kbs) := 
+  nu(nb).
+  b(x1).
+  let <y1,y2> = x1 in
+  case y2 of enc(m,kbs) in 
+  let <m1,m2> = m in
+  [a = m1]
+  let <n1,n2> = m2 in
+  [b = n1]
+  let <u1,u2> = n2 in
+  [kab = u2] 
+  a < <y1, <enc(u1,kab), nb>> >.
+  b(x3).
+  case x3 of enc(r,kab) in
+  [nb = r] 
+  b<b>;
+
+S_spec(a,b,s,kab,kas,kbs) :=
+  s(x0).
+  let <y1,y2> = x0 in
+  [a = y1]
+  let <z1,z2> = y2 in
+  [b = z1]
+  b < <enc(<a,<b,<z2,kab>>>, kas), enc(<a,<b,<z2,kab>>>,kbs)> > ;
+
+System_spec(a,b,s) :=
+  nu(kas,kbs,kab).( S_spec{a,b,s,kab,kas,kbs} | A_spec{a,b,s,kab,kas} | B_spec{a,b,kab,kbs} );
+
+% Query:
+% bisim(System_spec{a,b,s}, System{a,b,s});

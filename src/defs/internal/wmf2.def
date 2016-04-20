@@ -1,0 +1,123 @@
+#include "../bisim.def".
+
+agent_A_def Proc := 
+  Proc = 
+  (A\B\S\Kas\T\
+   (nu kab\
+     outp S (pr A (en (pr T (pr B kab)) Kas)) zero
+   )
+  ).
+
+agent_B_def Proc :=
+  Proc = 
+  (A\B\Kbs\T\
+   ( 
+    inp B (x\
+    case x Kbs (m\
+      let m (u\ v\ 
+       let v (s\ t\
+        match A s (
+         match T u (outp B B zero)
+        )
+       )
+     )
+    )
+    )
+   )
+ ).
+
+agent_S_def Proc :=
+ Proc = 
+ (A\B\S\Kas\Kbs\T\
+ (
+  inp S (x\
+  let x (x1\x2\
+   match A x1 (
+   case x2 Kas (m\
+   let m (m1\m2\
+   let m2 (n1\n2\
+   match B n1 (
+   match T m1 (
+   outp B (en (pr T (pr A n2)) Kbs) zero
+ )))))))))).
+
+agent_System_def Proc :=
+ agent_S_def ProcS,
+ agent_A_def ProcA,
+ agent_B_def ProcB, 
+ Proc = (A\B\S\T\ 
+  (nu kas\ nu kbs\
+   par (ProcS A B S kas kbs T) 
+   (par (ProcB A B kbs T) (ProcA A B S kas T))
+  )
+ ).
+
+agent_ASpec_def Proc := 
+ Proc = (A\B\S\kab\kas\tt\
+  outp S (pr A (en (pr tt (pr B kab)) kas)) zero
+ ).
+
+agent_BSpec_def Proc :=
+ Proc = (A\B\kab\kbs\tt\
+   inp B (x\
+    case x kbs (m\
+    let m (m1\m2\
+    let m2 (n1\n2\
+      match A n1 (
+      match kab n2 (
+      match tt m1 (
+      outp B B zero
+    ))))
+ )))).
+ 
+
+agent_SSpec_def Proc :=
+ Proc = (A\B\S\kab\kas\kbs\tt\
+   inp S (x\
+    let x (x1\x2\
+    case x2 kas (m\
+    let m (m1\m2\
+    let m2 (n1\n2\
+     match A x1 (
+     match B n1 (
+     match kab n2 (
+     match tt m1 (
+     outp B (en (pr tt (pr A kab)) kbs) zero
+  )))))))))).
+
+
+
+agent_SystemSpec_def Proc :=
+ agent_SSpec_def ProcS,
+ agent_ASpec_def ProcA,
+ agent_BSpec_def ProcB, 
+ Proc = (A\B\S\tt\
+  (nu kas\ nu kbs\ nu kab\
+    par  (ProcS A B S kab kas kbs tt) 
+    (par (ProcB A B kab kbs tt) (ProcA A B S kab kas tt))
+ )).
+
+wmf H P Q := 
+ agent_System_def System, 
+ agent_SystemSpec_def SystemSpec,
+ H = (cons (out (nm agent_A) (nm agent_A))
+     (cons (out (nm agent_B) (nm agent_B))
+     (cons (out (nm agent_S) (nm agent_S))
+     (cons (out (nm tt) (nm tt)) nil)))),
+ P = (System (nm agent_A) (nm agent_B) (nm agent_S) (nm tt)),
+ Q = (SystemSpec (nm agent_A) (nm agent_B) (nm agent_S) (nm tt)).
+
+check_bisim :=
+ agent_System_def System, 
+ agent_SystemSpec_def SystemSpec,
+ H = nil,
+ P = (System (ct agent_A) (ct agent_B) (ct agent_S) (ct tt)),
+ Q = (SystemSpec (ct agent_A) (ct agent_B) (ct agent_S) (ct tt)),
+  println "Checking bisimulation for: ",
+  print "- history: ", print_bitrace H, println " ",
+  print "- P: ", print_proc (par P P), println " ",
+  print "- Q: ", print_proc (par P Q), println " ", 
+ bisim H (par P P) (par P Q).
+
+
+#assert (check_bisim).
