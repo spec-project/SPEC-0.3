@@ -1,0 +1,23 @@
+Bugs in version 0.2:
+
+Problem with alpha-conversion and rigid names.
+
+SPEC> bisim( x<z> | x(z), 0);
+Error: logic variable on the left
+
+Fixed by redefining get_freeids in input.ml.
+
+
+
+Wishes for 0.3:
+
+1. Free names treated as variables rather than constants.
+
+2. Open progressing bisimulation checking.
+
+3. Simulation checking.
+
+4. Completed variants.
+ -- Keyword 1 and predicate tick defined. Need to check correctness of extensions.
+
+

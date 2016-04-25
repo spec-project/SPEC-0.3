@@ -24,12 +24,21 @@ Kind tm_type type.
 
 Type nm_type	tm_type.
 Type ct_type 	tm_type.
-Type var_type 	tm_type. 
+Type var_type 	tm_type.
 Type pr_type	tm_type.
 Type en_type	tm_type.
+% Asymmetric Encryption
+Type aen_type	tm_type.
+Type pub_type	tm_type.
+% Blind
+Type blind_type tm_type.
+% Sign, Hash, Mac
+Type sign_type 	tm_type.
+Type hs_type	tm_type.
+Type mac_type	tm_type.
 
-% substitutions
-Kind sub_pair type. % substitution pair
+% Substitutions
+Kind sub_pair type. % Substitution pair
 
 Type sub (tm -> tm -> sub_pair). 
 
@@ -37,10 +46,18 @@ Type sub (tm -> tm -> sub_pair).
 
 Define closed : tm -> prop by 
 closed (ct X) ; 
-closed (nm X) ; 
+closed (nm X) ;
 closed (pr U V) := closed U /\ closed V ; 
-closed (en U V) := closed U /\ closed V.
-
+closed (en U V) := closed U /\ closed V;
+% Asymmetric Encryption
+closed (aen U V) := closed U /\ closed V;
+closed (pub U) := closed U;
+% Blind
+closed (blind U V) := closed U /\ closed V;
+% Sign, Hash, Mac
+closed (sign U V) := closed U /\ closed V;
+closed (hs U) := closed U;
+closed (mac U V) := closed U /\ closed V.
 
 % get_var Term VarIn VarOut
 Define get_var : tm -> list tm -> list tm -> prop by 
@@ -48,26 +65,62 @@ Define get_var : tm -> list tm -> list tm -> prop by
   get_var (nm X) VarIn VarIn ;
   get_var (var V) VarIn VarOut  := insert (var V) VarIn VarOut ;
   get_var (pr X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut ;
-  get_var (en X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut.
+  get_var (en X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut;
+  % Asymmetric Encryption
+  get_var (aen X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut;
+  get_var (pub X) VarIn VarOut := get_var X VarIn VarOut;
+  % Blind
+  get_var (blind X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut;
+  % Sign, Hash, Mac
+  get_var (sign X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut;
+  get_var (hs X) VarIn VarOut := get_var X VarIn VarOut;
+  get_var (mac X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut.
 
 Define msg_type : tm -> tm_type -> prop by 
   msg_type (nm X) nm_type ; 
-  msg_type (ct X) ct_type ; 
+  msg_type (ct X) ct_type ;
   msg_type (var X) var_type ;
   msg_type (pr U V) pr_type ;
-  msg_type (en U V) en_type.
+  msg_type (en U V) en_type;
+  % Asymmetric Encryption
+  msg_type (aen U V) aen_type;
+  msg_type (pub U) pub_type;
+  % Blind
+  msg_type (blind U V) blind_type;
+  % Sign, Hash, Mac
+  msg_type (sign U V) sign_type;
+  msg_type (hs U) hs_type;
+  msg_type (mac U V) mac_type.
 
 Define free : tm -> tm -> prop by 
   free (var V) (var V) ;
   free V (pr X Y) := free V X \/ free V Y ;
-  free V (en X Y) := free V X \/ free V Y.
+  free V (en X Y) := free V X \/ free V Y;
+  % Asymmetric Encryption
+  free V (aen X Y) := free V X \/ free V Y;
+  free V (pub X) := free V X;
+  % Blind
+  free V (blind X Y) := free V X \/ free V Y;
+  % Sign, Hash, Mac
+  free V (sign X Y) := free V X \/ free V Y;
+  free V (hs X) := free V X;
+  free V (mac X Y) := free V X \/ free V Y.
 
 Define not_free : tm -> tm -> prop by 
   not_free (var V) (ct A) ;
   not_free (var V) (nm A) ;
   not_free (var V) (var W) := _not(V = W) ;
   not_free V (pr X Y) := not_free V X /\ not_free V Y ;
-  not_free V (en X Y) := not_free V X /\ not_free V Y.
+  not_free V (en X Y) := not_free V X /\ not_free V Y;
+  % Asymmetric Encryption
+  not_free V (aen X Y) := not_free V X /\ not_free V Y;
+  not_free V (pub X) := not_free V X;
+  % Blind
+  not_free V (aen X Y) := not_free V X /\ not_free V Y;
+  % Sign, Hash, Mac
+  not_free V (sign X Y) := not_free V X /\ not_free V Y;
+  not_free V (hs X) := not_free V X;
+  not_free V (mac X Y) := not_free V X /\ not_free V Y.
 
 % A simple procedure for copying terms. 
 
@@ -77,7 +130,16 @@ Define simp_cp : tm -> tm -> prop by
   simp_cp (nm X) (nm X) ;  % free name
   simp_cp (ct X) (ct X) ;  % constants
   simp_cp (pr X Y) (pr U V) := simp_cp X U /\ simp_cp Y V ; 
-  simp_cp (en X Y) (en U V) := simp_cp X U /\ simp_cp Y V. 
+  simp_cp (en X Y) (en U V) := simp_cp X U /\ simp_cp Y V;
+  % Asymmetric Encryption
+  simp_cp (aen X Y) (aen U V) := simp_cp X U /\ simp_cp Y V;
+  simp_cp (pub X) (pub U) := simp_cp X U;
+  % Blind
+  simp_cp (blind X Y) (blind U V) := simp_cp X U /\ simp_cp Y V;
+  % Sign, Hash, Mac
+  simp_cp (sign X Y) (sign U V) := simp_cp X U /\ simp_cp Y V;
+  simp_cp (hs X) (hs U) := simp_cp X U;
+  simp_cp (mac X Y) (mac U V) := simp_cp X U /\ simp_cp Y V.
 
 % copyterm L S T:
 % L : a mapping from variables to terms
@@ -92,10 +154,19 @@ Define copyterm : list sub_pair  -> tm -> tm -> prop by
   copyterm L (bn X)  X ;      % bound name
   copyterm L (nm X) (nm X) ;  % free name
   copyterm L (ct X) (ct X) ;  % constants
-  copyterm L (pr X Y) (pr U V) := copyterm L X U /\ copyterm L Y V ; 
-  copyterm L (en X Y) (en U V) := copyterm L X U /\ copyterm L Y V. 
+  copyterm L (pr X Y) (pr U V) := copyterm L X U /\ copyterm L Y V ;
+  copyterm L (en X Y) (en U V) := copyterm L X U /\ copyterm L Y V;
+  % Asymmetric Encryption
+  copyterm L (aen X Y) (aen U V) := copyterm L X U /\ copyterm L Y V;
+  copyterm L (pub X) (pub U) := copyterm L X U;
+  % Blind
+  copyterm L (blind X Y) (blind U V) := copyterm L X U /\ copyterm L Y V;
+  % Sign, Hash, Mac
+  copyterm L (sign X Y) (sign U V) := copyterm L X U /\ copyterm L Y V;
+  copyterm L (hs X) (hs U) := copyterm L X U;
+  copyterm L (mac X Y) (mac U V) := copyterm L X U /\ copyterm L Y V. 
 
-% generate an identity substitution from a list of variables.
+% Generate an identity substitution from a list of variables.
 Define id_subst : list tm -> list sub_pair -> prop by  
   id_subst nil nil ; 
   id_subst (cons V Vs) (cons (sub V V) L) := id_subst Vs L.
@@ -111,7 +182,7 @@ Define compose : list tm -> list sub_pair -> list sub_pair -> list sub_pair -> p
     compose Vs S1 S2 S /\ 
     copyterm S1 (var V) M /\ 
     copyterm S2 M N /\
-    S3 = cons (sub (var V) N) S. 
+    S3 = cons (sub (var V) N) S.
   
 % unify L A B Vs Subst:
 % L : accumulator for storing substitution pairs (containing logic variables)

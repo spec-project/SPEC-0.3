@@ -26,18 +26,21 @@
       (Parsing.rhs_start_pos i, Parsing.rhs_end_pos i)
 
   let qstring p s = Input.pre_qstring p s 
-  let constid p s = Input.pre_predconstid p s   
+  let constid p s = Input.pre_predconstid p s
+  let freeid p s = Input.pre_freeid p s   (* RH: Added in attempt to fix free variable bugs. *)   
 
   let nil_op = constid (pos 0) "nil" 
   let cons_op = constid (pos 0) "cons"
   let def_op =  constid (pos 0) "def" 
   let ct_op = constid (pos 0) "ct"
   let zero_op = constid (pos 0) "zero"
+  let done_op = constid (pos 0) "done"
   let par_op = constid (pos 0) "par" 
   let plus_op = constid (pos 0) "plus"
   let nu_op = constid (pos 0) "nu" 
   let in_op = constid (pos 0) "inp" 
-  let out_op = constid (pos 0) "outp" 
+  let out_op = constid (pos 0) "outp"
+  let tau_op = constid (pos 0) "taup"   (* RH: Added tau *)
   let match_op = constid (pos 0) "match" 
   let mismatch_op = constid (pos 0) "mismatch" 
   let case_op = constid (pos 0) "case"
@@ -45,6 +48,21 @@
   let bang_op = constid (pos 0) "bang" 
   let pr_op = constid (pos 0) "pr"
   let en_op = constid (pos 0) "en"
+  (* Asymmetric Encryption *)
+  let aen_op = constid (pos 0) "aen"
+  let pub_op = constid (pos 0) "pub"
+  (* Blind *)
+  let blind_op = constid (pos 0) "blind"
+  (* Sign, Hash, Map *)
+  let sign_op = constid (pos 0) "sign"
+  let hash_op = constid (pos 0) "hs"
+  let mac_op  = constid (pos 0) "mac"
+  (* CheckSign *)
+  let checksign_op = constid (pos 0) "checksign"
+  (* Adec, Unblind, Getmsg *)
+  let letadec_op = constid (pos 0) "letadec"
+  let letunblind_op = constid (pos 0) "letunblind"
+  let letgetmsg_op = constid (pos 0) "letgetmsg"
 
   let app s t = Input.pre_app (pos 0) s t 
   let lambda v t = Input.pre_lambda (pos 0) [v] t 
@@ -63,26 +81,45 @@
 
   let change_freeids t =
     let vs = Input.get_freeids t in
-    let sub = List.map (fun s -> (s,app ct_op [qstring (pos 0) s]) ) vs in 
-     Input.pre_freeidsubst sub t 
+    let sub = List.map (fun s -> (s,app ct_op [qstring (pos 0) s]) ) vs in
+    Input.pre_freeidsubst sub t  
+
+
+  let abstract_ids tm vars =
+    let proc = constid (pos 0) "defProc" in 
+    let abs  = constid (pos 0) "defAbs" in 
+    List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars   (* RH: Builds lambda-abstraction in Bedwyr for each v in vars wrapped with defAbs from proc.def. *)
+               (app proc [tm])   (* RH: Base case of fold_right building a process before vars are abstracted.*)
 
   let mkdef a b = 
-    let agentname,vars = a in 
+    let agentname,vars = a in (* RH: Can now ignore vars on this line, since vars are defined by default. Alternatively check all vars are declared as in MWB. *)
+    let vars = List.map (fun (x,y,z) -> y) vars in
+    let vars = List.concat [
+                 vars;
+                 List.sort (fun x y -> if x < y then 0 else 1)
+                  (List.filter (fun x -> not (List.mem x vars))
+                    (Input.get_freeids b))]
+    in
     let proc = constid (pos 0) "defProc" in 
     let abs  = constid (pos 0) "defAbs" in 
     let agent_def = constid (pos 0) "agent_def" in 
-    let b = List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [v] t]) vars 
-                 (app proc [b]) in 
-    let d = change_freeids (app agent_def [(qstring (pos 0) agentname); b]) in 
-        Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))   
+    let b = abstract_ids b vars in
+    let d = (app agent_def [(qstring (pos 0) agentname); b]) in 
+    if vars != [] then
+       Format.printf "Free variable(s): %s.\n" (String.concat " " vars) ;
+    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))   
 
-  let mkquery a b = 
-    let q = app (constid (pos 0) "bisim_def") [a;b] in 
-    Spi.Query (pos 0, change_freeids q)
+  let mkquery bisim_fun a b = (* RH: bisim_fun is the string corresponding to the function in spec.def. *)
+    let vars = Input.get_freeids (app par_op [a;b]) in
+    let a' = abstract_ids a vars in
+    let b' = abstract_ids b vars in 
+    let q = app (constid (pos 0) bisim_fun) [nil_op; a';b'] in 
+    Spi.Query (pos 0, q)
+
 %}
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM
-%token ZERO DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB SIGN VK
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM PBISIM PSIM
+%token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU CHECKSIGN ADEC UNBLIND GETMSG	/* Asymmetric encryption, Blind, Sign, Hash, Mac, CheckSign, Adec, Unblind, Getmsg */
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
 %token <string> AID
@@ -104,7 +141,9 @@ input_def:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
 input_query:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
-| BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery $3 $5 }
+| BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "bisim_def" $3 $5 }
+| SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "psim_def" $3 $5 }
+| PBISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "pbisim_def" $3 $5 }
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }
@@ -128,6 +167,7 @@ head:
 pexp:
 | agent { $1 }
 | ZERO { zero_op }
+| DONE { done_op }
 | outpref { let a,b = $1 in app out_op [a;b;zero_op] }
 | inpref { let a,b = $1 in app in_op [a ; lambda b zero_op] }
 | pexp PAR pexp { app par_op [$1;$3] }
@@ -136,10 +176,16 @@ pexp:
 | inpref DOT pexp { let a,b = $1 in app in_op [a;lambda b $3] }
 | nupref DOT pexp { nuproc $1 $3 }
 | LBRAK texp EQ texp RBRAK pexp { app match_op [$2;$4;$6] }
+| LBRAK CHECKSIGN LPAREN texp COMMA texp RPAREN RBRAK pexp { app checksign_op [$4;$6;$9] }			/* CheckSign */
 | LBRAK texp NEQ texp RBRAK pexp { app mismatch_op [$2;$4;$6] }
 | cpref IN pexp { let a,(b,c) = $1 in app case_op [a;c;lambda b $3] }
 | lpref IN pexp { let t,(v1,v2) = $1 in app let_op [t; lambda v1 (lambda v2 $3)] }
+| ladecpref IN pexp { let (a1,a2),b = $1 in app letadec_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
+| lunblindpref IN pexp { let (a1,a2),b = $1 in app letunblind_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
+| lgetmsgpref IN pexp { let a,b = $1 in app letgetmsg_op [a; lambda b $3] }			/* Adec, Unblind, Getmsg */
 | BANG pexp { app bang_op [$2] }
+| TAU DOT pexp { app tau_op [$3] }
+| TAU { app tau_op [zero_op] }
 | apexp { $1 }
 
 apexp:
@@ -174,10 +220,18 @@ nupref:
 | NU LPAREN sids RPAREN { $3 }
 
 cpref: 
-| CASE texp OF encpat { ($2,$4) } 
+| CASE texp OF encpat { ($2,$4) }
 
 lpref:
 | LET prpat EQ texp { ($4,$2) }
+
+/* Adec, Unblind, Getmsg */
+ladecpref:
+| LET ID EQ adecpat { ($4, (pos 0,$2,Input.Typing.fresh_typaram()) ) }
+lunblindpref:
+| LET ID EQ unblindpat { ($4, (pos 0,$2,Input.Typing.fresh_typaram()) ) }
+lgetmsgpref:
+| LET ID EQ getmsgpat { ($4, (pos 0,$2,Input.Typing.fresh_typaram()) ) }
 
 sids: 
 | ID  { [(pos 0,$1,Input.Typing.fresh_typaram())] }
@@ -193,13 +247,27 @@ name_id:
 encpat:
 | ENC LPAREN ID COMMA texp RPAREN { ((pos 0,$3,Input.Typing.fresh_typaram()),$5) }
 
+/* Adec, Unblind, Getmsg */
+adecpat:
+| ADEC LPAREN texp COMMA texp RPAREN { ($3, $5) }
+unblindpat:
+| UNBLIND LPAREN texp COMMA texp RPAREN { ($3, $5) }
+getmsgpat:
+| GETMSG LPAREN texp RPAREN { $3 }
+
 prpat:
 | LANGLE ID COMMA ID RANGLE { ((pos 0,$2,Input.Typing.fresh_typaram()), (pos 0,$4,Input.Typing.fresh_typaram()) ) }
 
 texp: 
-| name_id { $1 }
+| name_id { $1 } 
 | LANGLE texp COMMA ltexp RANGLE { mkpairs ($2::$4)  }
 | ENC LPAREN texp COMMA texp RPAREN { app en_op [$3;$5] }
+| AENC LPAREN texp COMMA texp RPAREN { app aen_op [$3;$5] }		/* Asymmetric Encryption */
+| PUB LPAREN texp RPAREN { app pub_op [$3] }				/* Asymmetric Encryption */
+| BLIND LPAREN texp COMMA texp RPAREN { app blind_op[$3;$5] }		/* Blind */
+| SIGN LPAREN texp COMMA texp RPAREN { app sign_op [$3; $5] }		/* Sign, Hash, Mac */
+| HASH LPAREN texp RPAREN { app hash_op [$3] }				/* Sign, Hash, Mac */
+| MAC LPAREN texp COMMA texp RPAREN {app mac_op [$3; $5] }		/* Sign, Hash, Mac */
 | atexp { $1 }
 
 ltexp:

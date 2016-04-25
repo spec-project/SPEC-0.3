@@ -134,10 +134,10 @@ by
 fun_CS2 Vs H Sub1 Sub2 := fCS2 Vs H Sub2 nil Sub1.
 
 Define project_mesg : nat -> bt_pair -> tm -> prop
-by 
-project_mesg 1 (in M N) M ; 
-project_mesg 1 (out M N) M ; 
-project_mesg 2 (in M N) N ; 
+by
+project_mesg 1 (in M N) M ;
+project_mesg 1 (out M N) M ;
+project_mesg 2 (in M N) N ;
 project_mesg 2 (out M N) N.
 
 Define vars_cst	: list tm -> list tm -> list constraint -> prop
@@ -235,8 +235,20 @@ apply_subst_bt Sub1 Sub2 (cons (out M N) L) (cons (out U V) R) :=
 Define apply_RC : list bt_pair -> list thy_pair -> 
                   list bt_pair -> list thy_pair -> prop
 by 
+
 apply_RC H_in Thy_in H_out Thy_out := 
   select Thy_in (mp (en M N) (en R T))  Rest /\ 
+  split_thy Rest S1 S2 /\ 
+  C1 = (dedl S1 N) /\
+  C2 = (dedl S2 T) /\ 
+  (fun_RC1 H_in C1 Sub1 Sub2 \/ fun_RC2 H_in C2 Sub1 Sub2) /\
+  apply_subst_bt Sub1 Sub2 H_in H_out /\
+  apply_subst_thy  Sub1 Sub2 Thy_in Thy /\
+  reduce Thy Thy_out;
+
+% Asymmetric Encryption
+apply_RC H_in Thy_in H_out Thy_out := 
+  select Thy_in (mp (aen M (pub N)) (aen R (pub T)))  Rest /\ 
   split_thy Rest S1 S2 /\ 
   C1 = (dedl S1 N) /\
   C2 = (dedl S2 T) /\ 
@@ -275,7 +287,7 @@ Define bt_consistent_iter : list bt_pair -> list thy_pair -> list bt_pair -> pro
 by 
 
 bt_consistent_iter Bt_Pre Thy_Pre nil ;
- 
+
 bt_consistent_iter Bt_Pre Thy_Pre (cons (in M N) H) :=
   deduce_r Thy_Pre M N /\
   append Bt_Pre (cons (in M N) nil) NewBt /\ 
@@ -292,6 +304,4 @@ Define bt_consistent : list bt_pair -> prop
 by 
 bt_consistent H := 
   bt_consistent_iter nil nil H.
-
-  
 

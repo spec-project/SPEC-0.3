@@ -113,7 +113,14 @@ proc2text File L (bang P) :=
   print_str_list File L /\  
   fprintstr File "! ( \n" /\  
   proc2text File (cons " " L) P /\ 
-  fprintstr File ") \n". 
+  fprintstr File ") \n";
+
+proc2text File L (taup P) := % RH: Similar to bang.
+  print_str_list File L /\  
+  fprintstr File "tau ( \n" /\  
+  proc2text File (cons " " L) P /\ 
+  fprintstr File ") \n".
+
 
 Define print_proc_text : string -> proc -> prop
 by 

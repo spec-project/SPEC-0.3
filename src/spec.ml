@@ -103,7 +103,6 @@ let do_cleanup f x clean =
 (*            | _ -> ()) *)
 (*         System.defs *)
 
-
 let count_bisim = (fun () -> 
       try
         let _,_,_,table,_ = System.get_def Spi.Process.bisim_arity Spi.Process.bisim in
@@ -145,6 +144,8 @@ let prove_bisim a =
      ) 
   in 
      do_cleanup (do_query success failure) a reset
+
+
 
 let prove_show_def a = 
   let pre_show_def = Input.pre_predconstid (Input.dummy_pos) (Spi.Process.show_def_str) in 
@@ -192,7 +193,7 @@ let save_latex_footer fout =
   Printf.fprintf fout "\\end{enumerate}\n";
   Printf.fprintf fout "\\end{document} \n" 
 
-let show_bisim query table  = 
+let show_bisim query table  = (* query constructed using show_bisim_query. The query calls show_bisim in spec.def *)
   let s = (fun ts k -> ()) in
   let f = (fun () -> ()) in 
   let prv x y g = 
@@ -244,9 +245,9 @@ let rec process_spi ?(interactive=false) parse lexbuf =
            let _,_,_,_,ty = System.get_def 2 pred in 
            let pred_var = Term.get_var pred in 
              Format.printf "Reading spi definition\n" ;  
-             Spi.add_spi_sig agent n ; 
+             Spi.add_spi_sig agent n ;
      	     (* System.update_def Spi.Process.agent_def b ;  *)
-             System.add_clauses [(pred_var,ty)] [b] 
+             System.add_clauses [(pred_var,ty)] [b]
              (* check_def agent *)
          ) 
          with | Not_found ->  
@@ -391,7 +392,7 @@ and command lexbuf = function
   | "show_bisim",[] -> 
      (
        try
-        let _,_,_,table,_ = System.get_def (Spi.Process.bisim_arity) Spi.Process.bisim in
+        let _,_,_,table,_ = System.get_def (Spi.Process.bisim_arity) (* RH: bisim_arity is 3 *) Spi.Process.bisim in
         begin 
          match table with
          | Some table ->              

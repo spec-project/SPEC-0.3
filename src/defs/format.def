@@ -47,7 +47,8 @@ collapse_plus (plus P Q) R :=
 Define norm : proc -> proc -> prop, 
        norm_list : list proc -> list proc -> prop
 by 
-norm zero zero ; 
+norm zero zero ;
+norm done done ; % RH: Added for done.  
 norm (par P Q) R :=
   collapse_par (par P Q) L /\ 
   norm_list L M /\ 
@@ -69,9 +70,24 @@ norm (case M N (x\ P x)) (case U V (x\ Q x)) :=
   nabla x, norm (P (bn x)) (Q x) ; 
 norm (let M (x\y\ P x y)) (let N (x\y\ Q x y)) :=
   simp_cp M N /\ 
-  nabla x y, norm (P (bn x) (bn y)) (Q x y) ; 
+  nabla x y, norm (P (bn x) (bn y)) (Q x y) ;
+% CheckSign
+norm (checksign X Y P) (checksign U V R) :=  
+  simp_cp X U /\ simp_cp Y V /\ norm P R ; 
+% Adec, Unblind, Getmsg
+norm (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
+  simp_cp M U /\ simp_cp N V /\
+  nabla x, norm (P (bn x)) (Q x) ;
+norm (letunblind M N (x\ P x)) (letunblind U V (x\ Q x)) :=
+  simp_cp M U /\ simp_cp N V /\
+  nabla x, norm (P (bn x)) (Q x) ;
+norm (letgetmsg M (x\ P x)) (letgetmsg N(x\ Q x)) :=
+  simp_cp M N /\
+  nabla x, norm (P (bn x)) (Q x) ;
 norm (bang P) (bang Q) := norm P Q ; 
+norm (taup P) (taup Q) := norm P Q ;  % RH: Added for tau.
 
 norm_list nil nil ; 
 norm_list (cons X L) (cons Y R) :=
   norm X Y /\ norm_list L R.
+

@@ -130,20 +130,43 @@ let free_args pre_term =
   in
   in_app pre_term
 
-let get_freeids t = 
+let get_freeids_old t = (* RH: This has the bug that fv(t u) =/= fv(t) \cup fv(u). The bug is fixed below using sets. *)
   let filter xs ys = 
       let xs = List.map (fun (x,y,z) -> y) xs in 
        List.filter (fun a -> not (List.mem a xs)) ys in
   let rec aux vs t = 
     match t with 
     | FreeID(p,s) -> if List.mem s vs then vs else (s::vs)
-    | Eq(_,x,y) | And(_,x,y) | Or(_,x,y) | Arrow(_,x,y) -> aux (aux vs x) y 
+    | Eq(_,x,y) | And(_,x,y) | Or(_,x,y) | Arrow(_,x,y) -> aux (aux vs x) y (* RH: bug here *)
     | Binder(_,_,xs,u) | Lam(_,xs,u) -> filter xs (aux vs u)
     | App(_,hd,args) -> 
-        List.fold_left (fun a b -> aux a b) (aux vs hd) args 
+        List.fold_left (fun a b -> aux a b) (aux vs hd) args (* RH: bug here *)
     | _ -> vs 
   in
     aux [] t 
+
+(* RH: alternative to get_freeids fixing alpha-conversion bug *)
+module StringSet = Set.Make( 
+  struct
+    let compare = Pervasives.compare
+    type t = string
+  end )
+
+let get_freeids t = 
+  let filter xs ys = 
+      let xs = List.map (fun (x,y,z) -> y) xs in 
+      List.fold_left (fun s x -> StringSet.remove x s) ys xs in
+  let rec aux vs t = 
+    match t with 
+    | FreeID(p,s) -> if StringSet.mem s vs then vs else StringSet.add s vs
+    | Eq(_,x,y) | And(_,x,y) | Or(_,x,y) | Arrow(_,x,y) -> StringSet.union (aux vs x) (aux vs y) 
+    | Binder(_,_,xs,u) | Lam(_,xs,u) -> filter xs (aux vs u)
+    | App(_,hd,args) -> 
+         List.fold_left (fun a b -> StringSet.union a (aux vs b)) (aux vs hd) args
+    | _ -> vs 
+  in
+    StringSet.elements (aux StringSet.empty t)
+
 
 (* Textual substitution: can possibly capture variables (FreeID's) *) 
 let pre_freeidsubst sub pt = 

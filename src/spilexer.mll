@@ -43,11 +43,15 @@ rule token = parse
 | "!" { BANG }
 | "#" { SHARP }
 | "0" { ZERO }
+| "1" { DONE }
 | "." { DOT }
 | "=" { EQ }
 | "~=" { NEQ }
 | ":=" { DEF }
 | "bisim" { BISIM }
+| "pbisim" { PBISIM }
+| "sim" { SIM }
+| "psim" { PSIM }
 | "," { COMMA }
 | ";" { SEMICOLON }
 | "nu" { NU }
@@ -71,6 +75,13 @@ rule token = parse
 | "pub" { PUB }
 | "sign" { SIGN }
 | "vk" { VK }
+| "mac" { MAC }			(* Sign, Hash, Mac *)
+| "blind" { BLIND }		(* Blind *)
+| "tau" { TAU } 		(* Add tau *)
+| "checksign" { CHECKSIGN }	(* Add CheckSign *)
+| "adec" { ADEC } 		(* Asymmetric Decode *)
+| "unblind" { UNBLIND }		(* Unblind *)
+| "getmsg" { GETMSG }		(* Get Message *)
 
 | name as n { ID n }
 | aname as n { AID n} 

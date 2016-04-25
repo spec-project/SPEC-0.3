@@ -28,7 +28,11 @@ Type defProc proc -> def_body.
 Type defAbs  (tm -> def_body) -> def_body. 
 
 Define simplify : proc -> proc -> prop by 
-simplify zero zero ; 
+
+
+simplify zero zero ;
+simplify done done ;   % RH: Added for one.
+
 simplify (par P1 P2) Q := 
   simplify P1 Q1 /\ 
   simplify P2 Q2 /\ 
@@ -77,6 +81,30 @@ simplify (case M N P) Q :=
       (Q = zero)
       (Q = (case M N R)) ; 
 
+% CheckSign
+simplify (checksign X Y P) Q :=
+  simplify P R /\ 
+  _if (R = zero)
+      (Q = zero)
+      (Q = (checksign X Y R)) ; 
+
+% Adec, Unblind, Getmsg
+simplify (letadec M N (x\ P x)) Q := 
+  (nabla x, simplify (P x) (R x)) /\ 
+  _if (R = (x\ zero))
+      (Q = zero)
+      (Q = (letadec M N R)) ;
+simplify (letunblind M N (x\ P x)) Q := 
+  (nabla x, simplify (P x) (R x)) /\ 
+  _if (R = (x\ zero))
+      (Q = zero)
+      (Q = (letunblind M N R)) ;
+simplify (letgetmsg M (x\ P x)) Q := 
+  (nabla x, simplify (P x) (R x)) /\ 
+  _if (R = (x\ zero))
+      (Q = zero)
+      (Q = (letgetmsg M R)) ;
+
 simplify (let M (x\y\ P x y)) Q :=
   (nabla x y, simplify (P x y) (R x y)) /\ 
   _if (R = (x\y\ zero))
@@ -87,7 +115,12 @@ simplify (bang P) Q :=
   simplify P R /\
   _if (R = zero)
       (Q = zero)
-      (Q = (bang R)).
+      (Q = (bang R));
+
+simplify (taup P) Q := 
+  simplify P R /\
+  Q = (taup R) % RH: Tau transition added, similar to outp.
+.
 
 
 Define print_proc : proc -> prop, print_nu_proc : proc -> prop,
@@ -115,6 +148,8 @@ print_proc (def A L) :=
   _if (L = nil) true (printstr "{" /\ plist L /\ printstr "}") ; 
 
 print_proc zero := printstr "0" ;
+
+print_proc done := printstr "1" ; % RH: Added for one.
 
 print_proc (par P Q) :=
    print_proc P /\ printstr " | " /\ print_proc Q ; 
@@ -151,8 +186,34 @@ print_proc (let M (x\y\ P x y)) :=
     print y /\ printstr "> = " /\ print_term M /\ printstr " in " /\
     print_proc_aux (P (bn x) (bn y)) ; 
 
+% CheckSign
+print_proc (checksign X Y P) :=
+  printstr "[checksign(" /\ print_term X /\ printstr " = " /\ print_term Y /\ printstr ")]" /\
+  print_proc_aux P ;
+
+% Adec, Unblind, Getmsg
+print_proc (letadec M N (x\ P x)) :=
+  nabla x, 
+    printstr "let " /\ 
+    print x /\ printstr " = adec(" /\ print_term M /\ printstr ", " /\ print_term N /\ printstr ")" /\ printstr " in " /\
+    print_proc_aux (P (bn x)) ;
+print_proc (letunblind M N (x\ P x)) :=
+  nabla x, 
+    printstr "let " /\ 
+    print x /\ printstr " = unblind(" /\ print_term M /\ printstr ", " /\ print_term N /\ printstr ")" /\ printstr " in " /\
+    print_proc_aux (P (bn x)) ; 
+print_proc (letgetmsg M (x\ P x)) :=
+  nabla x, 
+    printstr "let " /\ 
+    print x /\ printstr " = getmsg(" /\ print_term M /\ printstr ")" /\ printstr " in " /\
+    print_proc_aux (P (bn x)) ; 
+
 print_proc (bang P) :=
-  printstr "!" /\ printstr "(" /\ print_proc P /\ printstr ")".
+  printstr "!" /\ printstr "(" /\ print_proc P /\ printstr ")";
+
+print_proc (taup P) := % RH: Added tau.
+  printstr "tau." /\ printstr "(" /\ print_proc P /\ printstr ")".
+
  
 Define print_agent : agent -> prop by 
 print_agent (con M P) :=
@@ -176,14 +237,16 @@ print_act (act M) := print_term M.
 
 Define copyproc : list sub_pair -> proc -> proc -> prop by 
 
-copyproc L zero zero ; 
+copyproc L zero zero ;
+
+
+copyproc L done done ;  % RH: Added for done.
 
 copyproc L (par P Q) (par S T) :=
   copyproc L P S /\ copyproc L Q T ; 
 
 copyproc L (plus P Q) (plus S T) :=
   copyproc L P S /\ copyproc L Q T ; 
-
 
 copyproc L (nu x\P x) (nu x\Q x) :=
   nabla x, copyproc L (P (bn x)) (Q x) ; 
@@ -205,7 +268,24 @@ copyproc L (let M (x\y\P x y)) (let N (x\y\ Q x y)) :=
   copyterm L M N /\
   nabla x y, copyproc L (P (bn x) (bn y)) (Q x y) ; 
 
-copyproc L (bang P) (bang Q) := copyproc L P Q. 
+% CheckSign
+copyproc L (checksign X Y P) (checksign U V Q) :=
+  copyterm L X U /\ copyterm L Y V /\ copyproc L P Q ;
+
+% Adec, Unblind, Getmsg
+copyproc L (letadec M N (x\ P x)) (letadec U V (x\ Q x)) := 
+  copyterm L M U /\ copyterm L N V /\
+  nabla x, copyproc L (P (bn x)) (Q x) ;
+copyproc L (letunblind M N (x\ P x)) (letunblind U V (x\ Q x)) := 
+  copyterm L M U /\ copyterm L N V /\
+  nabla x, copyproc L (P (bn x)) (Q x) ; 
+copyproc L (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) := 
+  copyterm L M N /\
+  nabla x, copyproc L (P (bn x)) (Q x) ; 
+
+copyproc L (taup P) (taup Q) := copyproc L P Q ; % RH: Added for tau.
+
+copyproc L (bang P) (bang Q) := copyproc L P Q.
 
 Define copyagent : list sub_pair -> agent -> agent -> prop by 
 copyagent L (abs x\ P x) (abs x\ Q x) := 
@@ -275,7 +355,7 @@ c_oneAbs Vs P Cont  :=
   flex_subst Vs FSub /\ 
   copyproc FSub P P1 /\ 
   oneAbs P1 A Q /\ 
-  concretize FSub /\  
+  concretize FSub /\
   _abstract (contAgent A Q FSub) abscont_var Cont1 /\
   apply_var Cont1 Cont.
 
@@ -287,4 +367,6 @@ c_oneCon Vs P Cont :=
   concretize FSub /\ 
   _abstract (contAgent A Q FSub) abscont_var Cont1 /\ 
   apply_var Cont1 Cont.
+
+
 

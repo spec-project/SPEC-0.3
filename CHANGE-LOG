@@ -1,3 +1,10 @@
+Version 0.3
+- 25/04/16:
+* Open progressing bisimulation working (Added pbisim, sim).
+* Definitions are open.
+
+* Added aenc, pub, blind, sign, hash, mac, adec, unblind, getmsg syntax.
+
 Version 0.2
 -----------
 - 23/01/13:

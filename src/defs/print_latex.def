@@ -121,7 +121,14 @@ proc2latex File L (bang P) :=
   print_str_list File L /\ 
   fprintstr File "$! ~ ($ \\= \\\\ \n" /\  
   proc2latex File (cons "\\>" L) P /\ 
+  fprintstr File "$)$ \\\\ \n"; 
+
+proc2latex File L (taup P) := % RH: similar to bang but with \tau at front
+  print_str_list File L /\ 
+  fprintstr File "$\\tau. ~ ($ \\= \\\\ \n" /\  
+  proc2latex File (cons "\\>" L) P /\ 
   fprintstr File "$)$ \\\\ \n". 
+
 
 Define print_proc_latex : string -> proc -> prop 
 by 

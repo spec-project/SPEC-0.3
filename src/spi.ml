@@ -20,9 +20,11 @@
 module Process =
 struct
   let bisim = Term.atom "bisim"
+  let bisim = Term.atom "pbisim"  (* RH: added for progressing open bisimulation *)
 
   let agent_def = Term.atom "agent_def"
   let bisim_str = "bisim"
+  let pbisim_str = "pbisim" (* RH: added for progressing open bisimulation *)
   let show_bisim = Term.atom "show_bisim"
   let save_bisim = Term.atom "save_bisim" 
   let save_bisim_latex = Term.atom "bisim2latex"
@@ -38,13 +40,24 @@ struct
 
   let proc_inp = Term.atom "inp"
   let proc_outp = Term.atom "outp"
+  let proc_taup = Term.atom "taup" (* RH: Added tau *)
   let bt_in = Term.atom "in"
   let bt_out = Term.atom "out"
+  let bt_tau = Term.atom "tau" (* RH: Added tau *)
   let msg_pr = Term.atom "pr"
   let msg_en = Term.atom "en"
   let msg_ct = Term.atom "ct"
   let msg_nm = Term.atom "nm"
   let msg_bn = Term.atom "bn"
+  (* Asymmetric Encryption *)
+  let msg_aen = Term.atom "aen"
+  let msg_pub = Term.atom "pub"
+  (* Blind *)
+  let msg_blind = Term.atom "blind"
+  (* Sign, Hash, Mac *)
+  let msg_sign = Term.atom "sign"
+  let msg_hash = Term.atom "hs"
+  let msg_mac  = Term.atom "mac"
 
   (* let var_option  = Term.get_var option *)
 
@@ -89,7 +102,7 @@ let find_spi_name name =
     true
   with
   | Not_found -> false
-   
+
 let find_spi_sig name arity =
   try 
     ignore (List.find (fun (a,b) -> (a = name) & (b = arity)) !spi_sig ) ;
@@ -99,14 +112,15 @@ let find_spi_sig name arity =
 
 let bisim_size table =
     let i = ref 0 in
+    Printf.printf "!Got this far!";  
       Table.iter_fun table 
         (fun t tag -> 
+           Printf.printf "!but not this far!";  
            match tag with
            | Table.Proved -> i := (!i + 1) 
            | _ -> ()
         ) ;
       !i
-
 
 let save_bisim_raw fout table = 
   let fmt = Format.formatter_of_out_channel fout in

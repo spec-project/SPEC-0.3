@@ -191,7 +191,7 @@ split_bt (cons (out X Y) L) (cons X L1) (cons Y L2) := split_bt L L1 L2.
 % processes and their traces.
 
 Define reflexive : list bt_pair -> proc -> proc -> prop
-by 
+by
 reflexive H P Q :=
   _if (P = zero /\ Q = zero) (true)
       (
@@ -230,7 +230,35 @@ decomp_bt_pair Thy Acc (nm X) (nm Y) L :=
 %       (L = (cons (out (hs X) (hs Y)) Acc)).
 decomp_bt_pair Thy Acc (pr X Y) (pr U V) L :=
   decomp_bt_pair Thy Acc X U Acc1 /\ 
-  decomp_bt_pair Thy Acc1 Y V L ; 
+  decomp_bt_pair Thy Acc1 Y V L ;
+%% Add Asymmetric Encryption
+decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
+  _if (K = pub U /\ M = pub V /\ deduce_r Thy U V)
+      (
+	decomp_bt_pair Thy Acc X Y L
+      )
+      (
+        _if (det_mem (mp (aen X K) (aen Y M)) Thy)
+            (L = Acc)
+            (L = (cons (out (aen X K) (aen Y M)) Acc))
+      );
+decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
+  _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (pub X) (pub Y)) Acc));
+%% Sign, Hash, Mac
+decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy)
+      (L = Acc)
+      (L = (cons (out (sign X Y) (sign U V)) Acc));
+decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
+  _if (deduce_r Thy X Y \/ det_mem (mp (hs X) (hs Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (hs X) (hs Y)) Acc));
+decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy)
+      (L = Acc)
+      (L = (cons (out (mac X Y) (mac U V)) Acc));
 decomp_bt_pair Thy Acc (en X K) (en Y M) L :=
   _if (deduce_r Thy K M)
       ( 
@@ -250,39 +278,40 @@ Define bisimTau1, bisimTau2, bisimAbs1, bisimAbs2,
        coinductive bisim : list bt_pair -> proc -> proc -> prop
 by 
 
-% [bisimTau1,bisimTau2] These deal with the case where the cases involving the tau transitions
+% [bisimTau1,bisimTau2] These deal with the cases involving tau transitions
 % in the definition of bisimulation; see [TD10].
 
 bisimTau1 H Q (conRefProc Sub1 Sub2 A P1) :=
-  copyproc Sub2 Q Q1 /\
-  one Q1 A Q2 /\ 
+  copyproc Sub2 Q Q1 /\  % Apply right substitution.
+  one Q1 A Q2 /\   
   % _rigid Q2 /\ 
-  apply_subst_bt Sub1 Sub2 H H1 /\ 
-  % print_bisim H1 P1 Q2 /\ 
-  bisim_upto H1 P1 Q2 ; 
+  apply_subst_bt Sub1 Sub2 H H1  % Generates new bitrace H1 from pair of substitutions.
+  /\  bisim_upto H1 P1 Q2
+; 
 bisimTau1 H Q (absRef x\ Cts x) :=
-  nabla x, bisimTau1 H Q (Cts x) ;
+  nabla x, bisimTau1 H Q (Cts x) ;   % This is where extruded names are made rigid.
 
 bisimTau2 H P (conRefProc Sub1 Sub2 A Q1) := 
   copyproc Sub1 P P1 /\ 
-  one P1 A P2 /\
+  one P1 A P2 /\ 
   % _rigid (one P1 A P2) /\
-  apply_subst_bt Sub1 Sub2 H H1 /\ 
-  bisim_upto H1 P2 Q1 ; 
+  apply_subst_bt Sub1 Sub2 H H1
+  /\ bisim_upto H1 P2 Q1
+; 
 bisimTau2 H P (absRef x\ Cts x) :=
   nabla x, bisimTau2 H P (Cts x) ; 
 
 % [bisimAbs1,bisimAbs2] These deal with the case where the cases involving the input transitions
 % in the definition of bisimulation; see [TD10] and the predicate bisim below. 
-% The continuation of a transition in this case is an abstraction (agent). 
+% The continuation of a transition in this case is an abstraction (agent).
 
 bisimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
   apply_subst_bt Sub1 Sub2 H H1 /\ 
   bt2thy H1 Thy /\
   reduce Thy ThyRed /\ 
-  deduce_r ThyRed M N /\ 
+  deduce_r ThyRed M N /\ % RH: this line checks the input and output channels are indistinguishable according to the theory of H1.
   copyproc Sub2 Q Q1 /\ 
-  oneAbs Q1 (act N) Q2 /\ 
+  oneAbs Q1 (act N) Q2 /\
   % _rigid (oneAbs Q1 (act N) Q2) /\ 
   bisimAgent H1 ThyRed P1 Q2 ; 
 bisimAbs1 H Q (absRef x\ Cts x) :=
@@ -309,7 +338,7 @@ bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
   reduce Thy ThyRed /\ 
   deduce_r ThyRed M N /\ 
   copyproc Sub2 Q Q1 /\ 
-  oneCon Q1 (act N) Q2 /\ 
+  oneCon Q1 (act N) Q2 /\  
   % _rigid (oneCon Q1 (act N) Q2) /\ 
   bisimAgent H1 ThyRed P1 Q2 ; 
 bisimCon1 H Q (absRef x\ Cts x) :=
@@ -321,7 +350,7 @@ bisimCon2 H P (conRefAgent Sub1 Sub2 (act N) Q1) :=
   reduce Thy ThyRed /\ 
   deduce_inv_r ThyRed N M /\  
   copyproc Sub1 P P1 /\ 
-  oneCon P1 (act M) P2 /\ 
+  oneCon P1 (act M) P2 /\   
   % _rigid (oneCon P1 (act M) P2) /\ 
   bisimAgent H1 ThyRed P2 Q1 ; 
 bisimCon2 H P (absRef x\ Cts x) :=
@@ -350,10 +379,10 @@ bisim_upto H P Q :=
 % variables bound by 'new' are instantiated as object-level new names. 
 
 bisimAgent H Thy (abs x\P x) (abs x\Q x) := 
-  nabla x, exists H1, 
+  nabla x, exists H1,
    append H (cons (in (var x) (var x)) nil) H1 /\ 
-   % print_bisim H1 (P (var x)) (Q (var x)) /\ 
-   bisim_upto H1 (P (var x)) (Q (var x)) ; 
+   print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   bisim_upto H1 (P (var x)) (Q (var x)) ;  % RH: Updates bitrace with input variable.
 
 bisimAgent H Thy (con M P) (con N Q) := 
     decomp_bt_pair Thy nil M N L /\ 
@@ -387,13 +416,13 @@ bisim H P Q :=
       (forall Cts, 
         _distinct (ref1_cont H Vs Cont Cts) -> (bisimTau1 H Q Cts)
       )
-  ) 
-  /\ 
-  (forall Cont,  _distinct (c_one Vs Q Cont)  -> 
+  )
+  /\
+  (forall Cont, _distinct (c_one Vs Q Cont)  -> 
       (forall Cts, 
           _distinct (ref2_cont H Vs Cont Cts) -> (bisimTau2 H P Cts)
       )
-  ) 
+  )
   /\ 
   (forall Cont, _distinct (c_oneAbs Vs P Cont) -> 
       (forall Cts, 
@@ -412,13 +441,325 @@ bisim H P Q :=
         _distinct (ref1_cont H Vs Cont Cts) -> (bisimCon1 H Q Cts)
       )
   )
-  /\ 
+  /\
   (forall Cont, _distinct (c_oneCon Vs Q Cont) -> 
       (forall Cts, 
         _distinct (ref2_cont H Vs Cont Cts) -> (bisimCon2 H P Cts)
       )
-  ).
+  )
+%  /\ (tick P -> exists N, taus Q N /\ tick N)  % Tick enable to distinguish zero from unsatifiable guards or blocked channels.
+%  /\ (tick Q -> exists N, taus P N /\ tick N)
+.
+
+
+
+
+Define pbisimTau1, pbisimTau2, pbisimAbs1, pbisimAbs2,
+       pbisimCon1, pbisimCon2 : list bt_pair -> proc -> refinement -> prop, 
+       pbisimAgent : list bt_pair -> list thy_pair -> agent -> agent -> prop, 
+       pbisim_upto : list bt_pair -> proc -> proc -> prop,
+       coinductive pbisim : list bt_pair -> proc -> proc -> prop
+by 
+
+% [bisimTau1,bisimTau2] These deal with the cases involving tau transitions
+% in the definition of bisimulation; see [TD10].
+
+pbisimTau1 H Q (conRefProc Sub1 Sub2 A P1) :=
+  copyproc Sub2 Q Q1 /\  % Apply right substitution.
+  progressing_one Q1 A Q2 /\   % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  %one Q1 A Q2 /\   
+  % _rigid Q2 /\ 
+  apply_subst_bt Sub1 Sub2 H H1  % Generates new bitrace H1 from pair of substitutions.
+  /\  pbisim_upto H1 P1 Q2
+; 
+pbisimTau1 H Q (absRef x\ Cts x) :=
+  nabla x, pbisimTau1 H Q (Cts x) ;   % This is where extruded names are made rigid.
+
+pbisimTau2 H P (conRefProc Sub1 Sub2 A Q1) := 
+  copyproc Sub1 P P1 /\ 
+  progressing_one P1 A P2 /\   % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (one P1 A P2) /\
+  apply_subst_bt Sub1 Sub2 H H1
+  /\ bisim_upto H1 P2 Q1
+; 
+pbisimTau2 H P (absRef x\ Cts x) :=
+  nabla x, pbisimTau2 H P (Cts x) ; 
+
+% [bisimAbs1,bisimAbs2] These deal with the case where the cases involving the input transitions
+% in the definition of bisimulation; see [TD10] and the predicate bisim below. 
+% The continuation of a transition in this case is an abstraction (agent).
+
+pbisimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  progressing_oneAbs Q1 (act N) Q2 /\  % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneAbs Q1 (act N) Q2) /\ 
+  pbisimAgent H1 ThyRed P1 Q2 ; 
+pbisimAbs1 H Q (absRef x\ Cts x) :=
+  nabla x, pbisimAbs1 H Q (Cts x) ; 
+
+pbisimAbs2 H P (conRefAgent Sub1 Sub2 (act N) Q1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\
+  reduce Thy ThyRed /\ 
+  deduce_inv_r ThyRed N M /\ 
+  copyproc Sub1 P P1 /\ 
+  progressing_oneAbs P1 (act M) P2 /\   % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneAbs P1 (act M) P2) /\ 
+  pbisimAgent H1 ThyRed P2 Q1 ; 
+pbisimAbs2 H P (absRef x\ Cts x) :=
+  nabla x, pbisimAbs2 H P (Cts x) ; 
+
+% [bisimCon1,bisimCon2] These deal with the case where the cases involving the output transitions
+% in the definition of bisimulation. The continuation in this case is an agent. 
+
+pbisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\ 
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  progressing_oneCon Q1 (act N) Q2 /\  % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneCon Q1 (act N) Q2) /\ 
+  pbisimAgent H1 ThyRed P1 Q2 ; 
+pbisimCon1 H Q (absRef x\ Cts x) :=
+  nabla x, pbisimCon1 H Q (Cts x) ; 
+
+pbisimCon2 H P (conRefAgent Sub1 Sub2 (act N) Q1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\ 
+  reduce Thy ThyRed /\ 
+  deduce_inv_r ThyRed N M /\  
+  copyproc Sub1 P P1 /\ 
+  progressing_oneCon P1 (act M) P2 /\   % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneCon P1 (act M) P2) /\ 
+  pbisimAgent H1 ThyRed P2 Q1 ; 
+pbisimCon2 H P (absRef x\ Cts x) :=
+  nabla x, pbisimCon2 H P (Cts x) ; 
+
+ 
+% [bisim_upto] This simplifies the bisimulation triples before calling 
+% the real bisimulation procedure. 
   
+pbisim_upto H P Q :=
+  trim_history nil H H1 /\ 
+  simplify P P1 /\ 
+  simplify Q Q1 /\ 
+  _if (refl_opt) 
+      (
+         _if (reflexive H1 P1 Q1) (true) (pbisim H1 P1 Q1)
+      )
+      (pbisim H1 P1 Q1) ;
+%   _if (reflexive H1 P1 Q1) (true) (bisim H1 P1 Q1) ;
+
+
+% [bisimAgent] A helper procedure to instantiate all the abstractions
+% in the agents (i.e., those bound via the 'abs' and the 'new' constructs) 
+% in the argument of bisimulation procedure. Variables bound by 'abs' are 
+% instantiated as object-level variables (e.g., (var x) below), whereas
+% variables bound by 'new' are instantiated as object-level new names. 
+
+pbisimAgent H Thy (abs x\P x) (abs x\Q x) := 
+  nabla x, exists H1,
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   pbisim_upto H1 (P (var x)) (Q (var x)) ;
+
+pbisimAgent H Thy (con M P) (con N Q) := 
+    decomp_bt_pair Thy nil M N L /\ 
+    _if (L = nil)
+        (bisim_upto H P Q)
+        (
+         check_consistency H Thy L /\  
+         append H L H1 /\ 
+         pbisim_upto H1 P Q
+        ) ;    
+pbisimAgent H Thy (con M P) (new x\ Q x) :=
+  nabla x, pbisimAgent H Thy (con M P) (Q (nm x)) ; 
+pbisimAgent H Thy (new x\ P x) (con N Q) := 
+  nabla x, pbisimAgent H Thy (P (nm x)) (con N Q) ; 
+
+% It's more efficient to disassociate fresh names generated for output
+% actions of the first and the second processes; this way we can
+% exploit the equivariant tabling property to reduce bisim size. 
+
+pbisimAgent H Thy (new x\ P x) (new x\ Q x) := 
+  nabla x, pbisimAgent H Thy (P (nm x)) (Q (nm x)) ; 
+
+% [pbisim] The main procedure for open progressing bisimulation checking.
+
+pbisim H P Q := 
+  print_bisim H P Q /\ 
+  bitrace_vars H Vs /\ 
+  % _rigid P /\ _rigid Q /\ _rigid Vs /\ 
+  (forall Cont, _distinct (c_one Vs P Cont) ->
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (pbisimTau1 H Q Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_one Vs Q Cont)  -> 
+      (forall Cts, 
+          _distinct (ref2_cont H Vs Cont Cts) -> (pbisimTau2 H P Cts)
+      )
+  )
+  /\ 
+  (forall Cont, _distinct (c_oneAbs Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (pbisimAbs1 H Q Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneAbs Vs Q Cont) -> 
+      (forall Cts, 
+        _distinct (ref2_cont H Vs Cont Cts) -> (pbisimAbs2 H P Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneCon Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (pbisimCon1 H Q Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneCon Vs Q Cont) -> 
+      (forall Cts, 
+        _distinct (ref2_cont H Vs Cont Cts) -> (pbisimCon2 H P Cts)
+      )
+  )
+%  /\ (tick P -> exists N, taus Q N /\ tick N)  % Tick enable to distinguish zero from unsatifiable guards or blocked channels.
+%  /\ (tick Q -> exists N, taus P N /\ tick N)
+.
+
+
+Define psimTau1, psimAbs1, psimCon1 : list bt_pair -> proc -> refinement -> prop, 
+       psimAgent : list bt_pair -> list thy_pair -> agent -> agent -> prop, 
+       psim_upto : list bt_pair -> proc -> proc -> prop,
+       coinductive psim : list bt_pair -> proc -> proc -> prop
+by 
+
+% [bisimTau1,bisimTau2] These deal with the cases involving tau transitions
+% in the definition of bisimulation; see [TD10].
+
+psimTau1 H Q (conRefProc Sub1 Sub2 A P1) :=
+  copyproc Sub2 Q Q1 /\  % Apply right substitution.
+  progressing_one Q1 A Q2 /\   % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid Q2 /\ 
+  apply_subst_bt Sub1 Sub2 H H1  % Generates new bitrace H1 from pair of substitutions.
+  /\  psim_upto H1 P1 Q2
+; 
+psimTau1 H Q (absRef x\ Cts x) :=
+  nabla x, psimTau1 H Q (Cts x) ;   % This is where extruded names are made rigid.
+
+% [bisimAbs1,bisimAbs2] These deal with the case where the cases involving the input transitions
+% in the definition of bisimulation; see [TD10] and the predicate bisim below. 
+% The continuation of a transition in this case is an abstraction (agent).
+
+psimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  progressing_oneAbs Q1 (act N) Q2 /\  % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneAbs Q1 (act N) Q2) /\ 
+  psimAgent H1 ThyRed P1 Q2 ; 
+psimAbs1 H Q (absRef x\ Cts x) :=
+  nabla x, psimAbs1 H Q (Cts x) ; 
+
+% [bisimCon1,bisimCon2] These deal with the case where the cases involving the output transitions
+% in the definition of bisimulation. The continuation in this case is an agent. 
+
+psimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+  apply_subst_bt Sub1 Sub2 H H1 /\ 
+  bt2thy H1 Thy /\ 
+  reduce Thy ThyRed /\ 
+  deduce_r ThyRed M N /\ 
+  copyproc Sub2 Q Q1 /\ 
+  progressing_oneCon Q1 (act N) Q2 /\  % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+  % _rigid (oneCon Q1 (act N) Q2) /\ 
+  psimAgent H1 ThyRed P1 Q2 ; 
+psimCon1 H Q (absRef x\ Cts x) :=
+  nabla x, psimCon1 H Q (Cts x) ; 
+
+% [bisim_upto] This simplifies the bisimulation triples before calling 
+% the real bisimulation procedure. 
+
+psim_upto H P Q :=
+  trim_history nil H H1 /\ 
+  simplify P P1 /\ 
+  simplify Q Q1 /\ 
+  _if (refl_opt) 
+      (
+         _if (reflexive H1 P1 Q1) (true) (psim H1 P1 Q1)
+      )
+      (psim H1 P1 Q1) ;
+%   _if (reflexive H1 P1 Q1) (true) (bisim H1 P1 Q1) ;
+
+
+% [bisimAgent] A helper procedure to instantiate all the abstractions
+% in the agents (i.e., those bound via the 'abs' and the 'new' constructs) 
+% in the argument of bisimulation procedure. Variables bound by 'abs' are 
+% instantiated as object-level variables (e.g., (var x) below), whereas
+% variables bound by 'new' are instantiated as object-level new names. 
+
+psimAgent H Thy (abs x\P x) (abs x\Q x) := 
+  nabla x, exists H1,
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   psim_upto H1 (P (var x)) (Q (var x)) ;
+
+psimAgent H Thy (con M P) (con N Q) := 
+    decomp_bt_pair Thy nil M N L /\ 
+    _if (L = nil)
+        (psim_upto H P Q)
+        (
+         check_consistency H Thy L /\  
+         append H L H1 /\ 
+         psim_upto H1 P Q
+        ) ;
+
+psimAgent H Thy (con M P) (new x\ Q x) :=
+  nabla x, psimAgent H Thy (con M P) (Q (nm x)) ; 
+psimAgent H Thy (new x\ P x) (con N Q) := 
+  nabla x, psimAgent H Thy (P (nm x)) (con N Q) ; 
+
+% It's more efficient to disassociate fresh names generated for output
+% actions of the first and the second processes; this way we can
+% exploit the equivariant tabling property to reduce bisim size. 
+
+psimAgent H Thy (new x\ P x) (new x\ Q x) := 
+  nabla x, psimAgent H Thy (P (nm x)) (Q (nm x)) ; 
+
+% [psim] The main procedure for open progressing simulation checking.
+
+psim H P Q := 
+  print_bisim H P Q /\ 
+  bitrace_vars H Vs /\ 
+  % _rigid P /\ _rigid Q /\ _rigid Vs /\  
+  (forall Cont, _distinct (c_one Vs P Cont) ->
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (psimTau1 H Q Cts)
+      )
+  )
+  /\ 
+  (forall Cont, _distinct (c_oneAbs Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (psimAbs1 H Q Cts)
+      )
+  )
+  /\
+  (forall Cont, _distinct (c_oneCon Vs P Cont) -> 
+      (forall Cts, 
+        _distinct (ref1_cont H Vs Cont Cts) -> (psimCon1 H Q Cts)
+      )
+  )
+  %/\ (tick P -> exists N, taus Q N /\ tick N)  % Tick enable to distinguish 1 from 0.
+.
+
 
 Define toplevel_bisim : list bt_pair -> proc -> proc -> prop
 by

@@ -26,13 +26,13 @@ Type cons A -> list A -> list A.
 
 % Some basic predicates for list manipulations.
 
-% checking membership of a list.
+% Checking membership of a list.
 
 Define member : A -> list A -> prop by
 member X (cons X L) ;
 member X (cons Y L) := member X L.
 
-% deterministic member predicate: stops as soon as a match is found. 
+% Deterministic member predicate: stops as soon as a match is found.
 
 Define det_mem : A -> list A -> prop by
 det_mem X (cons Y L) :=
@@ -60,7 +60,7 @@ Define select : list A -> A -> list A -> prop by
 select (cons X L) X L ;
 select (cons Y L) X (cons Y R) := select L X R.
 
-% insert an element into a list, avoiding duplication. 
+% Insert an element into a list, avoiding duplication. 
 Define insert : A -> list A -> list A -> prop by 
 insert X L R :=
   _if (det_mem X L) 

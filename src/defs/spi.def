@@ -27,31 +27,37 @@
 % For simplicity, in this implementation we use only the encryption 
 % constructor and pairing; natural numbers constructors are not implemented.
 % But it is easy to add them.
-%
+
 
 % Message terms
 Kind tm type.
 Kind name type.
 
-Type ct	(string -> tm). % constants
-Type var	(name -> tm). % variables 
-Type nm	(name -> tm). % names
-Type bn	(tm -> tm).   % constructor for marking bound names; needed when recursing over binders. 
-Type en	(tm -> tm -> tm). % symmetric encryption
-Type pr	(tm -> tm -> tm). % pairing constructor
+Type ct		(string -> tm).		% constants
+Type var	(name -> tm).		% variables 
+Type nm		(name -> tm).		% names
+Type bn		(tm -> tm).		% constructor for marking bound names; needed when recursing over binders. 
+Type en		(tm -> tm -> tm).	% symmetric encryption
+Type pr		(tm -> tm -> tm).	% pairing constructor
+% Asymmetric Encryption
+Type aen        (tm -> tm -> tm).	% asymmetric encryption
+Type pub        (tm -> tm).		% public key constructor
+% Blind Signature
+Type blind	(tm -> tm -> tm).
+% Sign, Hash, Mac
+Type sign	(tm -> tm -> tm).	% signature
+Type hs		(tm -> tm).		% hash function
+Type mac 	(tm -> tm -> tm).	% mac function
 
 % Currently not used: 
-% Type zz		tm. % zero
-% Type succ	(tm -> tm). % successor
-% Type hs	(tm -> tm). % hash function 
-% Type aen	(tm -> tm -> tm). % asymmetric encryption 
-% Type pub	(tm -> tm). % public key constructor
-% Type sign	(tm -> tm -> tm). % signature
-% Type vk	(tm -> tm). % verification key
+% Type zz		tm.		% zero
+% Type succ	(tm -> tm).		% successor
+% Type vk	(tm -> tm).		% verification key
 
 % process constructors
 Kind proc type.
 Type zero proc.
+Type done proc. % RH: added for done.
 Type par proc -> proc -> proc.
 Type nu  (tm -> proc) -> proc.
 Type match tm -> tm -> proc -> proc.
@@ -62,9 +68,19 @@ Type case tm -> tm -> (tm -> proc) -> proc.
 % e.g., [case L of {x}_k in Px] is translated to (case L k (x\Px)).
 Type let tm -> (tm -> tm -> proc) -> proc.
 %   e.g., [let (x,y) = M in Pxy] becomes (let M (x\y\Pxy).
+% CheckSign
+Type checksign tm -> tm -> proc -> proc.
+% Adec, Unblind, Getmsg
+Type letadec tm -> tm -> (tm -> proc) -> proc.
+Type letunblind tm -> tm -> (tm -> proc) -> proc.
+Type letgetmsg tm -> (tm -> proc) -> proc.
+
 
 % non-deterministic choice
 Type plus proc -> proc -> proc. 
+
+% Tau transition
+Type taup proc -> proc. %RH: Tau prefix action.
 
 % agent constructors
 Kind agent type.
@@ -79,8 +95,14 @@ Type act tm -> action.
 
 Define red_proc : proc -> proc -> prop by
    red_proc (match X X P) P ; 
-   red_proc (let (pr M N) P) R := R = (P M N) ; 
-   red_proc (case (en M K) K P) R := R = (P M).
+   red_proc (let (pr M N) P) R := R = (P M N);
+   red_proc (case (en M K) K P) R := R = (P M);
+   % CheckSign
+   red_proc (checksign (sign M K) (pub K) P) P ;
+   % Adec, Unblind, Getmsg
+   red_proc (letadec (aen M (pub K)) K P) R := R = (P M);
+   red_proc (letunblind (sign (blind M N) K) N P) R := R = (P (sign M K));	% Require blind implementation
+   red_proc (letgetmsg (sign M K) P) R := R = (P M).
 
 Define appAbs : agent -> agent -> proc -> prop by 
    appAbs (abs M) (con X Q) R := R = (par (M X) Q) ; 
@@ -128,10 +150,13 @@ Define one : proc -> action -> proc -> prop,      % free-action transitions
        oneAbs : proc -> action -> agent -> prop,  % abstractions 
        oneCon : proc -> action -> agent -> prop   % concretions
 by 
+  one (taup P) tau P ; % := printstr "\n tau"; % RH: tau transition added, with debug message.
   one (par P Q) tau R := exists x, oneAbs P x F /\ oneCon Q x C /\ appAbs F C R ;
   one (par P Q) tau R := exists x, oneCon P x C /\ oneAbs Q x F /\ appCon C F R ; 
   one (plus P Q) tau R := one P tau R ;
   one (plus P Q) tau R := one Q tau R ; 
+  one (plus done P) tau done; % RH: Added for avoiding deadlock.
+  one (plus P done) tau done; % RH: Added for avoiding deadlock.
   one (nu P) tau (nu R) := nabla x, one (P x) tau (R x) ;
   one (bang P) tau (par (bang P) Q) := one P tau Q ;
   one P tau R := red_proc P Q /\ one Q tau R ;
@@ -143,7 +168,7 @@ by
   oneAbs (plus P Q) X R := oneAbs P X R ;
   oneAbs (plus P Q) X R := oneAbs Q X R ;
   oneAbs (nu P) A (abs x\(nu (R x))) := nabla y, oneAbs (P y) A (abs x\(R x y)) ; 
-  oneAbs (bang P) A (abs x\ (par (bang P) (Q x))) := oneAbs P A (abs Q) ; 
+  oneAbs (bang P) A (abs x\ (par (bang P) (Q x))) := oneAbs P A (abs Q) ;
 
   oneCon (outp X M P) (act X) (con M P) ; 
   oneCon P X C := red_proc P Q /\ oneCon Q X C ; 
@@ -155,3 +180,31 @@ by
   oneCon (bang P) X R := oneCon P X C /\ mergeLeft C (bang P) R.
 
 
+% RH: Taus defined as normal.
+
+Define taus : proc -> proc -> prop,
+       tausAbs : agent -> agent -> prop
+by
+  taus P QQ := one P tau Q /\ taus Q QQ ; 
+  taus P P;
+  tausAbs (abs A) (abs BB) := (nabla x, one (A x) tau (B x)) /\ tausAbs (abs B) (abs BB) ;
+  tausAbs A A.
+
+% RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
+
+Define progressing_one : proc -> action -> proc -> prop,       
+       progressing_oneAbs : proc -> action -> agent -> prop,   
+       progressing_oneCon : proc -> action -> agent -> prop    
+by
+  progressing_one Q tau P := taus Q QQ /\ one QQ tau PP /\ taus PP P ; 
+  progressing_oneAbs Q A P := taus Q QQ /\ oneAbs QQ A PP /\ (tausAbs PP P) ;
+  progressing_oneCon Q A (con M P) := taus Q QQ /\ oneCon QQ A (con M PP) /\ taus PP P.
+
+% Checks whether a process has terminated successfully or deadlocked.
+
+Define tick : proc -> prop by
+  tick done;
+  tick (par done P) := tick P;
+  tick (par P done) := tick P;
+  tick (nu P) := nabla x, tick (P x);
+  tick (bang P) := tick P.

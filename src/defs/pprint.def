@@ -26,8 +26,17 @@ Define print_term : tm -> prop by
   print_term (var X) := printstr "?" /\ print X ; 
   print_term (bn X) := print X ; 
   print_term (nm X) := print X ;
-  print_term (pr M N) := printstr "<" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ">" ; 
-  print_term (en M N) := printstr "enc(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")".
+  print_term (pr M N) := printstr "<" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ">" ;
+  print_term (en M N) := printstr "enc(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")";
+  % Asymmetric Encryption
+  print_term (aen M N) := printstr "aenc(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")";
+  print_term (pub M) := printstr "pub(" /\ print_term M /\ printstr ")";
+  % Blind Signature
+  print_term (blind M N) := printstr "blind(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")";
+  % Sign, Hash, Mac
+  print_term (sign M N) := printstr "sign(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")";
+  print_term (hs M) := printstr "hash(" /\ print_term M /\ printstr ")";
+  print_term (mac M N) := printstr "mac(" /\ print_term M /\ printstr "," /\ print_term N /\ printstr ")".
 
 Define plist : list tm -> prop by 
   plist nil ; 
