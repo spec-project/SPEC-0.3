@@ -92,7 +92,9 @@ expand_defs (case M N (x\ P x)) (case U V (x\ Q x)) :=
   nabla x, expand_defs (P (bn x))  (Q x) ; 
 expand_defs (let M (x\y\P x y)) (let N (x\y\ Q x y)) := 
   simp_cp M N /\
-  nabla x y, expand_defs (P (bn x) (bn y)) (Q x y) ;
+  nabla x y, expand_defs (P (bn x) (bn y)) (Q x y) ; 
+expand_defs (taup P) (taup Q) := expand_defs P Q;  % RH: Added for tau.
+
 % CheckSign
 expand_defs (checksign X Y P) (checksign U V Q) :=
   simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ; 
@@ -106,7 +108,7 @@ expand_defs (letunblind M N (x\ P x)) (letunblind U V (x\ Q x)) :=
 expand_defs (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) :=
   simp_cp M N /\
   nabla x, expand_defs (P (bn x)) (Q x) ;
-expand_defs (taup P) (taup Q) := expand_defs P Q;  % RH: Added for tau.
+
 expand_defs (bang P) (bang Q) := expand_defs P Q.
 
 Kind oprop type.
@@ -210,14 +212,17 @@ free_names_proc (let M P) Acc L :=
   free_names_term M Acc Acc1 /\
   nabla x y, 
   free_names_proc (P (bn x) (bn y)) Acc1 L ; 
+
+free_names_proc (taup P) Acc L := % RH: Added for tau.
+  free_names_proc P Acc L;
+
 % Adec, Unblinding, Getmsg
 free_names_proc (letadec M N P) Acc L :=
   free_names_term M Acc Acc1 /\
   free_names_term N Acc1 Acc2 /\
   nabla x, 
   free_names_proc (P (bn x)) Acc2 L ; 
-free_names_proc (taup P) Acc L := % RH: Added for tau.
-  free_names_proc P Acc L;
+
 free_names_proc (bang P) Acc L := 
   free_names_proc P Acc L.
 
@@ -238,6 +243,9 @@ check_def A :=
         printstr " in the definition of " /\ print A /\ printstr "\n" 
       ).
 
+
+% RH: Added for open progressing bisimulation.
+
 Define  bisim_def : list bt_pair -> def_body -> def_body -> prop by 
 bisim_def H (defAbs x\A x) (defAbs x\B x) :=
   nabla x, exists H1,
@@ -246,42 +254,16 @@ bisim_def H (defAbs x\A x) (defAbs x\B x) :=
 bisim_def H (defProc P) (defProc Q) :=
   expand_defs P R /\ 
   expand_defs Q T /\
-  printstr "Checking strong bisimilarity for: \n" /\ 
+  _if (progressing_opt)
+      (_if sim_opt
+           (printstr "Checking progressing similarity for: \n")
+           (printstr "Checking progressing bisimilarity for: \n"))
+      (_if sim_opt
+           (printstr "Checking strong similarity for: \n")
+           (printstr "Checking strong bisimilarity for: \n"))
+  /\ 
   print_proc R /\ printstr "\n" /\
   printstr " and \n" /\ 
   print_proc T /\ printstr "\n" /\
   bisim H R T.
 
-
-
-% RH: Added for open progressing bisimulation.
-
-Define  pbisim_def : list bt_pair -> def_body -> def_body -> prop by 
-pbisim_def H (defAbs x\A x) (defAbs x\B x) :=
-  nabla x, exists H1,
-   append H (cons (in (var x) (var x)) nil) H1 /\ 
-   pbisim_def H1 (A (var x)) (B (var x)) ;
-pbisim_def H (defProc P) (defProc Q) :=
-  expand_defs P R /\ 
-  expand_defs Q T /\
-  printstr "Checking progressing bisimilarity for: \n" /\ 
-  print_proc R /\ printstr "\n" /\
-  printstr " and \n" /\ 
-  print_proc T /\ printstr "\n" /\
-  pbisim H R T.
-
-% RH: Added for open progressing simulation.
-
-Define  psim_def : list bt_pair -> def_body -> def_body -> prop by 
-psim_def H (defAbs x\A x) (defAbs x\B x) :=
-  nabla x, exists H1,
-   append H (cons (in (var x) (var x)) nil) H1 /\ 
-   psim_def H1 (A (var x)) (B (var x)) ;
-psim_def H (defProc P) (defProc Q) :=
-  expand_defs P R /\ 
-  expand_defs Q T /\
-  printstr "Checking progressing similarity for: \n" /\ 
-  print_proc R /\ printstr "\n" /\
-  printstr " and \n" /\ 
-  print_proc T /\ printstr "\n" /\
-  psim H R T.

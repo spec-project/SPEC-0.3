@@ -44,6 +44,7 @@ let help_msg =
   "List of commands: 
 #help;                               Display this message.
 #exit;                               Exit.
+#progressing [on/off]                Progressing [on] or strong [off].
 #equivariant [on/off];               Enable/disable equivariant.
 #reflexive [on/off];                 Enable/disable reflexivity checking. 
 #load [file];                        Load a process definition file.
@@ -253,9 +254,9 @@ let rec process_spi ?(interactive=false) parse lexbuf =
          with | Not_found ->  
             raise (System.Missing_definition ("agent_def",None))
         )
-      | Spi.Query (a,b)       -> 
+      | Spi.Query (a,b) ->
 	  let q = System.translate_query b in
-  	    System.clear_tables () ; prove_bisim q 
+  	    System.clear_tables () ; prove_bisim q
       | Spi.Command (c,a) -> command lexbuf (c,a)
     end ;
     if interactive then flush stdout
@@ -373,6 +374,21 @@ and command lexbuf = function
              (
                System.update_def (Spi.Process.trace_opt) (Term.lambda 0 (Term.op_false)) ; 
                Printf.printf "Trace printing is disabled.\n"
+             )
+          | _ -> raise Invalid_command
+        end
+
+  | "progressing", [d] -> 
+        begin match d with
+          | "on" -> 
+             (
+               System.update_def (Spi.Process.progressing_opt) (Term.lambda 0 (Term.op_true)) ; 
+	       Printf.printf "Progressing bisimulation is enabled.\n"
+             )
+          | "off" -> 
+             (
+               System.update_def (Spi.Process.progressing_opt) (Term.lambda 0 (Term.op_false)) ; 
+               Printf.printf "Strong open bisimulation is enabled.\n"
              )
           | _ -> raise Invalid_command
         end

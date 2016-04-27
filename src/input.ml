@@ -143,10 +143,10 @@ let get_freeids_old t = (* RH: This has the bug that fv(t u) =/= fv(t) \cup fv(u
         List.fold_left (fun a b -> aux a b) (aux vs hd) args (* RH: bug here *)
     | _ -> vs 
   in
-    aux [] t 
+    aux [] t
 
 (* RH: alternative to get_freeids fixing alpha-conversion bug *)
-module StringSet = Set.Make( 
+module StringSet = Set.Make(
   struct
     let compare = Pervasives.compare
     type t = string

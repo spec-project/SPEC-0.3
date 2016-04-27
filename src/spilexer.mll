@@ -49,9 +49,7 @@ rule token = parse
 | "~=" { NEQ }
 | ":=" { DEF }
 | "bisim" { BISIM }
-| "pbisim" { PBISIM }
 | "sim" { SIM }
-| "psim" { PSIM }
 | "," { COMMA }
 | ";" { SEMICOLON }
 | "nu" { NU }

@@ -19,18 +19,18 @@
 
 module Process =
 struct
-  let bisim = Term.atom "bisim"
-  let bisim = Term.atom "pbisim"  (* RH: added for progressing open bisimulation *)
+  let bisim_str = "bisim"
+  let bisim = Term.atom bisim_str
 
   let agent_def = Term.atom "agent_def"
-  let bisim_str = "bisim"
-  let pbisim_str = "pbisim" (* RH: added for progressing open bisimulation *)
   let show_bisim = Term.atom "show_bisim"
   let save_bisim = Term.atom "save_bisim" 
   let save_bisim_latex = Term.atom "bisim2latex"
   let check_def = Term.atom "check_def" 
   let refl_opt = Term.atom "refl_opt" 
   let trace_opt = Term.atom "trace_opt"
+  let progressing_opt = Term.atom "progressing_opt" (* RH: Added for progressing option *)
+  let sim_opt = Term.atom "sim_opt" (* RH: Added for sim *)
   let save_bisim_str = "save_bisim"
   let save_bisim_latex_str = "save_bisim_latex"
   let show_def_str = "show_def" 
@@ -81,7 +81,7 @@ exception Duplicate_agent_def of string
 exception Sig_mismatch of string*int
 
 type input =
-  | Def  of string * int * (Input.pos * Input.preterm * Input.preterm)
+  | Def     of string * int * (Input.pos * Input.preterm * Input.preterm)
   | Query   of Input.pos * Input.preterm
   | Command of string * string list
 
@@ -112,10 +112,8 @@ let find_spi_sig name arity =
 
 let bisim_size table =
     let i = ref 0 in
-    Printf.printf "!Got this far!";  
       Table.iter_fun table 
         (fun t tag -> 
-           Printf.printf "!but not this far!";  
            match tag with
            | Table.Proved -> i := (!i + 1) 
            | _ -> ()

@@ -109,16 +109,17 @@
        Format.printf "Free variable(s): %s.\n" (String.concat " " vars) ;
     Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))   
 
-  let mkquery bisim_fun a b = (* RH: bisim_fun is the string corresponding to the function in spec.def. *)
+  let mkquery a b = (* RH: bisim_fun is the string corresponding to the function in spec.def. *)
     let vars = Input.get_freeids (app par_op [a;b]) in
     let a' = abstract_ids a vars in
     let b' = abstract_ids b vars in 
-    let q = app (constid (pos 0) bisim_fun) [nil_op; a';b'] in 
+    let q = app (constid (pos 0) "bisim_def" ) [nil_op; a';b'] in 
     Spi.Query (pos 0, q)
 
 %}
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM PBISIM PSIM
+
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM
 %token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU CHECKSIGN ADEC UNBLIND GETMSG	/* Asymmetric encryption, Blind, Sign, Hash, Mac, CheckSign, Adec, Unblind, Getmsg */
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
@@ -141,9 +142,8 @@ input_def:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
 input_query:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
-| BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "bisim_def" $3 $5 }
-| SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "psim_def" $3 $5 }
-| PBISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { mkquery "pbisim_def" $3 $5 }
+| BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
+| SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }

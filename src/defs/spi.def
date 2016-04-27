@@ -101,7 +101,7 @@ Define red_proc : proc -> proc -> prop by
    red_proc (checksign (sign M K) (pub K) P) P ;
    % Adec, Unblind, Getmsg
    red_proc (letadec (aen M (pub K)) K P) R := R = (P M);
-   red_proc (letunblind (sign (blind M N) K) N P) R := R = (P (sign M K));	% Require blind implementation
+%   red_proc (letunblind (sign (blind M N) K) N P) R := R = (P (sign M K));	% Require blind implementation
    red_proc (letgetmsg (sign M K) P) R := R = (P M).
 
 Define appAbs : agent -> agent -> proc -> prop by 
