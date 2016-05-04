@@ -244,7 +244,7 @@ decomp_bt_pair Thy Acc (nm X) (nm Y) L :=
 decomp_bt_pair Thy Acc (pr X Y) (pr U V) L :=
   decomp_bt_pair Thy Acc X U Acc1 /\ 
   decomp_bt_pair Thy Acc1 Y V L ;
-%% Add Asymmetric Encryption
+% Add Asymmetric Encryption
 decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
   _if (K = pub U /\ M = pub V /\ deduce_r Thy U V)
       (
@@ -259,7 +259,20 @@ decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
   _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy)
       (L = Acc)
       (L = (cons (out (pub X) (pub Y)) Acc));
-%% Sign, Hash, Mac
+
+% Blind
+decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
+  _if (deduce_r Thy K M)
+      ( 
+        decomp_bt_pair Thy Acc X Y L
+      )
+      (
+        _if (det_mem (mp (blind X K) (blind Y M)) Thy)
+            (L = Acc)
+            (L = (cons (out (blind X K) (blind Y M)) Acc))
+      );
+
+% Sign, Hash, Mac
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
  _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy)
       (L = Acc)
@@ -272,6 +285,8 @@ decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
  _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy)
       (L = Acc)
       (L = (cons (out (mac X Y) (mac U V)) Acc));
+
+% Symmetric Encryption
 decomp_bt_pair Thy Acc (en X K) (en Y M) L :=
   _if (deduce_r Thy K M)
       ( 

@@ -123,7 +123,7 @@ red 2 Vs (dedr S (blind X Y)) Cs Ds :=
   Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ;
 
 % Sign, Hash, Mac
-red 2 Vs (dedr S (sign X Y)) Cs Ds := 
+red 2 Vs (dedr S (sign X Y)) Cs Ds :=
   Ds = (cons (dedr S X) (cons (dedr S Y) Cs)) ; 
 red 2 Vs (dedr S (hs X)) Cs Ds :=
   Ds = (cons (dedr S X) Cs) ;
@@ -145,14 +145,33 @@ red 5 Vs (dedl S M) Cs Ds :=
   _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
-%% Asymmetric Encryption
+% % Asymmetric Encryption
 red 5 Vs (dedl S M) Cs Ds :=
   select S (aen U (pub X)) T /\
   _if (msg_type X ct_type) (T1 = T) (insert X T T1) /\
   _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
-  Ds = cons (dedr T X) (cons (dedl T2 M) Cs).
+  Ds = cons (dedr T X) (cons (dedl T2 M) Cs);
 
-% % Signing. Keep the signed message. 
+% % Blind
+red 5 Vs (dedl S M) Cs Ds :=
+  select S (blind U V) T /\
+  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\
+  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
+  Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
+
+% % Sign, Blind
+red 5 Vs (dedl S M) Cs Ds :=
+  select S (sign (blind M N) K) T /\
+  _if (det_mem (sign M K) T) (T1 = T) (T1 = cons (sign M K) T) /\
+  Ds = cons (dedr T N) (cons (dedl T1 M) Cs);
+
+% % Sign
+red 5 Vs (dedl S M) Cs Ds :=
+  det_mem (sign U V) S /\
+  _not (msg_type U ct_type \/ det_mem U S) /\
+  Ds = cons (dedl (cons U S) M) Cs.
+
+% % Signing. Keep the signed message (SPEC original commented source code). 
 % red 5 Vs (dedl S M) Cs Ds :=
 %   select S (sign U V) T /\ 
 %   _not (msg_type U ct_type \/ det_mem U T) ; 

@@ -180,7 +180,7 @@ decom_enc_aenc (cons (mp (en U V) (en R T)) Thy) NE1 E1 NE2 E2 :=
         decom_enc_aenc Thy NE1 NewE1 NE2 E2
       ) ;
 
-% Asymetric Encryption
+% Asymmetric Encryption
 decom_enc_aenc (cons (mp (aen U V) (aen R T)) Thy) NE1 E1 NE2 E2 :=
   append NE1 E1 Thy1 /\ 
   append Thy1 Thy Thy2 /\ 
@@ -193,8 +193,39 @@ decom_enc_aenc (cons (mp (aen U V) (aen R T)) Thy) NE1 E1 NE2 E2 :=
         insert (mp (aen U V) (aen R T)) E1 NewE1 /\ 
         decom_enc_aenc Thy NE1 NewE1 NE2 E2
       ) ;
+
+% Blind
+decom_enc_aenc nil NE E NE E ;
+decom_enc_aenc (cons (mp (blind U V) (blind R T)) Thy) NE1 E1 NE2 E2 :=
+  append NE1 E1 Thy1 /\ 
+  append Thy1 Thy Thy2 /\ 
+  _if (deduce_r Thy2 V T)
+      (
+	decom_pair (cons (mp U R) Thy) NewThy /\ 
+        decom_enc_aenc NewThy NE1 E1 NE2 E2
+      )
+      (
+        insert (mp (blind U V) (blind R T)) E1 NewE1 /\ 
+        decom_enc_aenc Thy NE1 NewE1 NE2 E2
+      ) ;
+
+% Sign	- Might add mp (pub V) (pub T) here!
+decom_enc_aenc (cons (mp (sign U V) (sign R T)) Thy) NE1 E1 NE2 E2 := 	
+  append NE1 E1 Thy1 /\ 
+  append Thy1 Thy Thy2 /\
+  _if (U = blind U1 U2 /\ R = blind R1 R2 /\ deduce_r Thy2 U2 R2)
+      (
+	decom_pair (cons (mp (sign U1 V) (sign R1 T)) Thy) NewThy /\ 
+        decom_enc_aenc NewThy NE1 E1 NE2 E2
+      )
+      (
+	decom_pair (cons (mp U R) Thy) NewThy /\
+	insert (mp (sign U V) (sign R T)) E1 NewE1 /\
+	decom_enc_aenc NewThy NE1 NewE1 NE2 E2
+      );
+
 decom_enc_aenc (cons X Thy) NE1 E1 NE2 E2 :=
-  _not(X = mp (en U V) (en R T) \/ X = mp (aen U (pub V)) (aen R (pub T)) ) /\ 	% Asymmetric Encryption
+  _not(X = mp (en U V) (en R T) \/ X = mp (aen U (pub V)) (aen R (pub T)) \/ X = mp (blind U V) (blind R T) \/ X = mp (sign U V) (sign R T) ) /\ 	% Asymmetric Encryption, Blind, Sign
   insert X NE1 NewNE1 /\ 
   decom_enc_aenc Thy NewNE1 E1 NE2 E2.
 
@@ -212,14 +243,22 @@ filter_enc (cons (mp (en U V) (en R T)) L) NE E :=
 filter_enc (cons (mp (aen U V) (aen R T)) L) NE E :=
   filter_enc L NE E1 /\ 
   E =  cons (mp (aen U V) (aen R T)) E1 ;
+% Blind
+filter_enc (cons (mp (blind U V) (blind R T)) L) NE E :=
+  filter_enc L NE E1 /\ 
+  E =  cons (mp (blind U V) (blind R T)) E1 ; 
+% Sign
+filter_enc (cons (mp (sign U V) (sign R T)) L) NE E :=
+  filter_enc L NE E1 /\ 
+  E =  cons (mp (sign U V) (sign R T)) E1 ; 
 filter_enc (cons X L) (cons X NE) E :=
-  _not(X = mp (en U V) (en R T) \/ X = mp (aen U V) (aen R T) ) /\ 	% Asymmetric Encryption
+  _not(X = mp (en U V) (en R T) \/ X = mp (aen U V) (aen R T) \/ X = mp (blind U V) (blind R T) \/ X = mp (sign U V) (sign R T)) /\ 	% Asymmetric Encryption, Blind, Sign
   filter_enc L NE E.
 
 Define iter_reduce : list thy_pair -> list thy_pair -> list thy_pair ->
       		     list thy_pair -> prop
 by 
-iter_reduce NE1 E1 NE2 E2 := 
+iter_reduce NE1 E1 NE2 E2 :=
   decom_enc_aenc E1 NE1 nil NE E /\
   _if (equal E1 E)
       (NE2 = NE /\ E2 = E)
@@ -318,13 +357,15 @@ thy_cc5 Thy :=
   forall M N, member (mp (pub M) (pub N)) Thy 
       -> (ded1_r S1 M -> false) /\ (ded1_r S2 N -> false).
 
-% Sign, Hash, Mac
+% Blind
 Define thy_cc6 : list thy_pair -> prop
 by
 thy_cc6 Thy :=
   split_thy Thy S1 S2 /\ 
-  forall M1 N1 M2 N2, member (mp (sign M1 N1) (sign M2 N2)) Thy 
-      -> (ded1_r S1 M1 /\ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 /\ ded1_r S2 N2 -> false).
+  forall M1 N1 M2 N2, member (mp (blind M1 N1) (blind M2 N2)) Thy 
+      -> (ded1_r S1 N1 -> false) /\ (ded1_r S2 N2 -> false).
+
+% Sign, Hash, Mac
 Define thy_cc7 : list thy_pair -> prop
 by
 thy_cc7 Thy :=
@@ -352,14 +393,19 @@ thy_cc3 (cons (mp M N) L) :=
 
 
 % Checking consistency of unreduced theories
+% Pair - thy_cc1
+% Symmetric Encrytption - thy_cc2
+% Asymmetric Encryption - thy_cc4, thy_cc5
+% Blind - thy_cc6
+% Sign, Hash, Mac - thy_cc7, thy_cc8
 Define thy_consistent : list thy_pair -> prop
 by
 thy_consistent Thy :=
-  reduce Thy Thy1 /\ thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc3 Thy1. % Asymmetric Encryption - thy_cc4
+  reduce Thy Thy1 /\ thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc3 Thy1.
 
 % Checking consistency of reduced theories
 Define thy_red_consistent : list thy_pair -> prop 
 by
-thy_red_consistent Thy := 
+thy_red_consistent Thy :=
   thy_cc1 Thy /\ thy_cc2 Thy /\ thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ thy_cc3 Thy. % Asymmetric Encryption - thy_cc4
 
