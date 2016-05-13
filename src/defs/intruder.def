@@ -65,8 +65,8 @@ Define trim_cst : list constraint -> list tm -> list constraint -> prop by
 trim_cst nil Rhs nil ; 
 trim_cst (cons C L) Rhs Ds :=
   rhs_cst C M /\
-  _if (M = (ct X))
-      (trim_cst L Rhs Ds)
+%  _if (M = (ct X)) % RH: Without constants.
+%      (trim_cst L Rhs Ds)
       (
         _if (det_mem M Rhs)
             (trim_cst L Rhs Ds)
@@ -83,8 +83,8 @@ redundant_aux C (cons D L) :=
 Define redundant : constraint -> list constraint -> prop by 
 
 redundant C L :=
-  _if (rhs_cst C (ct X))
-      true 
+%  _if (rhs_cst C (ct X)) % RH: Remove constants
+%      true 
       (redundant_aux C L).
 
 
@@ -141,22 +141,28 @@ red 3 Vs (dedl S M) Cs Ds :=
 % So we add (dedr T V) instead of (dedr S V) to the constraints Cs.
 red 5 Vs (dedl S M) Cs Ds :=
   select S (en U V) T /\
-  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\
-  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
+  %_if (msg_type V ct_type) (T1 = T) % RH: Removed constants.
+  (insert V T T1) /\
+  % RH: Removed constants. _if (msg_type U ct_type) (T2 = T1)
+  (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Asymmetric Encryption
 red 5 Vs (dedl S M) Cs Ds :=
   select S (aen U (pub X)) T /\
-  _if (msg_type X ct_type) (T1 = T) (insert X T T1) /\
-  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
+  %_if (msg_type X ct_type) (T1 = T) % RH: Removed constants.
+  (insert X T T1) /\
+  %_if (msg_type U ct_type) (T2 = T1) % RH: Removed constants.
+  (insert U T1 T2) /\
   Ds = cons (dedr T X) (cons (dedl T2 M) Cs);
 
 % % Blind
 red 5 Vs (dedl S M) Cs Ds :=
   select S (blind U V) T /\
-  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\
-  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
+  %_if (msg_type V ct_type) (T1 = T) % RH: Removed constants.
+  (insert V T T1) /\
+  %_if (msg_type U ct_type) (T2 = T1) % RH: Removed constants.
+  (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Sign, Blind
@@ -168,7 +174,8 @@ red 5 Vs (dedl S M) Cs Ds :=
 % % Sign
 red 5 Vs (dedl S M) Cs Ds :=
   det_mem (sign U V) S /\
-  _not (msg_type U ct_type \/ det_mem U S) /\
+  _not (% RH: Removed constants. msg_type U ct_type \/
+        det_mem U S) /\
   Ds = cons (dedl (cons U S) M) Cs.
 
 % % Signing. Keep the signed message (SPEC original commented source code). 
@@ -184,7 +191,8 @@ by
 red5_aen_var (dedl S M) Pre Post Cs Subst :=
    select S (aen U (var X)) T /\
    Subst = (cons (sub (var X) (pub (var X))) nil) /\
-   _if (msg_type U ct_type) (T1 = T) (insert U T T1) /\
+   %_if (msg_type U ct_type) (T1 = T) % RH: Removed constants.
+   (insert U T T1) /\
    apply_list Subst Pre Pre1 /\
    apply_list Subst Post Post1 /\
    apply Subst (dedl T1 M) C /\
@@ -200,8 +208,10 @@ red5_aen_var (dedl S M) Pre Post Cs Subst :=
 Define decpr : list tm -> list tm -> prop by 
 decpr nil nil ;
 decpr (cons (pr U V) L) R :=
-  _if (msg_type V ct_type) (L1 = L)  (insert V L L1) /\
-  _if (msg_type U ct_type) (L2 = L1) (insert U L1 L2) /\
+  % RH: Removed constants. _if (msg_type V ct_type) (L1 = L) 
+  (insert V L L1) /\
+  % RH: Removed constants. _if (msg_type U ct_type) (L2 = L1)
+  (insert U L1 L2) /\
   decpr L2 R ;
 decpr (cons C L) (cons C R) :=
   _not(C = pr U V) /\ decpr L R.

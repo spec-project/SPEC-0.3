@@ -26,7 +26,7 @@
 % Printing a term in LaTeX format. 
 Define term2latex : string -> tm -> prop
 by 
-term2latex File (ct X) := fprintstr File "{\\mathrm{" /\ fprintstr File X /\ fprintstr File "}}" ;
+%term2latex File (ct X) := fprintstr File "{\\mathrm{" /\ fprintstr File X /\ fprintstr File "}}" ;
 term2latex File (var X) := fprintstr File "?" /\ fprint File X ; 
 term2latex File (bn X) := fprint File X ; 
 term2latex File (nm X) := fprint File X ; 

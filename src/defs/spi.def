@@ -33,8 +33,8 @@
 Kind tm type.
 Kind name type.
 
-Type ct		(string -> tm).		% constants
-Type var	(name -> tm).		% variables 
+%Type ct		(string -> tm).		% constants
+Type var	(name -> tm).		% variables        % RH: Consider making (name,string) pairs for pretty printing purposes.
 Type nm		(name -> tm).		% names
 Type bn		(tm -> tm).		% constructor for marking bound names; needed when recursing over binders. 
 Type en		(tm -> tm -> tm).	% symmetric encryption
@@ -150,15 +150,19 @@ Define one : proc -> action -> proc -> prop,      % free-action transitions
        oneAbs : proc -> action -> agent -> prop,  % abstractions 
        oneCon : proc -> action -> agent -> prop   % concretions
 by 
-  one (taup P) tau P ; % := printstr "\n tau"; % RH: tau transition added, with debug message.
+  one (taup P) tau P ; 
   one (par P Q) tau R := exists x, oneAbs P x F /\ oneCon Q x C /\ appAbs F C R ;
   one (par P Q) tau R := exists x, oneCon P x C /\ oneAbs Q x F /\ appCon C F R ; 
+  one (par P Q) tau (par R Q) := one P tau R;
+  one (par P Q) tau (par P R) := one Q tau R;
   one (plus P Q) tau R := one P tau R ;
   one (plus P Q) tau R := one Q tau R ; 
-  one (plus done P) tau done; % RH: Added for avoiding deadlock.
-  one (plus P done) tau done; % RH: Added for avoiding deadlock.
+  one (plus done P) tau done; % RH: Added for avoiding deadlock for process 1.
+  one (plus P done) tau done; % RH: Added for avoiding deadlock for process 1.
   one (nu P) tau (nu R) := nabla x, one (P x) tau (R x) ;
   one (bang P) tau (par (bang P) Q) := one P tau Q ;
+  one (bang P) tau (par R (bang P)) := exists x, oneAbs P x F /\ oneCon P x C /\ appAbs F C R ;
+%  one (bang P) tau Q := one (par P (bang P)) tau Q /\ printstr "Testing" ;
   one P tau R := red_proc P Q /\ one Q tau R ;
 
   oneAbs (inp X A) (act X) (abs A) ; 
@@ -169,6 +173,7 @@ by
   oneAbs (plus P Q) X R := oneAbs Q X R ;
   oneAbs (nu P) A (abs x\(nu (R x))) := nabla y, oneAbs (P y) A (abs x\(R x y)) ; 
   oneAbs (bang P) A (abs x\ (par (bang P) (Q x))) := oneAbs P A (abs Q) ;
+%  oneAbs (bang P) A R := oneAbs (par P (bang P)) A R ;
 
   oneCon (outp X M P) (act X) (con M P) ; 
   oneCon P X C := red_proc P Q /\ oneCon Q X C ; 
@@ -178,27 +183,30 @@ by
   oneCon (plus P Q) X R := oneCon Q X R ;
   oneCon (nu P) X C := (nabla y, oneCon (P y) X (R y)) /\ push_new (new R) C ; 
   oneCon (bang P) X R := oneCon P X C /\ mergeLeft C (bang P) R.
+%  oneCon (bang P) X C := oneCon (par P (bang P)) X C.
 
 
 % RH: Taus defined as normal.
 
 Define taus : proc -> proc -> prop,
-       tausAbs : agent -> agent -> prop
+       tausAgent : agent -> agent -> prop
 by
   taus P QQ := one P tau Q /\ taus Q QQ ; 
   taus P P;
-  tausAbs (abs A) (abs BB) := (nabla x, one (A x) tau (B x)) /\ tausAbs (abs B) (abs BB) ;
-  tausAbs A A.
+  tausAgent (abs A) (abs B) := nabla x, taus (A x) (B x) ;
+  tausAgent (con M A) (con M B) := taus A B ;
+  tausAgent (new A) (new B) := nabla x, tausAgent (A x) (B x) ;
+  tausAgent A A.
 
 % RH: progressing_one differs from weak_one since tau actions must be matched by at least one tau action.
 
-Define progressing_one : proc -> action -> proc -> prop,       
+Define progressing_one : proc -> action -> proc -> prop,
        progressing_oneAbs : proc -> action -> agent -> prop,   
        progressing_oneCon : proc -> action -> agent -> prop    
 by
-  progressing_one Q tau P := taus Q QQ /\ one QQ tau PP /\ taus PP P ; 
-  progressing_oneAbs Q A P := taus Q QQ /\ oneAbs QQ A PP /\ (tausAbs PP P) ;
-  progressing_oneCon Q A (con M P) := taus Q QQ /\ oneCon QQ A (con M PP) /\ taus PP P.
+  progressing_one Q A P := taus Q QQ /\ one QQ tau P ; 
+  progressing_oneAbs Q A P := taus Q QQ /\ oneAbs QQ A PP /\ tausAgent PP P ;
+  progressing_oneCon Q A C := taus Q QQ /\ oneCon QQ A CC /\ tausAgent CC C.
 
 % Checks whether a process has terminated successfully or deadlocked.
 

@@ -22,7 +22,7 @@
 #include "uni.def".
 
 Define print_term : tm -> prop by 
-  print_term (ct X) := printstr X ; 
+%  print_term (ct X) := printstr X ; 
   print_term (var X) := printstr "?" /\ print X ; 
   print_term (bn X) := print X ; 
   print_term (nm X) := print X ;

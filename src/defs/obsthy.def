@@ -61,7 +61,7 @@ print_thy Thy :=
 Define deduce_r : list thy_pair -> tm -> tm -> prop 
 by 
 deduce_r Thy (var V) (var V) ;
-deduce_r Thy (ct C) (ct C) ; 
+%deduce_r Thy (ct C) (ct C) ; % RH: Not sure why constants where included here.
 deduce_r Thy M N := det_mem (mp M N) Thy ;
 deduce_r Thy (pr U V) (pr R T) := deduce_r Thy U R /\ deduce_r Thy V T ; 
 deduce_r Thy (en U V) (en R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
@@ -89,7 +89,7 @@ deduce_r Thy (mac U V) (mac X Y) := deduce_r Thy U R /\ deduce_r Thy V T.
 Define deduce_inv_r : list thy_pair -> tm -> tm -> prop 
 by
 deduce_inv_r Thy (var V) (var V) ; 
-deduce_inv_r Thy (ct C) (ct C) ; 
+%deduce_inv_r Thy (ct C) (ct C) ; % RH: Not sure why constants where included here.
 deduce_inv_r Thy M N := det_mem (mp N M) Thy ; 
 deduce_inv_r Thy (pr U V) (pr R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ; 
 deduce_inv_r Thy (en U V) (en R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ;
@@ -110,7 +110,7 @@ deduce_inv_r Thy (mac U V) (mac R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy
 Define ded1_r : list tm -> tm -> prop
 by
 ded1_r S (var V) ; 
-ded1_r S (ct C) ; 
+%ded1_r S (ct C) ; 
 ded1_r S M := det_mem M S ; 
 % ded1_r S M := member M S ; 
 ded1_r S (pr U V) := ded1_r S U /\ ded1_r S V ; 
@@ -130,8 +130,8 @@ ded1_r S (mac U V) := ded1_r S U /\ ded1_r S V.
 
 Define id_pair : tm -> tm -> prop 
 by
-id_pair (var X) (var X) ; 
-id_pair (ct X) (ct X).
+id_pair (var X) (var X).
+%id_pair (ct X) (ct X).
 
   % insert (mp U R) Thy Thy1,
   % insert (mp V T) Thy1 Thy2, 
@@ -255,15 +255,15 @@ filter_enc (cons X L) (cons X NE) E :=
   _not(X = mp (en U V) (en R T) \/ X = mp (aen U V) (aen R T) \/ X = mp (blind U V) (blind R T) \/ X = mp (sign U V) (sign R T)) /\ 	% Asymmetric Encryption, Blind, Sign
   filter_enc L NE E.
 
+% RH: Applied theory reductions until no further reductions can be applied.
 Define iter_reduce : list thy_pair -> list thy_pair -> list thy_pair ->
       		     list thy_pair -> prop
 by 
 iter_reduce NE1 E1 NE2 E2 :=
   decom_enc_aenc E1 NE1 nil NE E /\
-  _if (equal E1 E)
+  _if (equal E1 E) % RH: checks no new pairs where added in the reduction step.
       (NE2 = NE /\ E2 = E)
       (iter_reduce NE E NE2 E2).
-
 
 % remove variable pairs from a theory
 % remove_thy_vars ThyIn ThyOut
@@ -278,13 +278,13 @@ remove_thy_vars (cons P ThyIn) ThyOut :=
 
 % remove constant pairs from a theory
 
-Define remove_thy_consts : list thy_pair -> list thy_pair -> prop
-by 
-remove_thy_consts nil nil ; 
-remove_thy_consts (cons P ThyIn) ThyOut :=
-  _if (P = (mp (ct X) (ct X)))
-      (remove_thy_consts ThyIn ThyOut)
-      (remove_thy_consts ThyIn Thy /\ ThyOut = (cons P Thy)).
+%Define remove_thy_consts : list thy_pair -> list thy_pair -> prop
+%by 
+%remove_thy_consts nil nil ; 
+%remove_thy_consts (cons P ThyIn) ThyOut :=
+%  _if (P = (mp (ct X) (ct X)))
+%      (remove_thy_consts ThyIn ThyOut)
+%      (remove_thy_consts ThyIn Thy /\ ThyOut = (cons P Thy)).
 
 Define reduce : list thy_pair -> list thy_pair -> prop
 by
@@ -293,26 +293,27 @@ reduce Thy1 Thy2 :=
   filter_enc Thy NE1 E1 /\
   iter_reduce NE1 E1 NE2 E2 /\
   append NE2 E2 Thy3 /\ 
-  remove_thy_vars Thy3 Thy4 /\
-  remove_thy_consts Thy4 Thy2.
+  remove_thy_vars Thy3 Thy2.
+  %   remove_thy_vars Thy3 Thy4 /\ remove_thy_consts Thy4 Thy2. % RH: No need for constants.
 
-
+% RH: checks that two messages have the same type by looking at the outermost constructor.
 Define eq_msg_type : tm -> tm -> prop
 by 
 eq_msg_type (var X) (var X) ; 
-eq_msg_type (ct X) (ct X) ; 
-eq_msg_type (nm X) (nm Y) ; 
+%eq_msg_type (ct X) (ct X)  RH: Removed constants.
+eq_msg_type (nm X) (nm Y) ;
 eq_msg_type (pr X Y) (pr U V) ;
 eq_msg_type (en X Y) (en U V) ;
+%  eq_msg_type Y V ;
 % Asymmetric Encryption
 eq_msg_type (aen X Y) (aen U V) := 
   (Y = pub K /\ V = pub M) \/ 
   (_not(Y = pub K) /\ _not(V = pub M));
-eq_msg_type (pub X) (pub Y);
+eq_msg_type (pub X) (pub Y) ;
 % Blind
 eq_msg_type (blind X Y) (blind U V) ;
 % Sign, Hash, Mac
-eq_msg_type (sign X Y) (sign U V) ;
+eq_msg_type (sign X Y) (sign U V) ; % eq_msg_type Y V; % RH: would avoid the folling being equated bisim( nu(k).a<sign(m,enc(n,k))> , nu(l).a<sign(m,l)> );
 eq_msg_type (hs X) (hs U) ;
 eq_msg_type (mac X Y) (mac U V).
 
@@ -326,6 +327,7 @@ thy_cc1 nil ;
 thy_cc1 (cons (mp M N) L) :=
   eq_msg_type M N /\ thy_cc1 L.
  
+
 % Consistency condition 2: 
 % We use an alternative characterisation here:
 % For every (M, N) in Gamma, if M = enc M1 M2 and N = enc N1 N2,
@@ -342,7 +344,7 @@ thy_cc2 Thy :=
       -> (ded1_r S1 N1 -> false) /\ (ded1_r S2 N2 -> false). 
 
 % Asymmetric Encryption
-% Consistency condittion 4:
+% Consistency condition 4:
 Define thy_cc4 : list thy_pair -> prop
 by
 thy_cc4 Thy :=
@@ -372,13 +374,15 @@ thy_cc7 Thy :=
   split_thy Thy S1 S2 /\ 
   forall M N, member (mp (hs M) (hs N)) Thy 
       -> (ded1_r S1 M -> false) /\ (ded1_r S2 N -> false).
+
 Define thy_cc8 : list thy_pair -> prop
 by
 thy_cc8 Thy :=
   split_thy Thy S1 S2 /\ 
   forall M1 N1 M2 N2, member (mp (mac M1 N1) (mac M2 N2)) Thy 
       -> (ded1_r S1 M1 /\ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 /\ ded1_r S2 N2 -> false).
-% Consistency condittion 3: 
+
+% Consistency condition 3: 
 % thy_cc3 Thy :=
 %  pi M\ pi N\ pi U\ pi V\ 
 %   member (mp M N) Thy, member (mp U V) Thy =>
@@ -392,20 +396,60 @@ thy_cc3 (cons (mp M N) L) :=
   thy_cc3 L.
 
 
+% RH: Alternative consistency checks, where messages are checked individually to be sure that they have been reduced to encrypted names.
+
+Define are_encrypted : list tm -> list tm -> prop
+by
+are_encrypted nil S;
+are_encrypted (cons (nm X) T) S1 :=
+    are_encrypted T S1;
+are_encrypted (cons (hs M) T) S1 :=
+    (ded1_r S1 M -> false) /\
+    are_encrypted T S1;
+are_encrypted (cons (blind M1 N1) T) S1 :=
+    (ded1_r S1 N1 -> false) /\
+    are_encrypted T S1;
+are_encrypted (cons (pub M) T) S1 :=
+    (ded1_r S1 M -> false) /\
+    are_encrypted T S1;
+are_encrypted (cons (aen M1 (pub N1)) T) S1 :=
+    (ded1_r S1 N1 -> false) /\
+    are_encrypted T S1;
+are_encrypted (cons (sign M1 N1) T) S1 := % RH: Signed messages are not broken down (unless secret key is known).
+    are_encrypted T S1; 
+are_encrypted (cons (en M1 N1) T) S1 :=
+    (ded1_r S1 N1 -> false) /\
+    are_encrypted T S1;
+are_encrypted (cons (mac M1 N1) T) S1 :=
+    ded1_r S1 M1 /\ (ded1_r S1 N1 -> false) /\
+    are_encrypted T S1.
+
+Define thy_cc2_alt : list thy_pair -> prop
+by
+thy_cc2_alt Thy :=
+  split_thy Thy S1 S2 /\
+  are_encrypted S1 S1 /\
+  are_encrypted S2 S2
+.
+
+
 % Checking consistency of unreduced theories
 % Pair - thy_cc1
 % Symmetric Encrytption - thy_cc2
 % Asymmetric Encryption - thy_cc4, thy_cc5
 % Blind - thy_cc6
 % Sign, Hash, Mac - thy_cc7, thy_cc8
-Define thy_consistent : list thy_pair -> prop
+Define thy_consistent : list thy_pair -> prop % RH: not used as far as I can see. Probably just for testing purposes.
 by
 thy_consistent Thy :=
-  reduce Thy Thy1 /\ thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc3 Thy1.
+  reduce Thy Thy1 /\ 
+  thy_cc1 Thy /\ thy_cc2 Thy /\ thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ thy_cc3 Thy. % Asymmetric Encryption - thy_cc4
+
 
 % Checking consistency of reduced theories
 Define thy_red_consistent : list thy_pair -> prop 
 by
 thy_red_consistent Thy :=
-  thy_cc1 Thy /\ thy_cc2 Thy /\ thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ thy_cc3 Thy. % Asymmetric Encryption - thy_cc4
+  thy_cc1 Thy /\  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ % Asymmetric Encryption - thy_cc4
+  thy_cc3 Thy. 
 

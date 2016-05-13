@@ -64,7 +64,6 @@ fun_RSRC2 H OriVars Sub C Sol Sub1 Sub2 :=
   fun_CS2 OriVars H Sub1 Sub2. 
 
 
-
 % [ref1_cont,ref2_cont] These predicates computes the refinement substitution pairs
 % induced by a transition of a process in the bisimulation tuple. 
 
@@ -123,8 +122,8 @@ Define trim_history : list tm -> list bt_pair -> list bt_pair -> prop
 by 
 trim_history Vs nil nil ; 
 trim_history Vs (cons X L) R :=
-  _if (X = (in (ct Y) (ct Y)) \/ X = (out (ct Y) (ct Y)))
-      (trim_history Vs L R)
+%  _if (X = (in (ct Y) (ct Y)) \/ X = (out (ct Y) (ct Y))) % RH: Removed constants.
+%      (trim_history Vs L R)
       (
         _if (X = in (pr U V) (pr S T))
             (trim_history Vs (cons (in U S) (cons (in V T) L)) R)
@@ -232,11 +231,7 @@ reflexive H P Q :=
 Define decomp_bt_pair : list thy_pair -> list bt_pair -> tm -> tm -> list bt_pair -> prop
 by 
 decomp_bt_pair Thy Acc (var X) (var X) Acc ; 
-decomp_bt_pair Thy Acc (ct X) (ct X) Acc ; 
-decomp_bt_pair Thy Acc (nm X) (nm Y) L :=
-  _if (det_mem (mp (nm X) (nm Y)) Thy)
-      (L = Acc)
-      (L = (cons (out (nm X) (nm Y)) Acc)) ; 
+%decomp_bt_pair Thy Acc (ct X) (ct X) Acc ; 
 % decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
 %   _if (det_mem (mp (hs X) (hs Y)) Thy)
 %       (L = Acc)
@@ -256,7 +251,7 @@ decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
             (L = (cons (out (aen X K) (aen Y M)) Acc))
       );
 decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
-  _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy)
+  _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy  \/ det_mem (out (pub X) (pub Y)) Acc)
       (L = Acc)
       (L = (cons (out (pub X) (pub Y)) Acc));
 
@@ -267,22 +262,22 @@ decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
         decomp_bt_pair Thy Acc X Y L
       )
       (
-        _if (det_mem (mp (blind X K) (blind Y M)) Thy)
+        _if (det_mem (mp (blind X K) (blind Y M)) Thy  \/ det_mem (out (blind X K) (blind Y M)) Acc)
             (L = Acc)
             (L = (cons (out (blind X K) (blind Y M)) Acc))
       );
 
 % Sign, Hash, Mac
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
- _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy)
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy \/ det_mem (out (sign X Y) (sign U V)) Acc)
       (L = Acc)
       (L = (cons (out (sign X Y) (sign U V)) Acc));
 decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
-  _if (deduce_r Thy X Y \/ det_mem (mp (hs X) (hs Y)) Thy)
+  _if (deduce_r Thy X Y \/ det_mem (mp (hs X) (hs Y)) Thy \/ det_mem (out (sign X Y) (sign U V)) Acc) 
       (L = Acc)
       (L = (cons (out (hs X) (hs Y)) Acc));
 decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
- _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy)
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy \/ det_mem (out (mac X Y) (mac U V)) Acc) 
       (L = Acc)
       (L = (cons (out (mac X Y) (mac U V)) Acc));
 
@@ -296,7 +291,17 @@ decomp_bt_pair Thy Acc (en X K) (en Y M) L :=
         _if (det_mem (mp (en X K) (en Y M)) Thy)
             (L = Acc)
             (L = (cons (out (en X K) (en Y M)) Acc))
-      ).
+      );
+
+decomp_bt_pair Thy Acc (nm X) (nm Y) L := % RH: Use this if only names should be comparrible to names.
+  _if (det_mem (mp (nm X) (nm Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (nm X) (nm Y)) Acc))
+%decomp_bt_pair Thy Acc X Y L := % RH: Added to allow anything to be indistinguishable in a theory.
+%  _if (det_mem (mp X Y) Thy \/ det_mem (out X Y) Acc)
+%      (L = Acc)
+%      (L = (cons (out X Y) Acc))
+.
 
 
 Define bisimTau1, bisimTau2, bisimAbs1, bisimAbs2,
@@ -311,9 +316,9 @@ by
 
 bisimTau1 H Q (conRefProc Sub1 Sub2 A P1) :=
   copyproc Sub2 Q Q1 /\  % Apply right substitution.
-  _if progressing_opt
+  (_if progressing_opt
       (progressing_one Q1 A Q2)
-      (one Q1 A Q2)
+      (one Q1 A Q2))
   /\   
   % _rigid Q2 /\ 
   apply_subst_bt Sub1 Sub2 H H1  % Generates new bitrace H1 from pair of substitutions.
@@ -324,9 +329,9 @@ bisimTau1 H Q (absRef x\ Cts x) :=
 
 bisimTau2 H P (conRefProc Sub1 Sub2 A Q1) := 
   copyproc Sub1 P P1 /\ 
-  _if progressing_opt
+  (_if progressing_opt
       (progressing_one P1 A P2)
-      (one P1 A P2)
+      (one P1 A P2))
   /\
   apply_subst_bt Sub1 Sub2 H H1
   /\ bisim_upto H1 P2 Q1
@@ -344,9 +349,9 @@ bisimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
   reduce Thy ThyRed /\ 
   deduce_r ThyRed M N /\ 
   copyproc Sub2 Q Q1 /\ 
-  _if progressing_opt
+  (_if progressing_opt
       (progressing_oneAbs Q1 (act N) Q2)
-      (oneAbs Q1 (act N) Q2)
+      (oneAbs Q1 (act N) Q2))
   /\ 
   bisimAgent H1 ThyRed P1 Q2 ; 
 bisimAbs1 H Q (absRef x\ Cts x) :=
@@ -358,9 +363,9 @@ bisimAbs2 H P (conRefAgent Sub1 Sub2 (act N) Q1) :=
   reduce Thy ThyRed /\ 
   deduce_inv_r ThyRed N M /\ 
   copyproc Sub1 P P1 /\ 
-  _if progressing_opt
+  (_if progressing_opt
       (progressing_oneAbs P1 (act M) P2)
-      (oneAbs P1 (act M) P2)
+      (oneAbs P1 (act M) P2))
   /\ 
   bisimAgent H1 ThyRed P2 Q1 ; 
 bisimAbs2 H P (absRef x\ Cts x) :=
@@ -375,9 +380,9 @@ bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
   reduce Thy ThyRed /\ 
   deduce_r ThyRed M N /\ 
   copyproc Sub2 Q Q1 /\
-  _if progressing_opt 
+  (_if progressing_opt 
       (progressing_oneCon Q1 (act N) Q2) 
-      (oneCon Q1 (act N) Q2)
+      (oneCon Q1 (act N) Q2))
   /\ 
   bisimAgent H1 ThyRed P1 Q2 ; 
 bisimCon1 H Q (absRef x\ Cts x) :=
@@ -389,9 +394,9 @@ bisimCon2 H P (conRefAgent Sub1 Sub2 (act N) Q1) :=
   reduce Thy ThyRed /\ 
   deduce_inv_r ThyRed N M /\  
   copyproc Sub1 P P1 /\ 
-  _if progressing_opt
+  (_if progressing_opt
      (progressing_oneCon P1 (act M) P2)  
-     (oneCon P1 (act M) P2)
+     (oneCon P1 (act M) P2))
   /\ 
   bisimAgent H1 ThyRed P2 Q1 ; 
 bisimCon2 H P (absRef x\ Cts x) :=

@@ -23,7 +23,7 @@
 
 Define term2text : string -> tm -> prop
 by 
-term2text File (ct X) := fprintstr File X ; 
+%term2text File (ct X) := fprintstr File X ; 
 term2text File (var X) := fprintstr File "?" /\ fprint File X ; 
 term2text File (bn X) := fprint File X ; 
 term2text File (nm X) := fprint File X ; 
