@@ -20,10 +20,34 @@
 #include "uni.def".
 #include "pprint.def".
 
+
 Kind constraint type. 
 
 Type dedl list tm -> tm -> constraint. 
 Type dedr list tm -> tm -> constraint.
+
+
+Define print_cst : constraint -> prop
+by 
+print_cst (dedr S M) :=
+  printstr "(" /\ plist S /\ printstr " |-_R " /\ print_term M /\ printstr ")" ; 
+print_cst (dedl S M) :=
+  printstr "(" /\ plist S /\ printstr " |- " /\ print_term M /\ printstr ")".
+ 
+Define plist_cst : list constraint -> prop
+by
+plist_cst nil ;
+plist_cst (cons X nil) := print_cst X ; 
+plist_cst (cons X (cons Y L)) :=
+  print_cst X /\
+  printstr " ; \n" /\
+  plist_cst (cons Y L).
+
+Define print_list_cst : list constraint -> prop
+by
+print_list_cst L :=
+  printstr"[" /\ plist_cst L /\ printstr "]".
+
 
 % Get the list of variables from a deducibility constraint system.
 % Assume wellformed constraint systems, so only need to check
@@ -65,27 +89,18 @@ Define trim_cst : list constraint -> list tm -> list constraint -> prop by
 trim_cst nil Rhs nil ; 
 trim_cst (cons C L) Rhs Ds :=
   rhs_cst C M /\
-%  _if (M = (ct X)) % RH: Without constants.
-%      (trim_cst L Rhs Ds)
-      (
-        _if (det_mem M Rhs)
-            (trim_cst L Rhs Ds)
-            (trim_cst L (cons M Rhs) Cs /\ Ds = (cons C Cs))
-      ).
+  _if (det_mem M Rhs)
+      (trim_cst L Rhs Ds)
+      (trim_cst L (cons M Rhs) Cs /\ Ds = (cons C Cs))
+      .
 
 
-Define redundant_aux : constraint -> list constraint -> prop by
-redundant_aux C (cons D L) :=
+
+Define redundant : constraint -> list constraint -> prop by
+redundant C (cons D L) :=
   _if (rhs_cst C M /\ rhs_cst D M)
       true
-      (redundant_aux C L).
-
-Define redundant : constraint -> list constraint -> prop by 
-
-redundant C L :=
-%  _if (rhs_cst C (ct X)) % RH: Remove constants
-%      true 
-      (redundant_aux C L).
+      (redundant C L).
 
 
 Define red1 : list tm -> constraint -> list constraint -> list constraint ->
@@ -141,41 +156,40 @@ red 3 Vs (dedl S M) Cs Ds :=
 % So we add (dedr T V) instead of (dedr S V) to the constraints Cs.
 red 5 Vs (dedl S M) Cs Ds :=
   select S (en U V) T /\
-  %_if (msg_type V ct_type) (T1 = T) % RH: Removed constants.
   (insert V T T1) /\
-  % RH: Removed constants. _if (msg_type U ct_type) (T2 = T1)
   (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Asymmetric Encryption
-red 5 Vs (dedl S M) Cs Ds :=
+red 6 Vs (dedl S M) Cs Ds :=
   select S (aen U (pub X)) T /\
-  %_if (msg_type X ct_type) (T1 = T) % RH: Removed constants.
   (insert X T T1) /\
-  %_if (msg_type U ct_type) (T2 = T1) % RH: Removed constants.
   (insert U T1 T2) /\
   Ds = cons (dedr T X) (cons (dedl T2 M) Cs);
 
 % % Blind
-red 5 Vs (dedl S M) Cs Ds :=
+red 7 Vs (dedl S M) Cs Ds :=
   select S (blind U V) T /\
-  %_if (msg_type V ct_type) (T1 = T) % RH: Removed constants.
   (insert V T T1) /\
-  %_if (msg_type U ct_type) (T2 = T1) % RH: Removed constants.
   (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Sign, Blind
-red 5 Vs (dedl S M) Cs Ds :=
+red 8 Vs (dedl S L) Cs Ds :=
   select S (sign (blind M N) K) T /\
-  _if (det_mem (sign M K) T) (T1 = T) (T1 = cons (sign M K) T) /\
-  Ds = cons (dedr T N) (cons (dedl T1 M) Cs);
+  _not (det_mem (sign M K) T) /\ % RH: sign M K must not be in the assumptions, or the rule has been applied or is redundant.
+  %println "Testing" /\
+  %print_cst (dedl S L) /\ println "" /\
+  %print_list_cst Cs /\ println " " /\
+  %print_list_cst Ds /\ println " " /\
+  Ds = cons (dedr T N) (cons (dedl (cons (sign M K) S) L) Cs);
+ 
 
-% % Sign
-red 5 Vs (dedl S M) Cs Ds :=
-  det_mem (sign U V) S /\
-  _not (% RH: Removed constants. msg_type U ct_type \/
-        det_mem U S) /\
+ % Sign
+red 9 Vs (dedl S M) Cs Ds :=
+  select S (sign U V) T /\
+  _not (det_mem U T) /\
+  %println "Testing2" /\
   Ds = cons (dedl (cons U S) M) Cs.
 
 % % Signing. Keep the signed message (SPEC original commented source code). 
@@ -191,7 +205,6 @@ by
 red5_aen_var (dedl S M) Pre Post Cs Subst :=
    select S (aen U (var X)) T /\
    Subst = (cons (sub (var X) (pub (var X))) nil) /\
-   %_if (msg_type U ct_type) (T1 = T) % RH: Removed constants.
    (insert U T T1) /\
    apply_list Subst Pre Pre1 /\
    apply_list Subst Post Post1 /\
@@ -208,19 +221,21 @@ red5_aen_var (dedl S M) Pre Post Cs Subst :=
 Define decpr : list tm -> list tm -> prop by 
 decpr nil nil ;
 decpr (cons (pr U V) L) R :=
-  % RH: Removed constants. _if (msg_type V ct_type) (L1 = L) 
   (insert V L L1) /\
-  % RH: Removed constants. _if (msg_type U ct_type) (L2 = L1)
   (insert U L1 L2) /\
   decpr L2 R ;
+%decpr (cons (sign U V) L) (cons (sign U V) R) :=
+%  (insert U L L1)
+%  /\ decpr L1 R ;
 decpr (cons C L) (cons C R) :=
-  _not(C = pr U V) /\ decpr L R.
+  _not(C = pr U V %\/ C = sign U V
+  ) /\ decpr L R.
 
-% Step 4 is asyncronous; we can always eagerly decompose pairs. 
+% Step 4 is asynchronous; we can always eagerly decompose pairs. 
 
 Define iter_red4 : constraint -> constraint -> prop
 by
-iter_red4 (dedl S M) (dedl T M) := decpr S T ;
+iter_red4 (dedl S M) (dedl T M) := decpr S T ; %  /\ println "test: " /\   print_cst (dedl S M) /\   print_cst (dedl T M)   ;
 iter_red4 (dedr S M) (dedr S M).
 
 % rewriting deducibility constraints to a solved form.
@@ -235,18 +250,20 @@ solved_form (dedr S (var V)).
 Define solve : list tm -> list sub_pair -> list constraint -> 
                list constraint -> list sub_pair -> prop
 by
-solve Vs Subst P nil Subst ; 
+solve Vs Subst Pre nil Subst ; % := println "GOT IT!:" /\ psubst Subst ; % RH: Output substitution only determined when Post constraints are processed.
 solve Vs S_In Pre (cons C Post) S_Out :=
   _if (redundant C Pre)
-      ( solve Vs S_In Pre Post S_Out)
+      (solve Vs S_In Pre Post S_Out)
       (
         _if (solved_form C)
-            (  append Pre (cons C nil) Pre1 /\ solve Vs S_In Pre1 Post S_Out)
+            (append Pre (cons C nil) Pre1 /\ solve Vs S_In Pre1 Post S_Out ) % RH: When in solved form move to pre.
             (
-             iter_red4 C D /\ 
-             (
+              
+              iter_red4 C D
+              /\
+              (
                 (red1 Vs D Pre Post Cs Subst /\ compose Vs S_In Subst NewSubst 
-                  /\ NewPre = nil /\ NewPost = Cs /\ Rule = 1
+                  /\ NewPre = nil /\ NewPost = Cs /\ Rule = 1  % NewPost is the Pre and Post together with substitution applied (Pre is rechecked in case variable on RHS is instatniated).
                 )
                 \/
                 (red I Vs D Post NewPost /\ NewSubst = S_In /\ NewPre = Pre /\ Rule = I) 
@@ -254,8 +271,15 @@ solve Vs S_In Pre (cons C Post) S_Out :=
 		(red5_aen_var D Pre Post Cs Subst /\ compose Vs S_In Subst NewSubst
 		  /\ NewPre = nil /\ NewPost = Cs /\ Rule = 5
                 )
-             ) /\
-             solve Vs NewSubst NewPre NewPost S_Out
+              ) 
+              %/\ println " " /\
+              %printstr "Pre: " /\ 
+              %print_list_cst Pre /\ printstr ", Post: " /\ print_list_cst (cons C Post) /\ println ", "
+	      %/\ printstr "Rule: " /\ print Rule /\ println ", " /\
+              %printstr "NewPre: " /\ 
+              %print_list_cst NewPre /\ printstr ", NewPost: " /\ print_list_cst NewPost /\ println ", "
+              /\
+              solve Vs NewSubst NewPre NewPost S_Out
             )
       ).
 
@@ -264,29 +288,9 @@ Define solve_constraints : list tm -> list constraint -> list sub_pair -> prop
 by
 solve_constraints Vs Cs Subst :=
   trim_cst Cs nil Ds /\
-%  println "Simplified input: ",
-%  print_list_cst Ds, println " ",
-  id_subst Vs IdSubst /\
-  solve Vs IdSubst nil Ds Subst.
+  %println "Simplified input: " /\ % RH: uncommented for debugging
+  %print_list_cst Ds /\ println " " /\ % RH: uncommented for debugging
+  id_subst Vs IdSubst /\ % RH: generates identity substitution (initial substitution for solve prodeedure).
+  (solve Vs IdSubst nil Ds Subst).
 
-Define print_cst : constraint -> prop
-by 
-print_cst (dedr S M) :=
-  printstr "(" /\ plist S /\ printstr " |-_R " /\ print_term M /\ printstr ")" ; 
-print_cst (dedl S M) :=
-  printstr "(" /\ plist S /\ printstr " |- " /\ print_term M /\ printstr ")".
- 
-Define plist_cst : list constraint -> prop
-by
-plist_cst nil ;
-plist_cst (cons X nil) := print_cst X ; 
-plist_cst (cons X (cons Y L)) :=
-  print_cst X /\
-  printstr " ; \n" /\
-  plist_cst (cons Y L).
-
-Define print_list_cst : list constraint -> prop
-by
-print_list_cst L :=
-  printstr"[" /\ plist_cst L /\ printstr "]".
 

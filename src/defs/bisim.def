@@ -47,9 +47,10 @@ fun_RSRC1 H OriVars Sub C Sol Sub1 Sub2 :=
   apply_list Sub Cs Ds /\ 
   append Ds (cons C nil) Constraints /\
   constraints_vars Constraints CstVars /\ 
-  _distinct (solve_constraints CstVars Constraints Sol) /\ 
-  compose OriVars Sub Sol Sub1 /\ 
-  fun_CS1 OriVars H Sub1 Sub2.
+  %_distinct
+  _cut(solve_constraints CstVars Constraints Sol) /\ 
+  compose OriVars Sub Sol Sub1 /\  % printstr " RSRC1: " /\ psubst Sub1 /\ printstr " Bitrace: " /\ pbitrace H /\ println "" /\
+  fun_CS1 OriVars H Sub1 Sub2. % RH: bitrace consistency is checked here. Sub2 is generated w.r.t. the (consistent) bitrace.
 
 Define fun_RSRC2 : list bt_pair -> list tm -> list sub_pair -> constraint -> 
       		      list sub_pair -> list sub_pair -> list sub_pair -> prop
@@ -59,12 +60,13 @@ fun_RSRC2 H OriVars Sub C Sol Sub1 Sub2 :=
   apply_list Sub Cs Ds /\
   append Ds (cons C nil) Constraints /\ 
   constraints_vars Constraints CstVars /\ 
-  _distinct (solve_constraints CstVars Constraints Sol) /\ 
-  compose OriVars Sub Sol Sub2 /\ 
+  %_distinct
+  _cut(solve_constraints CstVars Constraints Sol) /\ 
+  compose OriVars Sub Sol Sub2 /\ % printstr " RSRC2: " /\ psubst Sub2 /\ pbitrace H /\
   fun_CS2 OriVars H Sub1 Sub2. 
 
 
-% [ref1_cont,ref2_cont] These predicates computes the refinement substitution pairs
+% [ref1_cont,ref2_cont] These predicates compute the refinement substitution pairs
 % induced by a transition of a process in the bisimulation tuple. 
 
 Define ref1_cont : list bt_pair -> list tm -> continuation -> refinement -> prop
@@ -77,7 +79,8 @@ ref1_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) :=
   split_thy Thy S1 S2 /\ 
   copylist Sub S1 S /\ 
   C = (dedl S M) /\ 
-  fun_RSRC1 H Vs Sub C Sol Sub1 Sub2 /\ 
+  _distinct (fun_RSRC1 H Vs Sub C Sol Sub1 Sub2) /\ % RH: Added distinct here to cut down refinements.
+  % printstr " Refinement: " /\ printstr " sub1: " /\ psubst Sub1 /\ printstr " sub2: " /\ psubst Sub2 /\ printstr " H: " /\ pbitrace H /\ println "" /\
   copyterm Sol M N /\ 
   copyagent Sol Q P ; 
 ref1_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) := 
@@ -93,7 +96,7 @@ ref2_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) :=
   split_thy Thy S1 S2 /\ 
   copylist Sub S2 S /\ 
   C = (dedl S M) /\ 
-  fun_RSRC2 H Vs Sub C Sol Sub1 Sub2 /\ 
+  _distinct (fun_RSRC2 H Vs Sub C Sol Sub1 Sub2) /\ % RH: Added distinct here to cut down refinements.
   copyterm Sol M N /\ 
   copyagent Sol Q P ; 
 ref2_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) := 
@@ -404,7 +407,7 @@ bisimCon2 H P (absRef x\ Cts x) :=
 
  
 % [bisim_upto] This simplifies the bisimulation triples before calling 
-% the real bisimulation procedure. 
+% the real bisimulation procedure.
   
 bisim_upto H P Q :=
   trim_history nil H H1 /\ 
@@ -474,6 +477,7 @@ bisim H P Q :=
         _distinct (ref1_cont H Vs Cont Cts) -> (bisimCon1 H Q Cts)
       )
   )
+  /\ (tick P -> exists N, taus Q N /\ tick N)  % RH: tick distinguish 1 from unsatifiable guards or blocked channels (should probably treat guarded 1 more carefully using refinement!).
   /\
 _if sim_opt true
 (
@@ -494,14 +498,13 @@ _if sim_opt true
         _distinct (ref2_cont H Vs Cont Cts) -> (bisimCon2 H P Cts)
       )
   )
+  /\ (tick Q -> exists N, taus P N /\ tick N)
 )
-%  /\ (tick P -> exists N, taus Q N /\ tick N)  % Tick enable to distinguish zero from unsatifiable guards or blocked channels.
-%  /\ (tick Q -> exists N, taus P N /\ tick N)
 .
 
 
 
-Define toplevel_bisim : list bt_pair -> proc -> proc -> prop
+Define toplevel_bisim : list bt_pair -> proc -> proc -> prop  % RH: Used for testing only.
 by
 toplevel_bisim H P Q :=
   _if (bt_consistent H) 

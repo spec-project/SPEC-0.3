@@ -109,8 +109,8 @@ fCS1 (cons V Vs) H Sub1 Sub2_In Sub2_Out :=
   prefix V H H1 /\ bt2thy H1 Thy /\ 
   copyterm Sub1 V M /\
   apply_subst_thy Sub1 Sub2_In Thy Thy1 /\ 
-  reduce Thy1 Thy2 /\
-  deduce_r Thy2 M N /\
+  reduce Thy1 Thy2 /\ %println " Trying: " /\ printstr " Term: " /\ print_term M /\ printstr " Thy: " /\ print_thy Thy2 /\ printstr " H: " /\ print_bitrace H1 /\
+  deduce_r Thy2 M N /\ %println " OK! " /\
   fCS1 Vs H Sub1 (cons (sub V N) Sub2_In) Sub2_Out.
 
 Define fun_CS1 : list tm -> list bt_pair -> list sub_pair -> list sub_pair -> prop
@@ -166,7 +166,8 @@ Define fRC1 : list tm -> list bt_pair -> list constraint ->
               list sub_pair -> list sub_pair -> prop
 by 
 fRC1 Vs H Cs Sub1 Sub2 :=
-  _distinct (solve_constraints Vs Cs Sub1) /\
+  %_distinct 
+  _cut (solve_constraints Vs Cs Sub1) /\
   fun_CS1 Vs H Sub1 Sub2.
   
 Define fun_RC1 : list bt_pair -> constraint -> 
@@ -182,7 +183,8 @@ Define fRC2 : list tm -> list bt_pair -> list constraint ->
               list sub_pair -> list sub_pair -> prop
 by 
 fRC2 Vs H Cs Sub1 Sub2 :=
-  _distinct (solve_constraints Vs Cs Sub2) /\
+  %_distinct
+  _cut(solve_constraints Vs Cs Sub2) /\
   fun_CS2 Vs H Sub1 Sub2.
 
 Define fun_RC2 : list bt_pair -> constraint -> 
@@ -202,7 +204,8 @@ fun_RS1 H Sub Sol Sub1 Sub2 :=
   bitrace_cst 1 H nil Cs /\
   apply_list Sub Cs Ds /\
   constraints_vars Ds CstVars /\ 
-  _distinct (solve_constraints CstVars Ds Sol) /\
+  %_distinct  RH: changed to _cut to pick first solution.
+  _cut(solve_constraints CstVars Ds Sol) /\
   compose OriVars Sub Sol Sub1 /\
   fun_CS1 OriVars H Sub1 Sub2.
 
@@ -214,7 +217,8 @@ fun_RS2 H Sub Sol Sub1 Sub2 :=
   bitrace_cst 2 H nil Cs /\ 
   apply_list Sub Cs Ds /\
   constraints_vars Ds CstVars /\ 
-  _distinct (solve_constraints CstVars Ds Sol) /\ 
+  %_distinct  RH: changed to _cut to pick first solution.
+  _cut(solve_constraints CstVars Ds Sol) /\ 
   compose OriVars Sub Sol Sub2 /\
   fun_CS2 OriVars H Sub1 Sub2.
 

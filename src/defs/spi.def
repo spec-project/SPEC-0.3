@@ -215,4 +215,5 @@ Define tick : proc -> prop by
   tick (par done P) := tick P;
   tick (par P done) := tick P;
   tick (nu P) := nabla x, tick (P x);
-  tick (bang P) := tick P.
+  tick (bang P) := tick P;
+  tick P := red_proc P Q /\ tick Q.

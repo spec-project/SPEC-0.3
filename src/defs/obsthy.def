@@ -432,7 +432,6 @@ thy_cc2_alt Thy :=
   are_encrypted S2 S2
 .
 
-
 % Checking consistency of unreduced theories
 % Pair - thy_cc1
 % Symmetric Encrytption - thy_cc2
@@ -450,6 +449,8 @@ thy_consistent Thy :=
 Define thy_red_consistent : list thy_pair -> prop 
 by
 thy_red_consistent Thy :=
-  thy_cc1 Thy /\  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ % Asymmetric Encryption - thy_cc4
+  thy_cc1 Thy /\ 
+  %thy_cc2_alt Thy /\
+  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ % Asymmetric Encryption - thy_cc4
   thy_cc3 Thy. 
 
