@@ -1,0 +1,335 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2016 Alwen Tiu                                             
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "intruder.def".
+
+Kind kencpair type.
+
+%Type (nm emptyTerm)  tm.
+Type emptyTerm name.
+
+% Key encryption pair
+% kep k k' : k encrypt k' - Definition 5.1
+Type kep tm -> tm -> kencpair.
+
+% I. Basic functions
+
+% Print kencpair
+Define print_kencpair : kencpair -> prop
+by 
+print_kencpair (kep K1 K2) :=
+  printstr "(" /\ print_term K1 /\ printstr " enc " /\ print_term K2 /\ printstr ")".
+
+% Print kencpair list
+Define plist_kencpair : list kencpair -> prop
+by
+plist_kencpair nil;
+plist_kencpair (cons X nil) := print_kencpair X; 
+plist_kencpair (cons X (cons Y L)) :=
+  plist_kencpair (cons Y L) /\
+  print_kencpair X.
+
+% Print kencpair list
+Define print_list_kencpair : list kencpair -> prop
+by
+print_list_kencpair L :=
+  printstr"[" /\ plist_kencpair L /\ printstr "]".
+
+% Print strict key cycle
+Define print_list_kencpair_cycle : tm -> list kencpair -> prop
+by
+print_list_kencpair_cycle Key1 (cons (kep Key1 Key2) L) := print_kencpair (kep Key1 Key2);
+print_list_kencpair_cycle Key1 (cons (kep Key2 Key3) L) := _not(Key1 = Key2) /\ print_list_kencpair_cycle Key1 L /\ print_kencpair (kep Key2 Key3).
+
+
+% Make key encryption pair
+Define make_kencpair : tm -> list tm -> list kencpair -> prop by
+make_kencpair K nil nil;
+make_kencpair K (cons K1 KL) (cons (kep K K1) LKP) := make_kencpair K KL LKP.
+
+% Only names and variables can be of sort Key (Page 25)
+Define sort_key : tm -> prop by
+sort_key (nm X);
+sort_key (var X).
+
+% Merge two list
+Define merge : list A -> list A -> list A -> prop by 
+merge nil L L ;
+merge (cons X L1) L2 L3 := det_mem X L2 /\ merge L1 L2 L3;
+merge (cons X L1) L2 (cons X L3) := _not(det_mem X L2) /\ merge L1 L2 L3.
+
+% Check if intersection of two list is not empty
+Define not_empty_intersect : list A -> list A -> prop by
+not_empty_intersect (cons X L1) L2 := det_mem X L2;
+not_empty_intersect (cons X L1) L2 := _not(det_mem X L2) /\ not_empty_intersect L1 L2.
+
+% Remove an element from a list
+Define remove_element : A -> list A -> list A -> prop by
+remove_element M nil nil;
+remove_element M (cons N L1) (cons N L2) := _not (M = N) /\ remove_element M L1 L2;
+remove_element M (cons N L1) L1 := M = N.
+
+% II. Construct ti and tau substitution -> Lstau
+
+% Get list variables from list terms
+Define get_var_list_tm : list tm -> list tm -> list tm -> prop by
+get_var_list_tm nil VarIn VarIn;
+get_var_list_tm (cons M Ls) VarIn VarOut :=
+    get_var M VarIn VarOut1 /\ get_var_list_tm Ls VarOut1 VarOut.
+
+
+% Construct Ti from VarList and Ls
+Define construct_ti : list tm -> list tm -> tm -> tm -> prop by
+construct_ti VarList nil Ti_In Ti_In;
+construct_ti VarList (cons M Ls) TiIn TiOut :=
+    _if (get_var M nil VarOut /\ subset VarOut VarList)
+        (
+	    _if (TiIn = (nm emptyTerm)) (TiOut1 = M) (TiOut1 = pr M TiIn)
+        )
+        (
+	    TiOut1 = TiIn
+        ) /\
+    construct_ti VarList Ls TiOut1 TiOut.
+
+
+Define substitute_Lstau : list tm -> list tm -> list tm -> list sub_pair -> tm -> tm -> prop by
+substitute_Lstau NewVarList nil Ls SubPair TitauiPrev TitauiPrev;
+substitute_Lstau NewVarList (cons V VarList) Ls SubPair TitauiPrev Titaui :=
+    NewVarList1 = cons V NewVarList /\
+    construct_ti NewVarList1 Ls (nm emptyTerm) Ti1 /\
+%    printstr "NewTi = " /\ print_term Ti1 /\ printstr "\n" /\
+    SubPair1 = cons (sub V TitauiPrev) SubPair /\
+    copyterm SubPair1 Ti1 Titaui1 /\
+%    printstr "Titaui1 = " /\ print_term Titaui1 /\ printstr "\n" /\
+    substitute_Lstau NewVarList1 VarList Ls SubPair1 Titaui1 Titaui.
+
+
+Define construct_Lstau : list tm -> tm -> prop by
+construct_Lstau Ls Lstau :=
+    construct_ti nil Ls (nm emptyTerm) Ti1 /\
+%    printstr "T[0] = " /\ print_term Ti1 /\ printstr "\n" /\
+    get_var_list_tm Ls nil VarList /\
+%    printstr "VarList = " /\ print_list VarList /\ printstr "\n" /\
+    substitute_Lstau nil VarList Ls nil Ti1 Lstau
+%    /\ printstr "Lstau = " /\ print_term Lstau /\ printstr "\n"
+.
+
+
+% III. Find hidden keys from ground term S and construct key encryption pair from ground term S and hidden keys (Lstau is now a ground term)
+
+% 3.1 Find hidden key list from term S
+Define get_hidden_key : list tm -> tm -> list tm -> prop by
+get_hidden_key S TermIn HiddenKey :=
+    _if (TermIn = pr U V)	% \/ TermIn = sign U V
+	(
+	    get_hidden_key S U HiddenKey1 /\ get_hidden_key S V HiddenKey2 /\ merge HiddenKey1 HiddenKey2 HiddenKey
+	)
+	(
+	    _if (TermIn = en M K)
+		(
+		    get_hidden_key S M HiddenKey1 /\
+		    _if (sort_key K)
+			(
+			    _if (_not(solve_constraints nil (cons (dedl S K) nil) Subst)) (insert K HiddenKey1 HiddenKey) (HiddenKey = HiddenKey1)
+			)
+			(
+			    get_hidden_key S K HiddenKey2 /\ merge HiddenKey1 HiddenKey2 HiddenKey
+			)
+		)
+		(
+			HiddenKey = nil
+		)
+	).
+
+% 3.2 Find key encryption pair from term S and hidden key list HiddenKey
+Define get_key_encryption_pair : tm -> list tm -> list tm -> list kencpair -> prop by
+get_key_encryption_pair S HiddenKey KeyList KeyEncPair :=
+    _if (S = pr U V)		% \/ S = sign U V
+        (
+	    get_key_encryption_pair U HiddenKey KeyList1 KeyEncPair1 /\ 
+	    get_key_encryption_pair V HiddenKey KeyList2 KeyEncPair2 /\
+	    merge KeyEncPair1 KeyEncPair2 KeyEncPair /\ merge KeyList1 KeyList2 KeyList
+	)
+	(
+	    _if (S = en M K)
+		(
+		    _if (det_mem K HiddenKey)
+			(
+			    get_key_encryption_pair M HiddenKey KeyList1 KeyEncPair1 /\
+			    insert K KeyList1 KeyList2 /\
+			    make_kencpair K KeyList1 KeyEncPair2
+			)
+			(
+			    get_key_encryption_pair M HiddenKey KeyList1 KeyEncPair1 /\
+			    get_key_encryption_pair K HiddenKey KeyList2 KeyEncPair2
+			) /\
+		    merge KeyEncPair1 KeyEncPair2 KeyEncPair /\ merge KeyList1 KeyList2 KeyList
+		)
+		(
+		    KeyEncPair = nil /\
+		    _if (det_mem S HiddenKey) (KeyList = cons S nil) (KeyList = nil)
+		)
+	).
+
+% IV: Find strict key cycle and key ordering compatible by using key encryption pair
+
+% 4.1 Use DFS to find the cycle (Can be optimized by using Tarjan algorithm or remember visited edges/vertice -> O (|V| + |E|))
+Define find_strict_key_cycle : list kencpair -> tm -> list kencpair -> list tm -> prop by
+find_strict_key_cycle EdgePre Key EdgePost KeyList :=
+    select EdgePost (kep Key NewKey) EdgePost1 /\
+    EdgePre1 = cons (kep Key NewKey) EdgePre /\
+    _if (det_mem NewKey KeyList)
+        (
+	    true %/\ print_list_kencpair_cycle NewKey EdgePre1 /\ printstr "\n"
+	)
+        (
+            KeyList1 = cons NewKey KeyList /\ find_strict_key_cycle EdgePre1 NewKey EdgePost1 KeyList1
+	).
+
+% Find all duplicate solutions
+% Define strict_key_cycle : list tm -> list kencpair -> prop by
+% strict_key_cycle (cons Key KeyList) Edge :=
+%   find_strict_key_cycle nil Key Edge (cons Key nil) \/ strict_key_cycle KeyList Edge.
+
+% Find only 1 solution
+Define strict_key_cycle : list tm -> list kencpair -> prop by
+strict_key_cycle (cons Key KeyList) Edge :=
+   _if (find_strict_key_cycle nil Key Edge (cons Key nil)) (true) (strict_key_cycle KeyList Edge).
+
+
+% 4.2 Check Key Ordering
+Define check_key_ordering : tm -> list kencpair -> list tm -> prop by
+check_key_ordering K KLP Pre :=									% Check if (kep K M) in KLP -> M in Pre
+    _not(det_mem (kep K M) KLP /\ det_mem M Pre).
+
+Define key_ordering : list tm -> list tm -> list kencpair -> prop by
+key_ordering Pre KL nil;
+key_ordering Pre nil KLP;
+key_ordering Pre (cons K KL) KLP :=								% True -> Compatible with the strict partial order
+    check_key_ordering K KLP Pre /\ Pre1 = cons K Pre /\ key_ordering Pre1 KL KLP.
+
+
+% 4.3 Construct Ki list
+Define merge_ki : list tm -> list tm -> list tm -> list tm -> list tm -> list tm -> list tm -> prop by
+merge_ki (cons K KN1) KN2 KL1 KL2 KN1F KN2F KN		 := (det_mem K KN2F \/ (det_mem K KL2 /\ _not(det_mem K KN2F))) /\ merge_ki KN1 KN2 KL1 KL2 KN1F KN2F KN;
+merge_ki (cons K KN1) KN2 KL1 KL2 KN1F KN2F (cons K KN)	 := _not(det_mem K KN2F) /\ _not(det_mem K KL2) /\ merge_ki KN1 KN2 KL1 KL2 KN1F KN2F KN;
+% If K in both KN1 KN2 -> Add K when KN1 = nil
+merge_ki nil (cons K KN2) KL1 KL2 KN1F KN2F (cons K KN)  := (det_mem K KN1F \/ (_not(det_mem K KL1) /\ _not(det_mem K KN1F))) /\ merge_ki nil KN2 KL1 KL2 KN1F KN2F KN;
+merge_ki nil (cons K KN2) KL1 KL2 KN1F KN2F KN 		 := _not(det_mem K KN1F) /\ det_mem K KL1 /\ merge_ki nil KN2 KL1 KL2 KN1F KN2F KN;
+merge_ki nil nil KL1 KL2 KN1F KN2F nil.
+
+% KLOut is list of keys which are protected in TermIn
+% KLIn  is list of keys which protect keys in KLOut
+Define construct_ki_list : tm -> list tm -> list tm -> list tm -> list tm -> list tm -> list tm -> prop by
+construct_ki_list TermIn KLOut KLIn KPrev KNIn KNOut HiddenKey :=
+    _if (TermIn = pr U V)	% \/ TermIn = sign U V
+	(
+	    construct_ki_list U KLOut1 KLIn KPrev KNIn KNOut1 HiddenKey /\
+	    construct_ki_list V KLOut2 KLIn KPrev KNIn KNOut2 HiddenKey /\
+	    merge KLOut1 KLOut2 KLOut /\
+	    merge_ki KNOut1 KNOut2 KLOut1 KLOut2 KNOut1 KNOut2 KNOut
+	)
+	(
+	    _if (TermIn = en M K)
+		(
+
+		    _if (det_mem K HiddenKey)
+			(
+			    insert K KLIn KLIn1 /\
+			    % K is not in KLOut if K is not protected in M -> K is     in KNOut
+			    % K is     in KLOut if K is     protected in M -> K is not in KNOut
+			    construct_ki_list M KLOut KLIn1 KPrev KNIn KNOut1 HiddenKey /\
+			    merge_ki KNOut1 (cons K nil) KLOut (cons K nil) KNOut1 (cons K nil) KNOut
+			)
+			(
+			    construct_ki_list K KLOut2 nil KPrev KNIn KNOut2 HiddenKey /\
+			    % HiddenKeyInK + KLOut2 -> all keys in K and in HiddenKey, if k can be deduced by K and k in HiddenKey -> k in KLOut2
+			    get_hidden_key (cons K nil) K HiddenKeyInK /\ merge HiddenKeyInK KLOut2 KLOut3 /\ merge KLOut3 KLIn KLIn1 /\
+			    construct_ki_list M KLOut KLIn1 KPrev KNIn KNOut1 HiddenKey /\
+			    merge_ki KNOut1 KNOut2 KLOut KLOut2 KNOut1 KNOut2 KNOut
+			)
+		)
+		(
+		    _if (det_mem TermIn HiddenKey)
+			(
+			    KLOut = cons TermIn nil /\
+			    _if (det_mem TermIn KPrev)
+				(
+				    insert TermIn KNIn KNOut
+				) 
+				(
+				    _if ((KPrev = nil /\ (KLIn = nil \/ KLIn = cons TermIn nil)) \/ (_not(KPrev = nil) /\ not_empty_intersect KLIn KPrev))
+					(
+					    insert TermIn KNIn KNOut
+					)
+					(
+				    	    remove_element TermIn KNIn KNOut
+					)
+				)
+			)
+			(
+			    KLOut = nil /\ KNOut = KNIn
+			)
+		)
+	).
+
+Define construct_ki : tm -> list tm -> list tm -> list tm -> prop by
+construct_ki TermIn HiddenKey KPrev Kl :=
+    construct_ki_list TermIn KLOut nil KPrev nil KNOut HiddenKey /\
+%    printstr "KNOut:\t" /\ print_list KNOut /\ printstr "\n" /\
+    _if (subset KNOut KPrev)
+	(
+	    Kl = KNOut
+	)
+	(
+	     construct_ki TermIn HiddenKey KNOut Kl
+	).
+
+% V. Integrate all functions
+
+% 5.1 Find strict key cycle
+Define strict_key_cycle_detection : list tm -> prop by
+strict_key_cycle_detection Ls :=
+    construct_Lstau Ls Lstau /\
+    S = cons Lstau nil /\
+%    printstr "S:\t" /\ print_list S /\ printstr "\n" /\
+    get_hidden_key S Lstau HiddenKey /\ 
+%    printstr "K:\t" /\ print_list HiddenKey /\ printstr "\n" /\
+    get_key_encryption_pair Lstau HiddenKey KeyList Edge /\ 
+    strict_key_cycle HiddenKey Edge.
+
+
+% 5.2 Check Key Ordering
+Define key_ordering_compatibility_detection : list tm -> list tm -> prop by
+key_ordering_compatibility_detection Ls KeyOrder :=
+    construct_Lstau Ls Lstau /\
+    get_hidden_key Ls Lstau HiddenKey /\ get_key_encryption_pair Lstau HiddenKey KeyList KeyEncPair /\ print_list_kencpair KeyEncPair /\
+    _if (_cut(key_ordering nil KeyOrder KeyEncPair)) (printstr "--> Compatible\n") (printstr "--> Not Compatible\n").
+
+
+% 5.3 Find key cycle
+Define key_cycle_detection : list tm -> prop by
+key_cycle_detection Ls :=
+    construct_Lstau Ls Lstau /\
+    S = cons Lstau nil /\
+%    printstr "S:\t" /\ print_list S /\ printstr "\n" /\
+    get_hidden_key S Lstau HiddenKey /\ 
+%    printstr "K:\t" /\ print_list HiddenKey /\ printstr "\n" /\
+    construct_ki Lstau HiddenKey nil Kl /\
+    _not(subset HiddenKey Kl).

@@ -161,35 +161,30 @@ red 5 Vs (dedl S M) Cs Ds :=
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Asymmetric Encryption
-red 6 Vs (dedl S M) Cs Ds :=
+red 5 Vs (dedl S M) Cs Ds :=
   select S (aen U (pub X)) T /\
   (insert X T T1) /\
   (insert U T1 T2) /\
   Ds = cons (dedr T X) (cons (dedl T2 M) Cs);
 
 % % Blind
-red 7 Vs (dedl S M) Cs Ds :=
+red 5 Vs (dedl S M) Cs Ds :=
   select S (blind U V) T /\
   (insert V T T1) /\
   (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Sign, Blind
-red 8 Vs (dedl S L) Cs Ds :=
+red 5 Vs (dedl S L) Cs Ds :=
   select S (sign (blind M N) K) T /\
   _not (det_mem (sign M K) T) /\ % RH: sign M K must not be in the assumptions, or the rule has been applied or is redundant.
-  %println "Testing" /\
-  %print_cst (dedl S L) /\ println "" /\
-  %print_list_cst Cs /\ println " " /\
-  %print_list_cst Ds /\ println " " /\
   Ds = cons (dedr T N) (cons (dedl (cons (sign M K) S) L) Cs);
  
 
  % Sign
-red 9 Vs (dedl S M) Cs Ds :=
+red 5 Vs (dedl S M) Cs Ds :=
   select S (sign U V) T /\
   _not (det_mem U T) /\
-  %println "Testing2" /\
   Ds = cons (dedl (cons U S) M) Cs.
 
 % % Signing. Keep the signed message (SPEC original commented source code). 
