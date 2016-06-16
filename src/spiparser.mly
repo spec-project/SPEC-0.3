@@ -29,7 +29,7 @@
   let constid p s = Input.pre_predconstid p s
   let freeid p s = Input.pre_freeid p s   (* RH: Added in attempt to fix free variable bugs. *)   
 
-  let nil_op = constid (pos 0) "nil" 
+  let nil_op = constid (pos 0) "nil"
   let cons_op = constid (pos 0) "cons"
   let def_op =  constid (pos 0) "def" 
   let ct_op = constid (pos 0) "ct"
@@ -116,10 +116,17 @@
     let q = app (constid (pos 0) "bisim_def" ) [nil_op; a';b'] in 
     Spi.Query (pos 0, q)
 
+  (* Add key cycle *)
+  let kcquery a =
+    let vars = Input.get_freeids (app par_op [a]) in
+    let a' = abstract_ids a vars in
+    let q = app (constid (pos 0) "keycycle_def" ) [a'] in 
+    Spi.QueryKeyCycle (pos 0, q)
+
 %}
 
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE /* Add key cycle */
 %token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU CHECKSIGN ADEC UNBLIND GETMSG	/* Asymmetric encryption, Blind, Sign, Hash, Mac, CheckSign, Adec, Unblind, Getmsg */
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
@@ -144,6 +151,7 @@ input_query:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
 | BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
 | SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
+| KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }			/* Add key cycle */
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }
@@ -176,7 +184,7 @@ pexp:
 | inpref DOT pexp { let a,b = $1 in app in_op [a;lambda b $3] }
 | nupref DOT pexp { nuproc $1 $3 }
 | LBRAK texp EQ texp RBRAK pexp { app match_op [$2;$4;$6] }
-| LBRAK CHECKSIGN LPAREN texp COMMA texp RPAREN RBRAK pexp { app checksign_op [$4;$6;$9] }			/* CheckSign */
+| LBRAK CHECKSIGN LPAREN texp COMMA texp RPAREN RBRAK pexp { app checksign_op [$4;$6;$9] }	/* CheckSign */
 | LBRAK texp NEQ texp RBRAK pexp { app mismatch_op [$2;$4;$6] }
 | cpref IN pexp { let a,(b,c) = $1 in app case_op [a;c;lambda b $3] }
 | lpref IN pexp { let t,(v1,v2) = $1 in app let_op [t; lambda v1 (lambda v2 $3)] }

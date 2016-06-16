@@ -83,6 +83,7 @@ exception Sig_mismatch of string*int
 type input =
   | Def     of string * int * (Input.pos * Input.preterm * Input.preterm)
   | Query   of Input.pos * Input.preterm
+  | QueryKeyCycle of Input.pos * Input.preterm	(* Add key cycle *)
   | Command of string * string list
 
 

@@ -146,7 +146,32 @@ let prove_bisim a =
   in 
      do_cleanup (do_query success failure) a reset
 
-
+(* Add key cycle *)
+let prove_keycycle a =
+  let t0 = Unix.gettimeofday () in 
+  let time =
+      (fun () ->
+         if !System.time then
+           Format.printf "Running time: + %.0fs\n" (Unix.gettimeofday () -. t0))
+  in
+  let reset =
+      let s = Term.save_state () in
+      let ns = Term.save_namespace () in
+        fun () -> Term.restore_state s ; Term.restore_namespace ns
+  in
+  let found = ref false in
+  let success = (fun s k -> 
+         time () ;
+         found := true ;
+         Printf.printf "\nThis process contains key cycle.\n" ;
+    )
+  in    
+  let failure = (fun () -> 
+       time () ; 
+       if not !found then Printf.printf "\nThis process does not contain key cycle.\n"
+     ) 
+  in 
+     do_cleanup (do_query success failure) a reset
 
 let prove_show_def a = 
   let pre_show_def = Input.pre_predconstid (Input.dummy_pos) (Spi.Process.show_def_str) in 
@@ -257,6 +282,10 @@ let rec process_spi ?(interactive=false) parse lexbuf =
       | Spi.Query (a,b) ->
 	  let q = System.translate_query b in
   	    System.clear_tables () ; prove_bisim q
+      (* Add key cycle *)
+      | Spi.QueryKeyCycle (a,b) ->
+	  let q = System.translate_query b in
+  	    System.clear_tables () ; prove_keycycle q
       | Spi.Command (c,a) -> command lexbuf (c,a)
     end ;
     if interactive then flush stdout

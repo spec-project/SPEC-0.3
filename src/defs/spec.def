@@ -22,6 +22,8 @@
 #include "print_text.def".
 #include "bisim2text.def".
 #include "bisim2latex.def".
+#include "trace.def".
+#include "keycycle.def".
 
 % Dummy definition; to be updated dynamically through the SPEC
 % frontend. 
@@ -266,4 +268,15 @@ bisim_def H (defProc P) (defProc Q) :=
   printstr " and \n" /\ 
   print_proc T /\ printstr "\n" /\
   bisim H R T.
+
+% Add key cycle
+Define  keycycle_def : def_body -> prop by
+keycycle_def (defAbs x\A x):=
+  nabla x, keycycle_def (A (var x));
+
+keycycle_def (defProc P) :=
+  expand_defs P R /\ 
+  printstr "\nChecking key cycle for: \n" /\
+  print_proc R /\ printstr "\n" /\
+  get_trace R T /\ detect_keycycle_trace T.
 

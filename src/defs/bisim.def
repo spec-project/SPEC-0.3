@@ -194,7 +194,7 @@ print_bisim H P Q :=
 
 % Split a bitrace into its component traces.
 Define split_bt : list bt_pair -> list tm -> list tm -> prop
-by 
+by
 split_bt nil nil nil ; 
 split_bt (cons (in X Y) L) (cons X L1) (cons Y L2) := split_bt L L1 L2 ; 
 split_bt (cons (out X Y) L) (cons X L1) (cons Y L2) := split_bt L L1 L2.

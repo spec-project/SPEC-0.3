@@ -1,0 +1,131 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC                                                                     
+% Copyright (C) 2011-2016 Alwen Tiu                                        
+%
+% This program is free software; you can redistribute it and/or modify     
+% it under the terms of the GNU General Public License as published by     
+% the Free Software Foundation; either version 2 of the License, or        
+% (at your option) any later version.                                      
+%
+% This program is distributed in the hope that it will be useful,          
+% but WITHOUT ANY WARRANTY; without even the implied warranty of           
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            
+% GNU General Public License for more details.                             
+%
+% You should have received a copy of the GNU General Public License        
+% along with this code; if not, write to the Free Software Foundation,     
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "bitrace.def".
+#include "proc.def".
+
+Kind trace type.
+
+Type t_in	action -> tm -> trace -> trace.
+Type t_out      action -> tm -> trace -> trace.
+Type emp	trace.
+
+% Binder for traces; needed to make sure all newly created names
+% are bound in a trace.
+
+Type t_bind	(name -> trace) -> trace.
+
+% print bitraces
+Define ptrace : trace -> prop
+by
+ptrace (t_bind T) := nabla x, ptrace (T x) ;
+ptrace emp := printstr "emp" ; 
+ptrace (t_in A M T) :=
+  printstr "(" /\ print_term M /\ printstr ")^i." /\ 
+  ptrace L ; 
+ptrace (t_out A M T) :=
+  printstr "(" /\ print_term M /\ printstr ")^o." /\ 
+  ptrace L.
+
+Define print_trace : trace -> prop
+by 
+print_trace T :=
+  printstr "[" /\ ptrace T /\ printstr "]".
+
+Define copytrace : list sub_pair -> trace -> trace -> prop by
+
+copytrace Sub emp emp ;
+copytrace Sub (t_in (act A) B T1) (t_in (act C) D T2) :=
+	  copyterm Sub A C /\ copyterm Sub B D /\ copytrace Sub T1 T2 ;
+copytrace Sub (t_out (act A) B T1) (t_out (act C) D T2) :=
+	  copyterm Sub A C /\ copyterm Sub B D /\ copytrace Sub T1 T2.
+
+Define add_in : action -> tm -> trace -> trace -> prop by
+add_in A M emp (t_in A M emp) ;
+add_in A M (t_in B N T1) (t_in B N T2) := add_in A M T1 T2 ;
+add_in A M (t_out B N T1) (t_out B N T2) := add_in A M T1 T2 ;
+add_in A M (t_bind T1) (t_bind T2) := nabla x, add_in A M (T1 x) (T2 x).
+
+Define add_out : action -> tm -> trace -> trace -> prop by
+add_out A M emp (t_out A M emp) ;
+add_out A M (t_in B N T1) (t_in B N T2) := add_out A M T1 T2 ;
+add_out A M (t_out B N T1) (t_out B N T2) := add_out A M T1 T2 ;
+add_out A M (t_bind T1) (t_bind T2) := nabla x, add_out A M (T1 x) (T2 x).
+
+
+% Get a symbolic trace of a process (not necessarily a completed trace).
+Define get_trace_proc  : list tm -> trace -> proc -> trace -> prop,
+       get_trace_agent : list tm -> trace -> action -> agent -> trace -> prop,
+       get_trace_cont  : list tm -> trace -> continuation -> trace -> prop 
+by
+
+get_trace_agent Vs T1 A (con M P) T :=
+		add_out A M T1 T2 /\ get_trace_proc Vs T2 P T ;
+get_trace_agent Vs T1 A (abs P) (t_bind T) :=
+		nabla x, 
+		      add_in A (var x) T1 (T2 x) /\
+		      get_trace_proc (cons (var x) Vs) (T2 x) (P (var x)) (T x) ;
+get_trace_agent Vs T1 A (new P) (t_bind T) :=
+		nabla x, get_trace_agent Vs T1 A (P (nm x)) (T x) ;
+
+get_trace_cont Vs T1 (contProc A Q Sub) T :=
+	       copytrace Sub T1 T2 /\ 
+	       get_trace_proc Vs T2 Q T ;
+          
+get_trace_cont Vs T1 (contAgent A Q Sub) T :=
+	       copytrace Sub T1 T2 /\
+	       get_trace_agent Vs T2 A Q T ;
+
+get_trace_cont Vs T1 (abscont C) (t_bind T) :=
+	       nabla x, get_trace_cont (cons (var x) Vs) T1 (C x) (T x) ;
+
+get_trace_proc Vs T P T ;
+get_trace_proc Vs T1 P T := c_one Vs P C /\ get_trace_cont Vs T1 C T ;
+get_trace_proc Vs T1 P T := c_oneAbs Vs P C /\ get_trace_cont Vs T1 C T ;
+get_trace_proc Vs T1 P T := c_oneCon Vs P C /\ get_trace_cont Vs T1 C T. 
+
+Define get_trace : proc -> trace -> prop by
+get_trace P T := get_trace_proc nil emp P T.
+
+% Convert a trace (without binders) to deducibility constraints.
+Define trace_cst : trace -> list tm -> list constraint -> prop
+by 
+trace_cst emp Pre nil ; 
+trace_cst (t_in A U T) Pre (cons (dedl Pre U) Ds) :=
+  trace_cst T Pre Ds ; 
+trace_cst (t_out A U T) Pre Cs :=
+  trace_cst T (cons U Pre) Cs. 
+
+Define trace_vars : trace -> list tm -> list tm -> prop by
+trace_vars emp VarIn VarIn ;
+trace_vars (t_in (act M) N T) VarIn VarOut :=
+	   get_var (pr M N) VarIn Vs /\
+	   trace_vars T Vs VarOut ;
+trace_vars (t_out (act M) N T) VarIn VarOut :=
+	   get_var (pr M N) VarIn Vs /\
+	   trace_vars T Vs VarOut.
+	   
+
+% Check whether a symbolic trace is 'solvable'.
+Define solvable : trace -> prop by
+solvable (t_bind T) := nabla x,  solvable (T x) ;
+solvable T := det_or (T = (t_in A M T')) (T = (t_out A M T')) /\
+	 trace_cst T nil Cs /\
+	 trace_vars T nil Vars /\
+	 _distinct(solve_constraints Vars Cs Sol).

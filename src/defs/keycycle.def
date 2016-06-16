@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SPEC                                                                     
-% Copyright (C) 2011-2016 Alwen Tiu                                             
+% Copyright (C) 2011-2016 Alwen Tiu                                        
 %
 % This program is free software; you can redistribute it and/or modify     
 % it under the terms of the GNU General Public License as published by     
@@ -95,6 +95,7 @@ get_var_list_tm (cons M Ls) VarIn VarOut :=
 
 
 % Construct Ti from VarList and Ls
+% Construct the constraint system with solved form: Ti ||- xi
 Define construct_ti : list tm -> list tm -> tm -> tm -> prop by
 construct_ti VarList nil Ti_In Ti_In;
 construct_ti VarList (cons M Ls) TiIn TiOut :=
@@ -333,3 +334,49 @@ key_cycle_detection Ls :=
 %    printstr "K:\t" /\ print_list HiddenKey /\ printstr "\n" /\
     construct_ki Lstau HiddenKey nil Kl /\
     _not(subset HiddenKey Kl).
+
+
+% 5.4 Integrate with trace
+
+% Get list LHS of deducibility constraints which are extracted from consistent trace.
+Define trace_list_tm : trace -> list tm -> prop by 
+trace_list_tm emp nil ; 
+trace_list_tm (t_in A U T) Out := trace_list_tm T Out ; 
+trace_list_tm (t_out A U T) (cons U Out) := trace_list_tm T Out. 
+
+% Detect key cycle with trace
+Define detect_keycycle_trace : trace -> prop by
+detect_keycycle_trace (t_bind T) := nabla x,  detect_keycycle_trace (T x) ;
+detect_keycycle_trace T :=
+    det_or (T = (t_in A M T')) (T = (t_out A M T')) /\
+    trace_cst T nil Cs /\
+%    printstr "\n" /\ print_list_cst Cs /\ printstr "\n" /\
+    trace_vars T nil Vars /\
+    _distinct(solve_constraints Vars Cs Sol) /\ 
+    trace_list_tm T In /\	% Extract list of terms from trace T
+    copylist Sol In Out /\	% Do the consistent substitution
+    key_cycle_detection Out.
+
+
+% Optimization: (If timestamp of output messages affects key cycle decision)
+% construct_ti should be replaced by the function which extracts and substitutes LHS of Cs
+% construct_Lstau ->	1. substitute Sol to Cs -> Ds and look for solved form in Ds (variables which are not substituted)
+%			2. construct Ti from LHS of DS and create new substitution from solved form -> Lstau
+% However, LHS of DS does not contains all the output messages
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

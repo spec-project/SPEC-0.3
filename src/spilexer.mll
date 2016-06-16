@@ -49,6 +49,7 @@ rule token = parse
 | "~=" { NEQ }
 | ":=" { DEF }
 | "bisim" { BISIM }
+| "keycycle" { KEYCYCLE }
 | "sim" { SIM }
 | "," { COMMA }
 | ";" { SEMICOLON }

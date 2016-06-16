@@ -16,7 +16,7 @@ paper by Alwen Tiu and Jeremy Dawson (presented in the IEEE Computer
 Security Foundations symposium in 2010).
 
 SPEC is implemented on top of a modified version of the Bedwyr logical
-framework (see http://http://slimmer.gforge.inria.fr/bedwyr).  The
+framework (see http://slimmer.gforge.inria.fr/bedwyr).  The
 modified Bedwyr codes are included in this distribution.
 
 
