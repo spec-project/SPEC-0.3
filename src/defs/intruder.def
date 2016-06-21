@@ -266,8 +266,7 @@ solve Vs S_In Pre (cons C Post) S_Out :=
 		(red5_aen_var D Pre Post Cs Subst /\ compose Vs S_In Subst NewSubst
 		  /\ NewPre = nil /\ NewPost = Cs /\ Rule = 5
                 )
-              ) /\
-              print Rule 
+              )
               /\
               solve Vs NewSubst NewPre NewPost S_Out
             )
