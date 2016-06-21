@@ -47,9 +47,8 @@ fun_RSRC1 H OriVars Sub C Sol Sub1 Sub2 :=
   apply_list Sub Cs Ds /\ 
   append Ds (cons C nil) Constraints /\
   constraints_vars Constraints CstVars /\ 
-  %_distinct
-  _cut(solve_constraints CstVars Constraints Sol) /\ 
-  compose OriVars Sub Sol Sub1 /\  % printstr " RSRC1: " /\ psubst Sub1 /\ printstr " Bitrace: " /\ pbitrace H /\ println "" /\
+  _distinct(solve_constraints CstVars Constraints Sol) /\ 
+  compose OriVars Sub Sol Sub1 /\
   fun_CS1 OriVars H Sub1 Sub2. % RH: bitrace consistency is checked here. Sub2 is generated w.r.t. the (consistent) bitrace.
 
 Define fun_RSRC2 : list bt_pair -> list tm -> list sub_pair -> constraint -> 
@@ -60,8 +59,7 @@ fun_RSRC2 H OriVars Sub C Sol Sub1 Sub2 :=
   apply_list Sub Cs Ds /\
   append Ds (cons C nil) Constraints /\ 
   constraints_vars Constraints CstVars /\ 
-  %_distinct
-  _cut(solve_constraints CstVars Constraints Sol) /\ 
+  _distinct(solve_constraints CstVars Constraints Sol) /\ 
   compose OriVars Sub Sol Sub2 /\ % printstr " RSRC2: " /\ psubst Sub2 /\ pbitrace H /\
   fun_CS2 OriVars H Sub1 Sub2. 
 
