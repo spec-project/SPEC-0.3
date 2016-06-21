@@ -88,4 +88,4 @@ System_spec(a,b,s,minusone) :=
   ) ;
   
 %Query:
-% bisim(System_spec{a,b,s,minusone}, System{a,b,s,minusone});
+% bisim(nu(a,b,s,minusone).x<<<<a,b>,s>,minusone>>.System_spec{a,b,s,minusone}, nu(a,b,s,minusone).x<<<<a,b>,s>,minusone>>.System{a,b,s,minusone});

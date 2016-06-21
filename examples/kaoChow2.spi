@@ -112,4 +112,4 @@ System_spec(a,b,s) :=
   nu(kas,kbs,kt,kab).( S_spec{a,b,s,kab,kas,kbs,kt} | A_spec{a,b,s,kab,kas,kt} | B_spec{a,b,kab,kbs,kt} );
 
 % Query:
-% bisim(System_spec{a,b,s}, System{a,b,s});
+% bisim(nu(a,b,s).x<<<a,b>,s>>.System_spec{a,b,s}, nu(a,b,s).x<<<a,b>,s>>.System{a,b,s});

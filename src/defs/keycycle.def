@@ -85,54 +85,15 @@ remove_element M nil nil;
 remove_element M (cons N L1) (cons N L2) := _not (M = N) /\ remove_element M L1 L2;
 remove_element M (cons N L1) L1 := M = N.
 
-% II. Construct ti and tau substitution -> Lstau
-
-% Get list variables from list terms
-Define get_var_list_tm : list tm -> list tm -> list tm -> prop by
-get_var_list_tm nil VarIn VarIn;
-get_var_list_tm (cons M Ls) VarIn VarOut :=
-    get_var M VarIn VarOut1 /\ get_var_list_tm Ls VarOut1 VarOut.
-
-
-% Construct Ti from VarList and Ls
-% Construct the constraint system with solved form: Ti ||- xi
-Define construct_ti : list tm -> list tm -> tm -> tm -> prop by
-construct_ti VarList nil Ti_In Ti_In;
-construct_ti VarList (cons M Ls) TiIn TiOut :=
-    _if (get_var M nil VarOut /\ subset VarOut VarList)
-        (
-	    _if (TiIn = (nm emptyTerm)) (TiOut1 = M) (TiOut1 = pr M TiIn)
-        )
-        (
-	    TiOut1 = TiIn
-        ) /\
-    construct_ti VarList Ls TiOut1 TiOut.
-
-
-Define substitute_Lstau : list tm -> list tm -> list tm -> list sub_pair -> tm -> tm -> prop by
-substitute_Lstau NewVarList nil Ls SubPair TitauiPrev TitauiPrev;
-substitute_Lstau NewVarList (cons V VarList) Ls SubPair TitauiPrev Titaui :=
-    NewVarList1 = cons V NewVarList /\
-    construct_ti NewVarList1 Ls (nm emptyTerm) Ti1 /\
-%    printstr "NewTi = " /\ print_term Ti1 /\ printstr "\n" /\
-    SubPair1 = cons (sub V TitauiPrev) SubPair /\
-    copyterm SubPair1 Ti1 Titaui1 /\
-%    printstr "Titaui1 = " /\ print_term Titaui1 /\ printstr "\n" /\
-    substitute_Lstau NewVarList1 VarList Ls SubPair1 Titaui1 Titaui.
-
-
-Define construct_Lstau : list tm -> tm -> prop by
-construct_Lstau Ls Lstau :=
-    construct_ti nil Ls (nm emptyTerm) Ti1 /\
-%    printstr "T[0] = " /\ print_term Ti1 /\ printstr "\n" /\
-    get_var_list_tm Ls nil VarList /\
-%    printstr "VarList = " /\ print_list VarList /\ printstr "\n" /\
-    substitute_Lstau nil VarList Ls nil Ti1 Lstau
-%    /\ printstr "Lstau = " /\ print_term Lstau /\ printstr "\n"
-.
-
+% Convert list term to term
+Define list_tm_to_tm : list tm -> tm -> prop by
+list_tm_to_tm nil (nm emptyTerm);
+list_tm_to_tm (cons Tm nil) Tm;
+list_tm_to_tm (cons Tm1 Ls) (pr Tm1 Tm) := _not(Ls = nil) /\ list_tm_to_tm Ls Tm. 
 
 % III. Find hidden keys from ground term S and construct key encryption pair from ground term S and hidden keys (Lstau is now a ground term)
+Define can_derive : list tm -> tm -> prop by
+can_derive S K := _cut(solve_constraints nil (cons (dedl S K) nil) Subst).
 
 % 3.1 Find hidden key list from term S
 Define get_hidden_key : list tm -> tm -> list tm -> prop by
@@ -147,7 +108,7 @@ get_hidden_key S TermIn HiddenKey :=
 		    get_hidden_key S M HiddenKey1 /\
 		    _if (sort_key K)
 			(
-			    _if (_not(solve_constraints nil (cons (dedl S K) nil) Subst)) (insert K HiddenKey1 HiddenKey) (HiddenKey = HiddenKey1)
+			    _if (_not(can_derive S K)) (insert K HiddenKey1 HiddenKey) (HiddenKey = HiddenKey1)
 			)
 			(
 			    get_hidden_key S K HiddenKey2 /\ merge HiddenKey1 HiddenKey2 HiddenKey
@@ -275,7 +236,7 @@ construct_ki_list TermIn KLOut KLIn KPrev KNIn KNOut HiddenKey :=
 				    insert TermIn KNIn KNOut
 				) 
 				(
-				    _if ((KPrev = nil /\ (KLIn = nil \/ KLIn = cons TermIn nil)) \/ (_not(KPrev = nil) /\ not_empty_intersect KLIn KPrev))
+				    _if ((KPrev = nil /\ KLIn = nil) \/ (_not(KPrev = nil) /\ not_empty_intersect KLIn KPrev))
 					(
 					    insert TermIn KNIn KNOut
 					)
@@ -293,7 +254,7 @@ construct_ki_list TermIn KLOut KLIn KPrev KNIn KNOut HiddenKey :=
 Define construct_ki : tm -> list tm -> list tm -> list tm -> prop by
 construct_ki TermIn HiddenKey KPrev Kl :=
     construct_ki_list TermIn KLOut nil KPrev nil KNOut HiddenKey /\
-%    printstr "KNOut:\t" /\ print_list KNOut /\ printstr "\n" /\
+    %printstr "Ki :" /\ print_list KNOut /\ printstr "\n" /\
     _if (subset KNOut KPrev)
 	(
 	    Kl = KNOut
@@ -307,11 +268,8 @@ construct_ki TermIn HiddenKey KPrev Kl :=
 % 5.1 Find strict key cycle
 Define strict_key_cycle_detection : list tm -> prop by
 strict_key_cycle_detection Ls :=
-    construct_Lstau Ls Lstau /\
-    S = cons Lstau nil /\
-%    printstr "S:\t" /\ print_list S /\ printstr "\n" /\
-    get_hidden_key S Lstau HiddenKey /\ 
-%    printstr "K:\t" /\ print_list HiddenKey /\ printstr "\n" /\
+    list_tm_to_tm Ls Lstau /\
+    get_hidden_key Ls Lstau HiddenKey /\ _not(HiddenKey = nil) /\
     get_key_encryption_pair Lstau HiddenKey KeyList Edge /\ 
     strict_key_cycle HiddenKey Edge.
 
@@ -319,24 +277,37 @@ strict_key_cycle_detection Ls :=
 % 5.2 Check Key Ordering
 Define key_ordering_compatibility_detection : list tm -> list tm -> prop by
 key_ordering_compatibility_detection Ls KeyOrder :=
-    construct_Lstau Ls Lstau /\
-    get_hidden_key Ls Lstau HiddenKey /\ get_key_encryption_pair Lstau HiddenKey KeyList KeyEncPair /\ print_list_kencpair KeyEncPair /\
+    list_tm_to_tm Ls Lstau /\
+    get_hidden_key Ls Lstau HiddenKey /\ get_key_encryption_pair Lstau HiddenKey KeyList KeyEncPair /\
     _if (_cut(key_ordering nil KeyOrder KeyEncPair)) (printstr "--> Compatible\n") (printstr "--> Not Compatible\n").
 
 
 % 5.3 Find key cycle
 Define key_cycle_detection : list tm -> prop by
-key_cycle_detection Ls :=
-    construct_Lstau Ls Lstau /\
-    S = cons Lstau nil /\
-%    printstr "S:\t" /\ print_list S /\ printstr "\n" /\
-    get_hidden_key S Lstau HiddenKey /\ 
-%    printstr "K:\t" /\ print_list HiddenKey /\ printstr "\n" /\
+key_cycle_detection Ls := printstr "." /\
+    list_tm_to_tm Ls Lstau /\
+    get_hidden_key Ls Lstau HiddenKey /\ _not(HiddenKey = nil) /\
+    %printstr "HiddenKey : " /\ print_list HiddenKey /\ printstr "\n" /\
     construct_ki Lstau HiddenKey nil Kl /\
     _not(subset HiddenKey Kl).
 
 
 % 5.4 Integrate with trace
+Define get_solved_form_substitution : list constraint -> list sub_pair -> prop by
+get_solved_form_substitution nil nil;
+get_solved_form_substitution (cons (dedl U1 V) Ds) (cons (sub V U) Sub) :=
+    list_tm_to_tm U1 U /\
+    get_solved_form_substitution Ds Sub.
+
+% Get list of solved form constraints from list constraints
+Define get_solved_form : list constraint -> list sub_pair -> list constraint -> list constraint -> prop by
+get_solved_form nil Sub Ds_In Ds_In;
+get_solved_form (cons (dedl U V) Cs) Sub Ds_In Ds_Out :=
+    copylist Sub U USub /\ copyterm Sub V VSub /\
+    _if (VSub = var X) % V is not substituted
+	(Ds_In1 = cons (dedl USub VSub) Ds_In)
+	(Ds_In1 = Ds_In) /\
+    get_solved_form Cs Sub Ds_In1 Ds_Out.
 
 % Get list LHS of deducibility constraints which are extracted from consistent trace.
 Define trace_list_tm : trace -> list tm -> prop by 
@@ -350,33 +321,13 @@ detect_keycycle_trace (t_bind T) := nabla x,  detect_keycycle_trace (T x) ;
 detect_keycycle_trace T :=
     det_or (T = (t_in A M T')) (T = (t_out A M T')) /\
     trace_cst T nil Cs /\
-%    printstr "\n" /\ print_list_cst Cs /\ printstr "\n" /\
     trace_vars T nil Vars /\
-    _distinct(solve_constraints Vars Cs Sol) /\ 
-    trace_list_tm T In /\	% Extract list of terms from trace T
-    copylist Sol In Out /\	% Do the consistent substitution
-    key_cycle_detection Out.
-
-
-% Optimization: (If timestamp of output messages affects key cycle decision)
-% construct_ti should be replaced by the function which extracts and substitutes LHS of Cs
-% construct_Lstau ->	1. substitute Sol to Cs -> Ds and look for solved form in Ds (variables which are not substituted)
-%			2. construct Ti from LHS of DS and create new substitution from solved form -> Lstau
-% However, LHS of DS does not contains all the output messages
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    _distinct(solve_constraints Vars Cs Sol) /\
+    get_solved_form Cs Sol nil Ds /\ 
+    trace_list_tm T In /\		% Extract list of terms from trace T
+    copylist Sol In Out /\		% Do the consistent substitution
+    get_solved_form_substitution Ds NewSol /\
+    copylist NewSol Out Out1 /\
+    key_cycle_detection Out1 /\
+    printstr "\nSolved forms :\n" /\ print_list_cst Ds /\ printstr "\n" /\
+    printstr "\nOutput Messages :\n" /\ print_list Out /\ printstr "\n".

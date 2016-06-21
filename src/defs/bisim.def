@@ -244,7 +244,7 @@ decomp_bt_pair Thy Acc (pr X Y) (pr U V) L :=
   decomp_bt_pair Thy Acc1 Y V L ;
 % Add Asymmetric Encryption
 decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
-  _if (K = pub U /\ M = pub V /\ deduce_r Thy U V)
+  _if ((K = pub U /\ M = pub V /\ deduce_r Thy U V))
       (
 	decomp_bt_pair Thy Acc X Y L
       )

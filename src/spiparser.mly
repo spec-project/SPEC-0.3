@@ -62,7 +62,7 @@
   (* Adec, Unblind, Getmsg *)
   let letadec_op = constid (pos 0) "letadec"
   let letunblind_op = constid (pos 0) "letunblind"
-  let letgetmsg_op = constid (pos 0) "letgetmsg"
+  (* let letgetmsg_op = constid (pos 0) "letgetmsg" *)
 
   let app s t = Input.pre_app (pos 0) s t 
   let lambda v t = Input.pre_lambda (pos 0) [v] t 
@@ -184,13 +184,13 @@ pexp:
 | inpref DOT pexp { let a,b = $1 in app in_op [a;lambda b $3] }
 | nupref DOT pexp { nuproc $1 $3 }
 | LBRAK texp EQ texp RBRAK pexp { app match_op [$2;$4;$6] }
-| LBRAK CHECKSIGN LPAREN texp COMMA texp RPAREN RBRAK pexp { app checksign_op [$4;$6;$9] }	/* CheckSign */
+| LBRAK CHECKSIGN LPAREN texp COMMA texp COMMA texp RPAREN RBRAK pexp { app checksign_op [$4;$6;$8;$11] }	/* CheckSign */
 | LBRAK texp NEQ texp RBRAK pexp { app mismatch_op [$2;$4;$6] }
 | cpref IN pexp { let a,(b,c) = $1 in app case_op [a;c;lambda b $3] }
 | lpref IN pexp { let t,(v1,v2) = $1 in app let_op [t; lambda v1 (lambda v2 $3)] }
 | ladecpref IN pexp { let (a1,a2),b = $1 in app letadec_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
 | lunblindpref IN pexp { let (a1,a2),b = $1 in app letunblind_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
-| lgetmsgpref IN pexp { let a,b = $1 in app letgetmsg_op [a; lambda b $3] }			/* Adec, Unblind, Getmsg */
+/*| lgetmsgpref IN pexp { let a,b = $1 in app letgetmsg_op [a; lambda b $3] }*/			/* Adec, Unblind, Getmsg */
 | BANG pexp { app bang_op [$2] }
 | TAU DOT pexp { app tau_op [$3] }
 | TAU { app tau_op [zero_op] }

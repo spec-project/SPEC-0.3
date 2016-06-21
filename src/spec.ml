@@ -25,10 +25,10 @@ exception Def_file_missing
 let welcome_msg =
   "SPEC: An equivalence checker for the spi-calculus. 
 
-Version 0.2
+Version 0.3
 
 This software is under GNU Public License.
-Copyright (c) 2011-2013 Alwen Tiu
+Copyright (c) 2011-2016 Alwen Tiu
 
 Type `#help;' to display available commands. 
 \n"
@@ -36,7 +36,7 @@ Type `#help;' to display available commands.
 let usage_msg =
   "SPEC.  
 This software is under GNU Public License.
-Copyright (c) 2011-2013 Alwen Tiu. 
+Copyright (c) 2011-2016 Alwen Tiu. 
 
 "
 

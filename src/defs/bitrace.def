@@ -259,7 +259,14 @@ apply_RC H_in Thy_in H_out Thy_out :=
   (fun_RC1 H_in C1 Sub1 Sub2 \/ fun_RC2 H_in C2 Sub1 Sub2) /\
   apply_subst_bt Sub1 Sub2 H_in H_out /\
   apply_subst_thy  Sub1 Sub2 Thy_in Thy /\
-  reduce Thy Thy_out.
+  reduce Thy Thy_out;
+
+apply_RC H_in Thy_in H_out Thy_out :=
+  select Thy_in (mp (aen M (var X)) (aen R (var X)))  Rest /\
+  Subst = (cons (sub (var X) (pub (var X))) nil) /\
+  apply_subst_bt Subst Subst H_in H /\
+  apply_subst_thy Subst Subst Thy_in Thy /\
+  apply_RC H Thy H_out Thy_out.
 
 Define apply_RS : list bt_pair -> list thy_pair -> 
                   list bt_pair -> list thy_pair -> prop

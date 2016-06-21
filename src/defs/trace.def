@@ -34,14 +34,13 @@ Type t_bind	(name -> trace) -> trace.
 % print bitraces
 Define ptrace : trace -> prop
 by
-ptrace (t_bind T) := nabla x, ptrace (T x) ;
 ptrace emp := printstr "emp" ; 
 ptrace (t_in A M T) :=
   printstr "(" /\ print_term M /\ printstr ")^i." /\ 
-  ptrace L ; 
+  ptrace T ; 
 ptrace (t_out A M T) :=
   printstr "(" /\ print_term M /\ printstr ")^o." /\ 
-  ptrace L.
+  ptrace T.
 
 Define print_trace : trace -> prop
 by 

@@ -80,11 +80,11 @@ simplify (case M N P) Q :=
       (Q = (case M N R)) ; 
 
 % CheckSign
-simplify (checksign X Y P) Q :=
+simplify (checksign Z X Y P) Q :=
   simplify P R /\ 
   _if (R = zero)
       (Q = zero)
-      (Q = (checksign X Y R)) ; 
+      (Q = (checksign Z X Y R)) ; 
 
 % Adec, Unblind, Getmsg
 simplify (letadec M N (x\ P x)) Q := 
@@ -97,11 +97,11 @@ simplify (letunblind M N (x\ P x)) Q :=
   _if (R = (x\ zero))
       (Q = zero)
       (Q = (letunblind M N R)) ;
-simplify (letgetmsg M (x\ P x)) Q := 
-  (nabla x, simplify (P x) (R x)) /\ 
-  _if (R = (x\ zero))
-      (Q = zero)
-      (Q = (letgetmsg M R)) ;
+%simplify (letgetmsg M (x\ P x)) Q := 
+%  (nabla x, simplify (P x) (R x)) /\ 
+%  _if (R = (x\ zero))
+%      (Q = zero)
+%      (Q = (letgetmsg M R)) ;
 
 simplify (let M (x\y\ P x y)) Q :=
   (nabla x y, simplify (P x y) (R x y)) /\ 
@@ -185,8 +185,8 @@ print_proc (let M (x\y\ P x y)) :=
     print_proc_aux (P (bn x) (bn y)) ; 
 
 % CheckSign
-print_proc (checksign X Y P) :=
-  printstr "[checksign(" /\ print_term X /\ printstr " = " /\ print_term Y /\ printstr ")]" /\
+print_proc (checksign Z X Y P) :=
+  printstr "[checksign(" /\ print_term Z /\ printstr " , " /\ print_term X /\ printstr " , " /\ print_term Y /\ printstr ")]" /\
   print_proc_aux P ;
 
 % Adec, Unblind, Getmsg
@@ -200,11 +200,11 @@ print_proc (letunblind M N (x\ P x)) :=
     printstr "let " /\ 
     print x /\ printstr " = unblind(" /\ print_term M /\ printstr ", " /\ print_term N /\ printstr ")" /\ printstr " in " /\
     print_proc_aux (P (bn x)) ; 
-print_proc (letgetmsg M (x\ P x)) :=
-  nabla x, 
-    printstr "let " /\ 
-    print x /\ printstr " = getmsg(" /\ print_term M /\ printstr ")" /\ printstr " in " /\
-    print_proc_aux (P (bn x)) ; 
+%print_proc (letgetmsg M (x\ P x)) :=
+%  nabla x, 
+%    printstr "let " /\ 
+%    print x /\ printstr " = getmsg(" /\ print_term M /\ printstr ")" /\ printstr " in " /\
+%    print_proc_aux (P (bn x)) ; 
 
 print_proc (bang P) :=
   printstr "!" /\ printstr "(" /\ print_proc P /\ printstr ")";
@@ -267,8 +267,8 @@ copyproc L (let M (x\y\P x y)) (let N (x\y\ Q x y)) :=
 copyproc L (taup P) (taup Q) := copyproc L P Q ; % RH: Added for tau.
 
 % CheckSign
-copyproc L (checksign X Y P) (checksign U V Q) :=
-  copyterm L X U /\ copyterm L Y V /\ copyproc L P Q ;
+copyproc L (checksign Z X Y P) (checksign W U V Q) :=
+  copyterm L Z W /\ copyterm L X U /\ copyterm L Y V /\ copyproc L P Q ;
 
 % Adec, Unblind, Getmsg
 copyproc L (letadec M N (x\ P x)) (letadec U V (x\ Q x)) := 
@@ -277,9 +277,9 @@ copyproc L (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
 copyproc L (letunblind M N (x\ P x)) (letunblind U V (x\ Q x)) := 
   copyterm L M U /\ copyterm L N V /\
   nabla x, copyproc L (P (bn x)) (Q x) ; 
-copyproc L (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) := 
-  copyterm L M N /\
-  nabla x, copyproc L (P (bn x)) (Q x) ; 
+%copyproc L (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) := 
+%  copyterm L M N /\
+%  nabla x, copyproc L (P (bn x)) (Q x) ; 
 
 copyproc L (bang P) (bang Q) := copyproc L P Q. 
 

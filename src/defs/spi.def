@@ -69,11 +69,11 @@ Type case tm -> tm -> (tm -> proc) -> proc.
 Type let tm -> (tm -> tm -> proc) -> proc.
 %   e.g., [let (x,y) = M in Pxy] becomes (let M (x\y\Pxy).
 % CheckSign
-Type checksign tm -> tm -> proc -> proc.
+Type checksign tm -> tm -> tm -> proc -> proc.
 % Adec, Unblind, Getmsg
 Type letadec tm -> tm -> (tm -> proc) -> proc.
 Type letunblind tm -> tm -> (tm -> proc) -> proc.
-Type letgetmsg tm -> (tm -> proc) -> proc.
+%Type letgetmsg tm -> (tm -> proc) -> proc.
 
 
 % non-deterministic choice
@@ -98,11 +98,11 @@ Define red_proc : proc -> proc -> prop by
    red_proc (let (pr M N) P) R := R = (P M N);
    red_proc (case (en M K) K P) R := R = (P M);
    % CheckSign
-   red_proc (checksign (sign M K) (pub K) P) P ;
+   red_proc (checksign M (sign M K) (pub K) P) P ;
    % Adec, Unblind, Getmsg
    red_proc (letadec (aen M (pub K)) K P) R := R = (P M);
-   red_proc (letunblind (sign (blind M N) K) N P) R := R = (P (sign M K));	% Require blind implementation
-   red_proc (letgetmsg (sign M K) P) R := R = (P M).
+   red_proc (letunblind (sign (blind M N) K) N P) R := R = (P (sign M K)).
+%   red_proc (letgetmsg (sign M K) P) R := R = (P M).
 
 Define appAbs : agent -> agent -> proc -> prop by 
    appAbs (abs M) (con X Q) R := R = (par (M X) Q) ; 

@@ -112,6 +112,6 @@ SystemSpec(agent_A, agent_B) :=
 
 % sbisim System(agent_A, agent_B) SystemSpec(agent_A, agent_B) with (agent_A, agent_B)
 
-% Query: bisim(System{agent_A, agent_B}, SystemSpec{agent_A, agent_B});
+% Query: bisim(nu(agent_A,agent_B).x<<agent_A,agent_B>>.System{agent_A, agent_B}, nu(agent_A,agent_B).nu(agent_A,agent_B).x<<agent_A,agent_B>>.SystemSpec{agent_A, agent_B});
 
 
