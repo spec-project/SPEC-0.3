@@ -3,6 +3,7 @@
 \bibliographystyle{alpha}
 \usepackage{url}
 \usepackage{amsmath}
+\usepackage{mathtools}
 %\usepackage[margin=1in]{geometry}
 
 \newenvironment{definition}{\begin{define} \rm}{\end{define}}
@@ -17,9 +18,9 @@
 \newcommand\obj[1]{\texttt{#1}}
 
 \title{SPEC 0.3: A User Manual}
-\author{Alwen Tiu \\ 
-Research School of Computer Science\\
-The Australian National University
+\author{Alwen Tiu, Ross Horne, Nam Nguyen \\ 
+School of Computer Science and Engineering \\
+Nanyang Technological University
 }
 \date{}
 
@@ -32,8 +33,8 @@ The Australian National University
 SPEC (for Spi-calculus Equivalence Checker) is an equivalence checker for 
 a version of Abadi and Gordon's spi-calculus~\cite{abadi99ic}. 
 The spi-calculus is an extension of the $\pi$-calculus~\cite{milner92icII}, with
-operators encoding cryptographic primitives. In this implementation, we consider
-only a symmetric key encryption. As shown in \cite{abadi99ic}, the spi-calculus can be
+operators encoding cryptographic primitives.
+As shown in \cite{abadi99ic}, the spi-calculus can be
 used to encode security protocols, and via a notion of {\em observational equivalence},
 security properties such as secrecy and authentication can be expressed and proved. 
 
@@ -51,8 +52,8 @@ formalised in the spi-calculus assumes a model of intruder known as the Dolev-Ya
 This means, among others, that we assume that the encryption function is perfect, in the sense that
 an attacker is not able to decrypt an encrypted message unless he/she knows the key. 
 
-The current version of SPEC is still at the alpha testing phase, and allows only 
-modeling symmetric encryptions. It is also not yet optimised for 
+The current version of SPEC allows modeling symmetric and asymmetric key encryptions. However it
+is still at the alpha testing phase and is not yet optimised for 
 performance. The tool can only reason about equivalence (or more precisely,
 bisimilarities) of finite processes, i.e., those without recursion. It cannot yet be realistically
 used to decide equivalence of protocols with unbounded sessions; this will require
@@ -82,7 +83,7 @@ system that are implemented to support the proof engine of SPEC.
 \subsection{Downloading and compiling SPEC}
 The latest version of SPEC can be downloaded from the project page: 
 \begin{quote}
-\url{http://users.cecs.anu.edu.au/~tiu/spec}.
+\url{http://www.ntu.edu.sg/home/atiu/spec-prover/}.
 \end{quote}
 
 \noindent The SPEC distribution includes a modified version of the Bedwyr prover. 
@@ -91,9 +92,9 @@ The latest version of SPEC can be downloaded from the project page:
 SPEC is implemented using the Ocaml language and 
 has currently been tested only on the Linux operating system.
 
-To compile SPEC, download the SPEC package from the website given above, and
-unpack it in a directory of your choice. For the purpose of this tutorial, we assume
-that the unpacked files are located in the \obj{spec} directory inside
+To compile SPEC, download the SPEC package from the website given above.
+For the purpose of this tutorial, we assume
+that the downloaded files are located in the \obj{SPEC-0.3} directory inside
 the user's home directory. 
 The structure of the distribution consits of the following directories:
 \begin{itemize}
@@ -106,7 +107,7 @@ program files that will be run in the Bedwyr proof engine.
 \end{itemize}
 To compile the distribution, run the following commands: 
 \begin{verbatim}
-# cd $HOME/spec
+# cd $HOME/SPEC-0.3
 # ./configure
 # make
 \end{verbatim}
@@ -142,21 +143,22 @@ just as an illustration.
 
 \begin{verbatim}
 SPEC> P := nu (m, k). a< enc(m, k) >. [m = a] a<m>;
+Free variable(s): a.
 Reading spi definition
 \end{verbatim}
 Here the symbol to the left of \texttt{:=} is a process identifier, and 
 the expression to the right is the process itself. In this case, \texttt{P}
 is a process that creates two fresh names, $m$ and $k$, and output 
 the encrypted message \texttt{enc(m,k)} (representing a message that is obtained
-by encrypting m with key k) on channel \texttt{a}. It then performs
-a (useless) check on whether $m$ is equal to $a$ (which is always false, because
-$m$ needs to be a fresh name), before outputting $m$ on channel $a$. 
+by encrypting m with key k) on channel \texttt{a}.
+It then performs a (useless) check on whether $m$ is equal to $a$ 
+(which is always false, because $m$ needs to be a fresh name), before outputting $m$ on channel $a$. 
 
 Every definition (or any other statement) in the command prompt must ends with a
-semicolon. 
+semicolon.
 
-By default, SPEC treats free names in a process as public names, i.e., they are known
-to the intruder. In this case, the only public name is \texttt{a}. 
+By default, SPEC treats free names in a process as {\em rigid names}, to distinguish them from constants, they are known
+to the intruder. In this case, the only rigid name is \texttt{a}. 
 
 Let us define another process:
 
@@ -170,11 +172,11 @@ Having defined the two processes, we can query SPEC to check whether they are
 equivalent:
 
 \begin{verbatim}
-SPEC> bisim(P, Q);
-Checking bisimilarity for: 
-nu(n1,n2).a<enc(n1,n2)>.[n1 = a]a<n1>.0
+SPEC> bisim(P{a}, Q{a});
+Checking strong bisimilarity for: 
+nu(n2,n3).?n1<enc(n2,n3)>.[n2 = ?n1]?n1<n2>.0
  and 
-nu(n1).a<enc(a,n1)>.0
+nu(n2,n3).?n1<enc(n2,n3)>.0
 ..
 The two processes are bisimilar.
 Size of bisimulation set: 2.  Use #show_bisim to show the set.
@@ -194,17 +196,17 @@ claimed equivalence, in the form of a {\em bisimulation}. To show such a
 proof, use the following command:
 
 \begin{verbatim}
-SPEC> #show_bisim;
+SPEC> #show_bisim;     
 1. 
-Bitrace: []
-First process: nu(n1,n2).a<enc(n1,n2)>.[n1 = a]a<n1>.0
-Second process: nu(n1).a<enc(a,n1)>.0
+Bitrace: [(?n1, ?n1)^i.]
+First process: nu(n2,n3).?n1<enc(n2,n3)>.[n2 = ?n1]?n1<n2>.0
+Second process: nu(n2,n3).?n1<enc(n2,n3)>.0
 2. 
-Bitrace: [(enc(n1,n2), enc(a,n2))^o.]
-First process: [n1 = a]a<n1>.0
+Bitrace: [(?n1, ?n1)^i.(enc(n2,n3), enc(n2,n3))^o.]
+First process: [n2 = ?n1]?n1<n2>.0
 Second process: 0
 
-SPEC> 
+SPEC>
 \end{verbatim}
 
 In this case it is particularly simple. 
@@ -217,7 +219,8 @@ There are some meta-commands available in SPEC, which can be queried by
 using the \texttt{\#help} command. The list of commands is as follows. 
 \begin{itemize}
 \item \obj{\#help}: Display the help message.
-\item \obj{\#exit}: Exit the program. 
+\item \obj{\#exit}: Exit the program.
+\item \obj{\#progressing [on/off]}: Progressing [on] or strong [off].
 \item \obj{\#equivariant}: Turning the equivariant tabling on/off. See Section~\ref{sec:tabling}.
 By default, equivariant is always set to on.
 \item \obj{\#reflexive}: Turning reflexivity checking on/off. 
@@ -244,15 +247,19 @@ The spi-calculus generalises the $\pi$-calculus by allowing arbitrary terms to b
 instead of just simple names. To define the language of processes, we first need to define
 the set of terms (or messages). The set of terms allowed is defined by the following grammar:
 $$
-M, N  ::= a \mid x \mid \langle M, N \rangle \mid \mathrm{enc}(M, N)
+\begin{array}{ll}
+M, N  ::= & x \mid \langle M, N \rangle \mid \mathrm{enc}(M, N) \mid \mathrm{pub}(M) \mid \mathrm{aenc}(M, N) \mid \\
+	  & \mathrm {sign}(M, N) \mid \mathrm{hs}(M) \mid \mathrm{mac}(M)
+\end{array}
 $$
-where $a$ denotes a name and $x$ denotes a variable. Names are considered to be constants,
-i.e., they cannot be instantiated by other terms, wherease variables can be instantiated.
-The need for variables arises from the need to symbolically represent input values, which
-can range over an infinite set of messages, when 
-unfolding the transitions of a process. The message $\langle M, N \rangle$ represents
+where $x$ denotes a variable.
+The message $\langle M, N \rangle$ represents
 a pair of messages $M$ and $N$, and $\mathrm{enc}(M,N)$ represents a message $M$ encrypted
-with key $N$ using a symmetric encryption function. Note that the key here can itself be any term. 
+with key $N$ using a symmetric encryption function, $\mathrm{aenc}(M, N)$ represents a message $M$ encrypted with public key $N$
+using an asymmetric encryption function, $\mathrm{pub}(M)$ represents a public key corresponding
+to secret key $M$, $\mathrm{sign}(M, N)$ represents a message $M$ signed with secret key $M$ using
+a digital signature function, $\mathrm{hs}(M)$ represents the hash of $M$ and $\mathrm{mac}(M)$ represents the
+MAC of $M$.
 
 We assume a set of {\em process identifiers}, ranged over by capital letters such
 as $A$,$B$,etc. The purpose of a process identifier is to simplify the writing of a process,
@@ -261,28 +268,37 @@ A process identifier may be assigned an arity, representing the number of argume
 The language of processes is given by the following grammar:
 $$
 \begin{array}{ll}
-P ::= & A\{a_1,\ldots,a_n\} \mid 0 \mid a(x).P \mid a\langle M \rangle \mid [M = N] P \mid 
+P ::= & 0 \mid x(y).P \mid \bar x\langle M \rangle \mid [M = N] P \mid 
+[\mathrm{checksign}(M, N, L)] P \mid 
         \nu (x_1,\ldots,x_m). P \mid \\
-  & (P ~|~ P) \mid ~ !P \mid 
+  & (P ~|~ P) \mid (P + P) \mid \tau.P \mid !P \mid 
  \mathrm{let}~ \langle x, y \rangle = M ~ \mathrm{ in } ~ P
  \mid
-\mathrm{case} ~ M ~ \mathrm{ of } ~ \mathrm{enc}(x,N) ~ \mathrm{ in } ~ P.
+\mathrm{case} ~ M ~ \mathrm{ of } ~ \mathrm{enc}(x,N) ~ \mathrm{ in } ~ P \mid
+\\
+&
+\mathrm{let} ~ x = \mathrm{adec}(M, N) ~ \mathrm{ in } ~ P
+.
 \end{array}
 $$
 The intuitive meaning of each of the process construct (except for process identifier, which
 is explained later) is as follow:
 \begin{itemize}
 \item $0$ is a deadlocked process. It cannot perform any action.
-\item $a(x).P$ is an input-prefixed process. The variable $x$ is a binder whose scope is $P$.
-The process accepts a value on channel $a$, binds it to the
-variable $x$ and evolves into $P$. 
-\item $a\langle M \rangle.P$ is an output-prefixed process. It outputs a term $M$ on channel $a$
+\item $\tau.P$ performs a silent action then continues as $P$.
+\item $x(y).P$ is an input-prefixed process, where $y$ is bound in $P$.
+The process accepts a value on channel $x$, binds it to the
+variable $y$ and evolves as $P$.
+\item $\bar x\langle M \rangle.P$ is an output-prefixed process. It outputs a message $M$ on channel $x$
 and evolves into $P$.
 \item $[M = N] P$ is a process which behaves like $P$ when $M$ is syntactically equal to $N$,
-but is otherwise a deadlocked process. 
+but is otherwise a deadlocked process.
+\item $[\mathrm{checksign}(M, N, L)] P$ is a process which behaves like $P$ when $N$ becomes a message signed $M$
+with secret key $K$, i.e., of the form $sign(M, K)$, and $L$ is the public key $pub(K)$.
 \item $\nu (x_1,\ldots,x_m). P$ is a process that creates $m$ new names and behaves like $P$. 
 The $\nu$ operator (also called the restriction operator) binds the name $x_1,\ldots, x_m$ in $P$. 
 \item $P ~|~ Q$ is a paralel composition of $P$ and $Q$.
+\item $P + Q$ represents a non-deterministic choice between $P$ and $Q$.
 \item $!P$ is a replicated process; it represents an infinite paralel copies of $P$. 
 \item $\mathrm{let}~ \langle x, y \rangle = M ~ \mathrm{ in } ~ P.$ The variables $x$ and $y$
 are binders whose scope is $P$. This process checks that $M$ decomposes to a pair of messages,
@@ -291,6 +307,9 @@ and binds those messages to $x$ and $y$, respectively.
 The variable $x$ here is a binder whose scope is $P$. 
 This process checks that $M$ is a message encrypted with key $N$, decrypts the
 encrypted message and binds it to $x.$
+\item $\mathrm{let} ~ x = \mathrm{adec}(M,N) ~ \mathrm{ in } ~ P$ 
+binds free occurrences of $x$ in $P$. 
+This process checks that $M$ decrypts a message encrypted with public key $pub(N)$, and binds it to $x$.
 \end{itemize}
 
 A {\em process definition} is a statement of the form:
@@ -386,7 +405,7 @@ the command \texttt{\#show\_def}, followed by the identifier.
 For example:
 \begin{verbatim}
 SPEC> #show_def P;
-P := nu(n1,n2).a<enc(n1,n2)>.[n1 = a]a<n1>.0
+P(n1) := nu(n2,n3).n1<enc(n2,n3)>.[n2 = n1]n1<n2>.0
 SPEC> 
 \end{verbatim}
 The command \texttt{\#show\_defs} will show all the definitions entered so far. 
@@ -456,17 +475,6 @@ can be summarised as follows:
 \item Projection: the ability to extract components of a pair. 
 \item Equality testing: the ability to compare two messages for syntactic equality. 
 \end{itemize}
-For the purpose of simplifying the implementation of SPEC, we assume an additional
-capability: we assume that the intruder has knowledge of a set of ``public'' names
-(as in the notion of {\em frames} in Abadi and Gordon's {\em frame bisimulation}~\cite{abadi98njc}). 
-That is, we shall designate a certain set of names to be public names. We shall simply
-call these names {\em constants}. Hence the intruder also possesses the following capability: 
-\begin{itemize}
-\item Constant testing: the ability to recognise a constant. 
-\end{itemize}
-In the user interface of SPEC, any free names entered by the user are considered constants. 
-The purpose of introducing constants as public names is to reduce the size of bitraces
-when checking for equivalence, as these constants need not be included in the bitraces. 
 
 A {\em consistent bitrace} is then a bitrace where all possible observations applying
 to its first projection are also valid observations on its second projection, and vice versa. 
@@ -490,29 +498,29 @@ This defines two processes $P$ and $Q$. We can use the command
 \texttt{\#show\_defs} to show the process definitions we entered so far:
 \begin{verbatim}
 SPEC> #show_defs;
-P := nu(n1,n2).a<enc(n1,n2)>.a<b>.0
-Q := nu(n1,n2).a<enc(b,n2)>.a<b>.0
+P(n1,n2) := nu(n3,n4).n1<enc(n3,n4)>.n1<n2>.0
+Q(n1,n2) := nu(n3,n4).n1<enc(n2,n4)>.n1<n2>.0
 SPEC> 
 \end{verbatim}
 Notice that SPEC automatically renames the bound variables $x$ and $y$
-to its internally generated fresh names ($n1$ and $n2$ in this case).
+to its internally generated fresh names ($n3$ and $n4$ in this case).
 In general, SPEC will prefix any bound names or names freshly 
 generated with the letter `n'. The engine also performs $\alpha$-conversion
 as neccessary to avoid name clashes. 
 
 As discussed in the previous section, free names in a process entered by the user
  are automatically
-considered as constants by SPEC, with the consequence that they are known publicly
+considered as rigid names by SPEC, with the consequence that they are known publicly
 to the intruder. 
 
 Recall from Section~\ref{sec:quick} that the command \texttt{bisim} allows use to check
 for bisimilarity: 
 \begin{verbatim}
-SPEC> bisim(P,Q);
-Checking bisimilarity for: 
-nu(n1,n2).a<enc(n1,n2)>.a<b>.0
+SPEC> bisim(P{a,b},Q{a,b});
+Checking strong bisimilarity for: 
+nu(n3,n4).?n1<enc(n3,n4)>.?n1<?n2>.0
  and 
-nu(n1,n2).a<enc(b,n2)>.a<b>.0
+nu(n3,n4).?n1<enc(?n2,n4)>.?n1<?n2>.0
 ..
 The two processes are bisimilar.
 Size of bisimulation set: 2.  Use #show_bisim to show the set.
@@ -528,14 +536,14 @@ The bisimulation set produced by SPEC can be displayed using \texttt{\#show\_bis
 \begin{verbatim}
 SPEC> #show_bisim;
 1. 
-Bitrace: []
-First process: nu(n1,n2).a<enc(n1,n2)>.a<b>.0
-Second process: nu(n1,n2).a<enc(b,n2)>.a<b>.0
+Bitrace: [(?n1, ?n1)^i.(?n2, ?n2)^i.]
+First process: nu(n3,n4).?n1<enc(n3,n4)>.?n1<?n2>.0
+Second process: nu(n3,n4).?n1<enc(?n2,n4)>.?n1<?n2>.0
 2. 
-Bitrace: [(enc(n1,n2), enc(b,n2))^o.]
-First process: a<b>.0
-Second process: a<b>.0
-SPEC> 
+Bitrace: [(?n1, ?n1)^i.(?n2, ?n2)^i.(enc(n3,n4), enc(?n2,n4))^o.]
+First process: ?n1<?n2>.0
+Second process: ?n1<?n2>.0
+SPEC>
 \end{verbatim}
 The original processes are listed in the first item, which get unfolded into the second
 item. In the second item, we notice that the first process is actually equal to the second
@@ -555,7 +563,7 @@ step.
 \subsection{Separation of names in bisimulation}
 
 An important thing to note in reading a bisimulation triple $(h,P,Q)$ is that
-the names (other than constants) used in the first projection of the bitrace $h$
+the names used in the first projection of the bitrace $h$
 and process $P$ are {\em unrelated} to the names used in the second projection of $h$
 and $Q$. This is because names represent entities that may be generated internally
 by the processes (via scope extrusion) and may be unknown to the intruder, hence their
@@ -566,16 +574,13 @@ See \cite{abadi98njc} for an explaination of this.
 
 Another important thing to keep in mind when reading the output bisimulation set
 produced by SPEC is that each triple in the set represents an
-{\em equivalence class of triples modulo renaming} of variables and names (but
-excluding constants). 
-Thus, a triple such as 
+{\em equivalence class of triples modulo renaming} of variables and names. Thus, a triple such as 
 $$
-([(x,x)^i.(\mathrm{enc}(n,m_1), \mathrm{enc}(b,m_2))^o], P, Q)
+([(x,x)^i.(\mathrm{enc}(n_1,m_1), \mathrm{enc}(n_2,m_2))^o], P, Q)
 $$
-where $x$ is a variable, $n$ and $m$ are non-constant names and
-$b$ is a constant, represents the set containing 
+where $x$ is a variable, $n$ and $m$ are names represents the set containing 
 $$
-([(x\theta,x\theta)^i.(\mathrm{enc}(n\theta,m_1\theta), \mathrm{enc}(b,m_2\theta))^o], P\theta, Q\theta)
+([(x\theta,x\theta)^i.(\mathrm{enc}(n_1\theta,m_1\theta), \mathrm{enc}(n_2\theta,m_2\theta))^o], P\theta, Q\theta)
 $$
 where $\theta$ is an renaming substitution.
 
@@ -598,7 +603,7 @@ Q1   := a(x).\nu (k).a\langle \mathrm{enc}(x,k) \rangle. \nu (m).a\langle \mathr
 $$
 The process $P1$ inputs a term via channel $a$, binds it to $x$ and output
 an encrypted message $\mathrm{enc}(x,k)$. It then generates a new channel $m$,
-sends it off encrypted with the key $\mathrm{enc}(a,k)$. Here the name $a$ is a constant,
+sends it off encrypted with the key $\mathrm{enc}(a,k)$. Here the name $a$ is a rigid name,
 so it is known to the intruder. The process then sends a message on the newly generated
 channel $m$. Although the channel $m$ is a secret generated by $P1$, and it is not
 explicitly extruded, the intruder can still interact via $m$ if it feeds the name $a$
@@ -621,43 +626,19 @@ are bisimilar. Disabling this allows us to see a bit more clearly how the bitrac
 in the bisimulation set in the following example change from one entry to another. 
 
 After disabling reflexivity checking 
-and running the command \texttt{bisim(P1,Q1)}, we get that the two processes are indeed bisimilar.
+and running the command \texttt{bisim(P1\{a\},Q1\{a\})}, we get that the two processes are indeed bisimilar.
 The bisimulation set produced can be displayed using the \texttt{\#show\_bisim} command, but here
 we shall try to output it in a LaTeX format:
 \begin{enumerate} 
 \item 
 Bi-trace: 
-$[~]$
-
-First process: 
-\begin{tabbing}${\mathrm{a}}(n1).$ \\ 
-$\nu$ \= $(n2).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n1,n2) ~ \rangle.$ \\ 
-$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
-$0$ \\ 
-\end{tabbing}
-Second process: 
-\begin{tabbing}${\mathrm{a}}(n1).$ \\ 
-$\nu$ \= $(n2).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n1,n2) ~ \rangle.$ \\ 
-$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-${[n1 = {\mathrm{a}} ]}$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
-$0$ \\ 
-\end{tabbing}
-\item 
-Bi-trace: 
 $$
 \begin{array}{l}
-(\mbox{enc}({\mathrm{a}},n1)~ , ~ \mbox{enc}({\mathrm{a}},n1))^o. \\ 
-(\mbox{enc}(n2,\mbox{enc}({\mathrm{a}},n1))~ , ~ \mbox{enc}(n2,\mbox{enc}({\mathrm{a}},n1)))^o. \\ 
+(?n1~ , ~ ?n1)^i. \\ 
+(\mbox{enc}(?n1,n2)~ , ~ \mbox{enc}(?n1,n2))^o. \\ 
+(\mbox{enc}(n3,\mbox{enc}(?n1,n2))~ , ~ \mbox{enc}(n3,\mbox{enc}(?n1,n2)))^o. \\ 
 \end{array}
 $$
-
-
 
 First process: 
 \begin{tabbing}$0$ \\ 
@@ -670,26 +651,25 @@ Bi-trace:
 $$
 \begin{array}{l}
 (?n1~ , ~ ?n1)^i. \\ 
+(?n2~ , ~ ?n2)^i. \\ 
 \end{array}
 $$
 
-
-
 First process: 
-\begin{tabbing}$\nu$ \= $(n2).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(?n1,n2) ~ \rangle.$ \\ 
-$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$\nu$ \= $(n3).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(?n2,n3) ~ \rangle.$ \\ 
+$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 Second process: 
-\begin{tabbing}$\nu$ \= $(n2).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(?n1,n2) ~ \rangle.$ \\ 
-$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-${[?n1 = {\mathrm{a}} ]}$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$\nu$ \= $(n3).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(?n2,n3) ~ \rangle.$ \\ 
+$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+${[?n2 = ?n1 ]}$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 \item 
@@ -697,23 +677,22 @@ Bi-trace:
 $$
 \begin{array}{l}
 (?n1~ , ~ ?n1)^i. \\ 
-(\mbox{enc}(?n1,n2)~ , ~ \mbox{enc}(?n1,n2))^o. \\ 
+(?n2~ , ~ ?n2)^i. \\ 
+(\mbox{enc}(?n2,n3)~ , ~ \mbox{enc}(?n2,n3))^o. \\ 
 \end{array}
 $$
 
-
-
 First process: 
-\begin{tabbing}$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 Second process: 
-\begin{tabbing}$\nu$ \= $(n3).$ \\ 
-$\overline{{\mathrm{a}}}~\langle ~\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)) ~ \rangle.$ \\ 
-${[?n1 = {\mathrm{a}} ]}$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+${[?n2 = ?n1 ]}$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 \item 
@@ -721,20 +700,46 @@ Bi-trace:
 $$
 \begin{array}{l}
 (?n1~ , ~ ?n1)^i. \\ 
-(\mbox{enc}(?n1,n2)~ , ~ \mbox{enc}(?n1,n2))^o. \\ 
-(\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2))~ , ~ \mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)))^o. \\ 
 \end{array}
 $$
 
-
-
 First process: 
-\begin{tabbing}$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$?n1(n2).$ \\ 
+$\nu$ \= $(n3).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n2,n3) ~ \rangle.$ \\ 
+$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 Second process: 
-\begin{tabbing}${[?n1 = {\mathrm{a}} ]}$ \\ 
-$\overline{n3}~\langle ~{\mathrm{a}} ~ \rangle.$ \\ 
+\begin{tabbing}$?n1(n2).$ \\ 
+$\nu$ \= $(n3).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n2,n3) ~ \rangle.$ \\ 
+$\nu$ \= $(n4).$ \\ 
+$\overline{?n1}~\langle ~\mbox{enc}(n4,\mbox{enc}(?n1,n3)) ~ \rangle.$ \\ 
+${[n2 = ?n1 ]}$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
+$0$ \\ 
+\end{tabbing}
+\item 
+Bi-trace: 
+$$
+\begin{array}{l}
+(?n1~ , ~ ?n1)^i. \\ 
+(?n2~ , ~ ?n2)^i. \\ 
+(\mbox{enc}(?n2,n3)~ , ~ \mbox{enc}(?n2,n3))^o. \\ 
+(\mbox{enc}(n4,\mbox{enc}(?n1,n3))~ , ~ \mbox{enc}(n4,\mbox{enc}(?n1,n3)))^o. \\ 
+\end{array}
+$$
+
+First process: 
+\begin{tabbing}$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
+$0$ \\ 
+\end{tabbing}
+Second process: 
+\begin{tabbing}${[?n2 = ?n1 ]}$ \\ 
+$\overline{n4}~\langle ~?n1 ~ \rangle.$ \\ 
 $0$ \\ 
 \end{tabbing}
 \end{enumerate}
@@ -742,13 +747,12 @@ A few notes on the output produced by SPEC:
 \begin{itemize}
 \item {\em Typesetting of names and variables}: 
 Variables are typeset by prepending the variables with a question mark `?'. 
-Bound names and non-constant names are typeset using italised fonts, while constants
-are un-italicised. 
+Bound names are typeset using italised fonts. 
 
 \item The original process pair is given in item 1. The unfolding sequence
-proceeds as follows: $1 \to 3 \to 4 \to 5 \to 1.$ 
+proceeds as follows: $4 \to 2 \to 3 \to 5 \to 1.$ 
 Notice that in moving from $5$ to $1$, the input pair disappears from the bitrace.
-This is because the variable $?n1$ gets instantiated to $a$, which is a constant (hence,
+This is because the variable $x$ gets instantiated to $a$, which is a rigid name (hence,
 public knowledge), and it is removed by the simplification step of SPEC. 
 
 \item {\em Equivariance of bisimulation}: Notice that in proceeding from $5$ to $1$
@@ -759,14 +763,31 @@ in Bedwyr. See Section~\ref{sec:bedwyr-ext}.}
 Without renaming, the bitrace in item $1$ would have been the following: 
 $$
 \begin{array}{l}
-(\mbox{enc}({\mathrm{a}},n2)~ , ~ \mbox{enc}({\mathrm{a}},n2))^o. \\
-(\mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2))~ , ~ \mbox{enc}(n3,\mbox{enc}({\mathrm{a}},n2)))^o. \\
+(?n1~ , ~ ?n1)^i. \\ 
+(\mbox{enc}(?n1,n3)~ , ~ \mbox{enc}(?n1,n3))^o. \\ 
+(\mbox{enc}(n4,\mbox{enc}(?n1,n3))~ , ~ \mbox{enc}(n4,\mbox{enc}(?n1,n3)))^o. \\ 
 \end{array}
 $$
 
 \end{itemize}
 
 \end{example}
+
+\section{Key cycle detection}
+\label{sec:keycycle}
+Bedwyr is suited to protocol analysis problems beyond bisimulation. To illustrate this power, the version SPEC includes a feature that detects key cycles~\cite{comon-lundh10tocl}.
+Key cycles are formed when a key is directly or indirectly encrypted by itself.
+For example, the process $nu(k1,k2).a\langle\mathrm{enc}(k1,k2)\rangle.a\langle \mathrm{enc}(k2,k1)\rangle$ 
+has a private key $k1$ encrypted with private key $k2$ which is encrypted with $k1$.
+Key cycles are a security issue, since the computational security of the encryption function is dependent on the assumption there are no such cycles.
+Thus although both $k1$ and $k2$ are never directly revealed to attackers, we cannot computationally prove that the encryption cannot be broken.
+ 
+For example, using keyword \texttt{keycycle}, SPEC detects that the following generates a key cycle.
+\[
+P \coloneqq
+\nu(k1,k2,k3).(a\langle\mathrm{enc}(k1,k3) ~|~ a(x).\mathrm{case}~x~\mathrm{of}~\mathrm{enc}(y,k3).a\langle\mathrm{enc}(y,k2)\rangle ~|~ a\langle k2,k1\rangle)
+\]
+
 
 \section{Interacting at the Bedwyr level}
 \label{sec:bedwyr}
@@ -810,29 +831,36 @@ types. All expressions in Bedwyr are encoded as simply typed $\lambda$-terms.
 For the implementation of SPEC, we introduce (among others) the following types for
 the syntactic categories of terms and processes:
 \begin{itemize}
-\item $\obj{name}$: the set of `unsorted' names. Spi-calculus names, constants and variables
+\item $\obj{name}$: the set of `unsorted' names. Spi-calculus names and variables
 are encoded using additonal unary operators applied to these unsorted names.
 
 \item $\obj{tm}$: the set of terms (i.e., messages). Constructors for terms are as follows:
 \begin{itemize}
-\item $\obj{ct} : \obj{name} \to \obj{tm}$. This is used ot encode constant. 
 \item $\obj{var} : \obj{name} \to \obj{tm}$. This is used to encode variables. 
-\item $\obj{nm} : \obj{name} \to \obj{tm}$. This is used to encode names (other than constants). 
+\item $\obj{nm} : \obj{name} \to \obj{tm}$. This is used to encode names. 
 \item $\obj{pr} : \obj{tm} \to \obj{tm} \to \obj{tm}$. This encodes pairing.
 \item $\obj{enc} : \obj{tm} \to \obj{tm} \to \obj{tm}$. This encodes symmetric encryption.
+\item $\obj{aenc} : \obj{tm} \to \obj{tm} \to \obj{tm}$. This encodes asymmetric encryption.
+\item $\obj{pub} : \obj{tm} \to \obj{tm}$. This is used to encode public keys.
+\item $\obj{sign} : \obj{tm} \to \obj{tm} \to \obj{tm}$. This encodes digital signatures.
+\item $\obj{hs} : \obj{tm} \to \obj{tm}$. This is used to encode hash function.
+\item $\obj{mac} : \obj{tm} \to \obj{tm} \to \obj{tm}$. This is used to encode MAC.
 \end{itemize}
 
 \item $\obj{proc}$: this is the type of processes. Constructors for processes are as follows:
 \begin{itemize}
 \item $\obj{zero} : \obj{proc}$. The $0$ process.
+\item $\obj{done} : \obj{proc}$. The $done$ process.
 \item $\obj{par} : \obj{proc} \to \obj{proc} \to \obj{proc}$. Parallel composition.
 \item $\obj{nu} : (\obj{tm} \to \obj{proc}) \to \obj{proc}$. Restriction. 
 \item $\obj{match} : \obj{tm} \to \obj{tm} \to \obj{proc} \to \obj{proc}$. Matching.
 \item $\obj{inp} : \obj{tm} \to (\obj{tm} \to \obj{proc}) \to \obj{proc}$. Input prefix.
 \item $\obj{outp} : \obj{tm} \to \obj{tm} \to \obj{proc} \to \obj{proc}$. Output prefix.
-\item $\obj{let} : \obj{tm} \to (\obj{tm} \to \obj{tm} \to \obj{proc}) \to \obj{proc}.$ Let-operator.
-\item $\obj{case} : \obj{tm} \to \obj{tm} \to (\obj{tm} \to \obj{proc}) \to \obj{proc}.$ Case-operator.
 \item $\obj{bang} : \obj{proc} \to \obj{proc}$. Replication.
+\item $\obj{case} : \obj{tm} \to \obj{tm} \to (\obj{tm} \to \obj{proc}) \to \obj{proc}$. Case-operator.
+\item $\obj{let} : \obj{tm} \to (\obj{tm} \to \obj{tm} \to \obj{proc}) \to \obj{proc}$. Let-operator.
+\item $\obj{checksign} : \obj{tm} \to \obj{tm} \to \obj{tm} \to \obj{proc} \to \obj{proc}$. Digital signature checking
+\item $\obj{letadec} : \obj{tm} \to \obj{tm} \to (\obj{tm} \to \obj{proc}) \to \obj{proc}$. Asymmetric Decryption.
 \end{itemize}
 
 \end{itemize}
@@ -882,23 +910,23 @@ $\nu (m,k). a\langle \mathrm{enc}(m,k) \rangle.0$ and
 $\nu (k). a\langle \mathrm{enc}(a,k) \rangle.0$, one would type the following
 query:
 \begin{verbatim}
-?= nabla a\ bisim nil (nu m\ nu k\ outp (ct a) (en m k) zero) 
-             (nu k\ outp (ct a) (en (ct a) k) zero).
+?= nabla a, bisim nil (nu m\ nu k\ outp (var a) (en m k) zero) 
+             (nu k\ outp (var a) (en (var a) k) zero).
 ..Yes.
 More [y] ? 
 \end{verbatim}
-The $\nabla$ quantifier provides a new name. Here we assume that $a$ is a constant. 
+The $\nabla$ quantifier provides a new name. Here we assume that $a$ is a rigid name. 
 
 Working directly in Bedwyr allows us to enter a more flexible query, 
 such as attaching a non-trivial bitrace to the bisimulation pair. 
 For this, we shall utilise the predicate \obj{toplevel\_bisim}. This predicate
 works as \obj{bisim}, except it also checks the bitrace for consistency, whereas
 \obj{bisim} does not check for consistency. 
-For example, instead of assuming $a$ as constant, we could assume it is
-a (non-constant) name, using the constructor $\obj{nm}.$ We will need to add this
+For example, instead of assuming $a$ as rigid, we could assume it is
+a name, using the constructor $\obj{nm}.$ We will need to add this
 name explicitly in the bitrace, otherwise the bisimulation checker will reject it. 
 \begin{verbatim}
-?= nabla a\ toplevel_bisim 
+?= nabla a, toplevel_bisim 
               (cons (out (nm a) (nm a)) nil)  
               (nu m\ nu k\ outp (nm a) (en m k) zero) 
               (nu k\ outp (nm a) (en (nm a) k) zero).
@@ -918,22 +946,13 @@ one can display the entries of the table as follows.
 \begin{verbatim}
 ?= #show_table bisim.
 Table for bisim contains (P=Proved, D=Disproved):
- [P] (nabla (x1\
-             nabla (x2\
-                    nabla (x3\
-                           bisim (cons (out (nm x3) (nm x3))
-                                    (cons (out (en (nm x2) (nm x1))
-                                             (en (nm x3) (nm x2)))
-                                       nil))
-                             zero zero))))
- [P] (nabla (x1\
+ [P] (nabla (x1,
+             bisim nil (nu (x2\ nu (x3\ outp (var x1) (en x2 x3) zero)))
+               (nu (x2\ outp (var x1) (en (var x1) x2) zero))
+ [P] (nabla (x1,
              bisim (cons (out (nm x1) (nm x1)) nil)
                (nu (x2\ nu (x3\ outp (nm x1) (en x2 x3) zero)))
                (nu (x2\ outp (nm x1) (en (nm x1) x2) zero))))
- [D] (nabla (x1\
-             bisim (cons (out (nm x1) (nm x1)) nil)
-               (nu (x2\ nu (x3\ outp (ct x1) (en x2 x3) zero)))
-               (nu (x2\ outp (nm x1) (en (ct x1) x2) zero))))
 ?= 
 \end{verbatim}
 The bisimulation set consists of those entries marked with \obj{[P]}.
@@ -1071,11 +1090,12 @@ The tabling mechanism now allows for matching of table entries up to renaming
 of $\nabla$-variables. 
 As an example, consider this very simple program:
 \begin{verbatim}
-inductive q X Y := println "Proved without using table".
+Define inductive q : A -> A -> prop by
+q X Y := println "Proved without using table".
 \end{verbatim}
 and consider this query:
 \begin{verbatim}
-?= nabla x\ nabla y\ q x y.
+?= nabla x, nabla y, q x y.
 Proved without using table
 Yes.
 More [y] ? n
@@ -1084,7 +1104,7 @@ Bedwyr executes the body of the definition clause for \obj{q},
 which prints a message, and stores the goal in the table. 
 Now, the second time the query is repeated: 
 \begin{verbatim}
-?= nabla x\ nabla y\ q x y.
+?= nabla x, nabla y, q x y.
 Yes.
 More [y] ?
 \end{verbatim}
@@ -1093,7 +1113,7 @@ proves the query by a lookup in the table of previously proved queries
 and does not execute the body of the clause.
 To see the effect of automatic renaming, consider this query:
 \begin{verbatim}
-?= nabla x\ nabla y\ q y x.
+?= nabla x, nabla y, q y x.
 Yes.
 More [y] ?
 \end{verbatim} 
@@ -1105,7 +1125,7 @@ We see that adding vacuous $\nabla$-quantification
 does not affect this equivariant matching, as in the
 following query:
 \begin{verbatim}
-?= nabla x\ nabla y\ nabla z\ q x z.
+?= nabla x, nabla y, nabla z, q x z.
 Yes.
 More [y] ? 
 \end{verbatim}
@@ -1114,7 +1134,7 @@ $\nabla$-variables as arguments. So the following query
 will not match the table (as a consequence, the message in the body
 of the clause will again be printed): 
 \begin{verbatim}
-?= nabla x\ q x x.
+?= nabla x, q x x.
 Proved without using table
 Yes.
 More [y] ?
@@ -1160,8 +1180,9 @@ More [y] ?
 
 
 \subsection*{Acknowledgment}
-This work is supported by the ARC Discovery grants DP0880549 and DP110103173.
-The author would like to thank David Baelde for many useful correspondences 
+This work is supported by MoE Tier 2 grant MOE2014-T2-2-076 (2015-2018),
+NTU Start-up Grant M408.1190.020 (2013-2016), the ARC Discovery grants DP0880549 and DP110103173.
+The authors would like to thank David Baelde for many useful correspondences 
 regarding the implementation of the Bedwyr system, and Quentin Heath for 
 many improvements to the Bedwyr proof engine used to implement SPEC.
 
