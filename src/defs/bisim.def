@@ -232,7 +232,7 @@ reflexive H P Q :=
 Define decomp_bt_pair : list thy_pair -> list bt_pair -> tm -> tm -> list bt_pair -> prop
 by 
 decomp_bt_pair Thy Acc (var X) (var X) Acc ; 
-%decomp_bt_pair Thy Acc (ct X) (ct X) Acc ; 
+% decomp_bt_pair Thy Acc (ct X) (ct X) Acc ; 
 % decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
 %   _if (det_mem (mp (hs X) (hs Y)) Thy)
 %       (L = Acc)
@@ -247,12 +247,13 @@ decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
 	decomp_bt_pair Thy Acc X Y L
       )
       (
-        _if (det_mem (mp (aen X K) (aen Y M)) Thy)
+        _if ((deduce_r Thy X Y /\ deduce_r Thy K M) \/ det_mem (mp (aen X K) (aen Y M)) Thy)
             (L = Acc)
             (L = (cons (out (aen X K) (aen Y M)) Acc))
       );
+% Pub
 decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
-  _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy  \/ det_mem (out (pub X) (pub Y)) Acc)
+  _if (deduce_r Thy X Y \/ det_mem (mp (pub X) (pub Y)) Thy)
       (L = Acc)
       (L = (cons (out (pub X) (pub Y)) Acc));
 
@@ -263,22 +264,23 @@ decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
         decomp_bt_pair Thy Acc X Y L
       )
       (
-        _if (det_mem (mp (blind X K) (blind Y M)) Thy  \/ det_mem (out (blind X K) (blind Y M)) Acc)
+        _if (det_mem (mp (blind X K) (blind Y M)) Thy)
             (L = Acc)
             (L = (cons (out (blind X K) (blind Y M)) Acc))
       );
 
 % Sign, Hash, Mac
+% Special case: sign (blind U V) K
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
- _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy \/ det_mem (out (sign X Y) (sign U V)) Acc)
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (sign X Y) (sign U V)) Thy)
       (L = Acc)
       (L = (cons (out (sign X Y) (sign U V)) Acc));
 decomp_bt_pair Thy Acc (hs X) (hs Y) L :=
-  _if (deduce_r Thy X Y \/ det_mem (mp (hs X) (hs Y)) Thy \/ det_mem (out (sign X Y) (sign U V)) Acc) 
+  _if (deduce_r Thy X Y \/ det_mem (mp (hs X) (hs Y)) Thy) 
       (L = Acc)
       (L = (cons (out (hs X) (hs Y)) Acc));
 decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
- _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy \/ det_mem (out (mac X Y) (mac U V)) Acc) 
+ _if ((deduce_r Thy X U /\ deduce_r Thy Y V) \/ det_mem (mp (mac X Y) (mac U V)) Thy) 
       (L = Acc)
       (L = (cons (out (mac X Y) (mac U V)) Acc));
 
@@ -436,7 +438,7 @@ bisimAgent H Thy (con M P) (con N Q) :=
     _if (L = nil)
         (bisim_upto H P Q)
         (
-         check_consistency H Thy L /\  
+         check_consistency H Thy L /\
          append H L H1 /\ 
          bisim_upto H1 P Q
         ) ;    

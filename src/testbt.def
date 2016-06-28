@@ -1,0 +1,65 @@
+%[bisim] Checking bisimilarity for: 
+%[bisim] Bitrace: [(?n1, ?n1)^i.(n2, n2)^o.(n3, n3)^o.(n4, n4)^o.(pub(n5), pub(n5))^o.(sign(<pub(n6),n7>,n5), sign(<pub(n6),n7>,n5))^o.(n7, n7)^o.(pub(n6), pub(n6))^o.(sign(<pub(n8),n9>,n5), sign(<pub(n8),n9>,n5))^o.(n9, n9)^o.(pub(n8), pub(n8))^o.(sign(<pub(n10),n11>,n5), sign(<pub(n10),n11>,n5))^o.(n11, n11)^o.(pub(n10), pub(n10))^o.(n10, n10)^o.(?n12, ?n12)^i.]
+%[bisim] First process: n4(n13).let <n14,n15> = n13 in [checksign(n14 , n15 , pub(n5))]let <n16,n17> = n14 in [n17 = n9]nu(n18).n2<aenc(<n18,n7>,n16)>.n2(n19).let n20 = adec(n19, n6) in let <n21,n22> = n20 in let <n23,n24> = n22 in [n21 = n18][n24 = n9]n2<aenc(n23,n16)>.0 | let n13 = adec(?n12, n8) in let <n14,n15> = n13 in n4(n16).let <n17,n18> = n16 in [checksign(n17 , n18 , pub(n5))]let <n19,n20> = n17 in [n20 = n15]nu(n21).n3<aenc(<n14,<n21,n9>>,n19)>.n3(n22).let n23 = adec(n22, n8) in [n23 = n21]n3<enc(n7,n21)>.0
+%[bisim] Second process: n4(n13).let <n14,n15> = n13 in [checksign(n14 , n15 , pub(n5))]let <n16,n17> = n14 in [n17 = n9]nu(n18).n2<aenc(<n18,n7>,n16)>.n2(n19).let n20 = adec(n19, n6) in let <n21,n22> = n20 in let <n23,n24> = n22 in [n21 = n18][n24 = n9]n2<aenc(n23,n16)>.0 | let n13 = adec(?n12, n8) in let <n14,n15> = n13 in n4(n16).let <n17,n18> = n16 in [checksign(n17 , n18 , pub(n5))]let <n19,n20> = n17 in [n20 = n15]nu(n21).n3<aenc(<n14,<n21,n9>>,n19)>.n3(n22).let n23 = adec(n22, n8) in [n23 = n21]n3<enc(n9,n21)>.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%[bisim] Bitrace: [(?n1, ?n1)^i.(n2, n2)^o.(n3, n3)^o.(n4, n4)^o.(pub(n5), pub(n5))^o.(sign(<pub(n6),n7>,n5), sign(<pub(n6),n7>,n5))^o.(n7, n7)^o.(pub(n6), pub(n6))^o.(sign(<pub(n8),n9>,n5), sign(<pub(n8),n9>,n5))^o.(n9, n9)^o.(pub(n8), pub(n8))^o.(sign(<pub(n10),n11>,n5), sign(<pub(n10),n11>,n5))^o.(n11, n11)^o.(pub(n10), pub(n10))^o.(n10, n10)^o.(aenc(<?n14,n11>,pub(n8)), aenc(<?n14,n11>,pub(n8)))^i.(?n16, ?n16)^i.(n18, n18)^o.(?n19, ?n19)^i.]
+
+%{(n7, n9), (n2, n2), (n3, n3), (n4, n4), (n7, n7), (n9, n9), (n11, n11), (n10, n10), (n18, n18), (sign(<pub(n10),n11>,n5), sign(<pub(n10),n11>,n5)), (pub(n8), pub(n8)), (sign(<pub(n8),n9>,n5), sign(<pub(n8),n9>,n5)), (pub(n6), pub(n6)), (sign(<pub(n6),n7>,n5), sign(<pub(n6),n7>,n5)), (pub(n5), pub(n5)) }
+
+#include "defs/bitrace.def".
+
+Type n1 name.
+Type n2 name.
+Type n3 name.
+Type n4 name.
+Type n5 name.
+Type n6 name.
+Type n7 name.
+Type n8 name.
+Type n9 name.
+Type n10 name.
+Type n11 name.
+Type n12 name.
+Type n18 name.
+
+Define test : nat -> prop by
+test 1 :=
+    H = cons (in (var n1) (var n1)) (cons (out (nm n2) (nm n2)) (cons (out (nm n3)(nm n3)) (cons (out (nm n4) (nm n4)) (cons (out (pub (nm n5))(pub (nm n5))) (cons (out (sign (pr (pub (nm n6))(nm n7))(nm n5))(sign (pr (pub (nm n6))(nm n7))(nm n5))) (cons (out (nm n7)(nm n7)) (cons (out ((sign (pr (pub (nm n8))(nm n9))(nm n5)))(sign (pr (pub (nm n8))(nm n9))(nm n5))) (cons (out (nm n9)(nm n9)) (cons (out (pub (nm n8))(pub (nm n8))) (cons (out (sign (pr (pub (nm n10))(nm n11))(nm n5))(sign (pr (pub (nm n10))(nm n11))(nm n5))) (cons (out (nm n11)(nm n11)) (cons (out (pub (nm n10))(pub (nm n10))) (cons (out (nm n10)(nm n10)) (cons (in (nm n12)(nm n12)) nil)))))))))))))) /\
+    print_bitrace H /\ printstr "\n" /\
+    bt_consistent H;
+
+test 2 :=
+    Thy = cons (mp (nm n2) (nm n2)) (cons (mp (nm n3)(nm n3)) (cons (mp (nm n4) (nm n4)) (cons (mp (pub (nm n5))(pub (nm n5))) (cons (mp (sign (pr (pub (nm n6))(nm n7))(nm n5))(sign (pr (pub (nm n6))(nm n7))(nm n5))) (cons (mp (nm n7)(nm n7)) (cons (mp ((sign (pr (pub (nm n8))(nm n9))(nm n5)))(sign (pr (pub (nm n8))(nm n9))(nm n5))) (cons (mp (nm n9)(nm n9)) (cons (mp (pub (nm n8))(pub (nm n8))) (cons (mp (sign (pr (pub (nm n10))(nm n11))(nm n5))(sign (pr (pub (nm n10))(nm n11))(nm n5))) (cons (mp (nm n11)(nm n11)) (cons (mp (pub (nm n10))(pub (nm n10))) (cons (mp (nm n10)(nm n10)) nil)))))))))))) /\
+    printstr "\n" /\ reduce Thy Thy1 /\ print_thy Thy1 /\
+%    thy_red_consistent Thy
+    thy_red_consistent Thy1
+;
+
+test 3 :=
+    Thy = cons (mp (pub (nm n10))(pub (nm n10))) (cons (mp (nm n10)(nm n10)) nil) /\
+    reduce Thy Thy1 /\
+    print_thy Thy1 /\
+    thy_consistent Thy1;
+
+test 4 :=
+    Thy = cons (mp (nm n2) (nm n2)) (cons (mp (nm n3)(nm n3)) (cons (mp (nm n4) (nm n4)) (cons (mp (pub (nm n5))(pub (nm n5))) (cons (mp (sign (pr (pub (nm n6))(nm n7))(nm n5))(sign (pr (pub (nm n6))(nm n7))(nm n5))) (cons (mp (nm n7)(nm n7)) (cons (mp (pub (nm n6)) (pub (nm n6))) (cons (mp ((sign (pr (pub (nm n8))(nm n9))(nm n5)))(sign (pr (pub (nm n8))(nm n9))(nm n5))) (cons (mp (nm n9)(nm n9)) (cons (mp (pub (nm n8))(pub (nm n8))) (cons (mp (sign (pr (pub (nm n10))(nm n11))(nm n5))(sign (pr (pub (nm n10))(nm n11))(nm n5))) (cons (mp (nm n11)(nm n11)) (cons (mp (pub (nm n10))(pub (nm n10))) (cons (mp (nm n10)(nm n10)) (cons (mp (nm n18)(nm n18)) nil)))))))))))))) /\
+    reduce Thy Thy1 /\ print_thy Thy1 /\
+    thy_red_consistent Thy1 /\ printstr "\n"
+.
