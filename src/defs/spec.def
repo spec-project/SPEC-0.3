@@ -193,7 +193,7 @@ free_names_proc (plus P Q) Acc L :=
   free_names_proc P Acc L1 /\ 
   free_names_proc Q L1 L ; 
 free_names_proc (nu P) Acc L :=
-  nabla x, free_names_proc (P (bn x)) Acc L ; 
+  nabla x, free_names_proc (P (bn x)) Acc L ;
 free_names_proc (match X Y P) Acc L :=
   free_names_term X Acc Acc1 /\ free_names_term Y Acc1 Acc2 /\
   free_names_proc P Acc2 L ; 
@@ -271,12 +271,14 @@ bisim_def H (defProc P) (defProc Q) :=
 
 % Add key cycle
 Define  keycycle_def : def_body -> prop by
-keycycle_def (defAbs x\A x):=
+keycycle_def (defAbs x\A x) :=
   nabla x, keycycle_def (A (var x));
 
 keycycle_def (defProc P) :=
   expand_defs P R /\ 
   printstr "\nChecking key cycle for: \n" /\
   print_proc R /\ printstr "\n" /\
-  get_trace R T /\ detect_keycycle_trace T.
+  get_trace R T /\ 
+  detect_keycycle_trace T
+.
 

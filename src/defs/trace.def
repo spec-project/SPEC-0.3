@@ -31,9 +31,10 @@ Type emp	trace.
 
 Type t_bind	(name -> trace) -> trace.
 
-% print bitraces
+% Print trace
 Define ptrace : trace -> prop
 by
+ptrace (t_bind T) := nabla x, ptrace (T x);
 ptrace emp := printstr "emp" ; 
 ptrace (t_in A M T) :=
   printstr "(" /\ print_term M /\ printstr ")^i." /\ 
@@ -43,9 +44,9 @@ ptrace (t_out A M T) :=
   ptrace T.
 
 Define print_trace : trace -> prop
-by 
+by
 print_trace T :=
-  printstr "[" /\ ptrace T /\ printstr "]".
+  printstr "\n[" /\ ptrace T /\ printstr "]\n".
 
 Define copytrace : list sub_pair -> trace -> trace -> prop by
 

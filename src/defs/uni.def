@@ -116,10 +116,9 @@ Define not_free : tm -> tm -> prop by
   not_free V (aen X Y) := not_free V X /\ not_free V Y;
   not_free V (pub X) := not_free V X;
   % Blind
-  not_free V (aen X Y) := not_free V X /\ not_free V Y;
+  not_free V (blind X Y) := not_free V X /\ not_free V Y;
   % Sign, Hash, Mac
   not_free V (sign X Y) := not_free V X /\ not_free V Y;
-  not_free V (blind X Y) := not_free V X /\ not_free V Y;
   not_free V (hs X) := not_free V X;
   not_free V (mac X Y) := not_free V X /\ not_free V Y.
 

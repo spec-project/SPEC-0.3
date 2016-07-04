@@ -511,9 +511,9 @@ thy_consistent Thy :=
 % Checking consistency of reduced theories
 Define thy_red_consistent : list thy_pair -> prop 
 by
-thy_red_consistent Thy :=  print_thy Thy /\
-  thy_cc1 Thy /\ 
+thy_red_consistent Thy := print_thy Thy /\
+  thy_cc1 Thy /\
   %thy_cc2_alt Thy /\
-  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ % Asymmetric Encryption - thy_cc4
+  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\
   thy_cc3 Thy. 
 
