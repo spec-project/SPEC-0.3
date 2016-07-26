@@ -257,7 +257,7 @@ The message $\langle M, N \rangle$ represents
 a pair of messages $M$ and $N$, and $\mathrm{enc}(M,N)$ represents a message $M$ encrypted
 with key $N$ using a symmetric encryption function, $\mathrm{aenc}(M, N)$ represents a message $M$ encrypted with public key $N$
 using an asymmetric encryption function, $\mathrm{pub}(M)$ represents a public key corresponding
-to secret key $M$, $\mathrm{sign}(M, N)$ represents a message $M$ signed with secret key $M$ using
+to secret key $M$, $\mathrm{sign}(M, N)$ represents a message $M$ signed with secret key $N$ using
 a digital signature function, $\mathrm{hs}(M)$ represents the hash of $M$ and $\mathrm{mac}(M)$ represents the
 MAC of $M$.
 
@@ -268,7 +268,7 @@ A process identifier may be assigned an arity, representing the number of argume
 The language of processes is given by the following grammar:
 $$
 \begin{array}{ll}
-P ::= & 0 \mid x(y).P \mid \bar x\langle M \rangle \mid [M = N] P \mid 
+P ::= & 0 \mid x(y).P \mid \bar x\langle M \rangle. P \mid [M = N] P \mid 
 [\mathrm{checksign}(M, N, L)] P \mid 
         \nu (x_1,\ldots,x_m). P \mid \\
   & (P ~|~ P) \mid (P + P) \mid \tau.P \mid !P \mid 
@@ -294,7 +294,7 @@ and evolves into $P$.
 \item $[M = N] P$ is a process which behaves like $P$ when $M$ is syntactically equal to $N$,
 but is otherwise a deadlocked process.
 \item $[\mathrm{checksign}(M, N, L)] P$ is a process which behaves like $P$ when $N$ becomes a message signed $M$
-with secret key $K$, i.e., of the form $sign(M, K)$, and $L$ is the public key $pub(K)$.
+with secret key $K$, i.e., of the form $\mathrm{sign}(M, K)$, and $L$ is the public key $\mathrm{pub}(K)$.
 \item $\nu (x_1,\ldots,x_m). P$ is a process that creates $m$ new names and behaves like $P$. 
 The $\nu$ operator (also called the restriction operator) binds the name $x_1,\ldots, x_m$ in $P$. 
 \item $P ~|~ Q$ is a paralel composition of $P$ and $Q$.
@@ -309,7 +309,7 @@ This process checks that $M$ is a message encrypted with key $N$, decrypts the
 encrypted message and binds it to $x.$
 \item $\mathrm{let} ~ x = \mathrm{adec}(M,N) ~ \mathrm{ in } ~ P$ 
 binds free occurrences of $x$ in $P$. 
-This process checks that $M$ decrypts a message encrypted with public key $pub(N)$, and binds it to $x$.
+This process checks that $M$ decrypts a message encrypted with public key $\mathrm{pub}(N)$, and binds it to $x$.
 \end{itemize}
 
 A {\em process definition} is a statement of the form:
