@@ -1,0 +1,70 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SPEC 
+% Copyright (C) 2011-2016 Alwen Tiu, Ross Horne 
+%
+% This program is free software; you can redistribute it and/or modify 
+% it under the terms of the GNU General Public License as published by 
+% the Free Software Foundation; either version 2 of the License, or
+% (at your option) any later version.  
+%
+% This program is distributed in the hope that it will be useful,  
+% but WITHOUT ANY WARRANTY; without even the implied warranty of   
+% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+% GNU General Public License for more details. 
+%
+% You should have received a copy of the GNU General Public License
+% along with this code; if not, write to the Free Software Foundation, 
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "trace.def".
+
+
+% Convert a trace (without binders) to deducibility constraints.
+Define st_cst : trace -> list tm -> list constraint -> prop
+by 
+st_cst emp Pre nil;
+
+st_cst (t_in (act A) U T) Pre Cs :=
+  _if (det_mem A Pre)
+(Cs = cons (dedl Pre U) Ds /\ Pre1 = Pre)
+(Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) (cons (dedl Pre1 U) Ds))
+  /\ st_cst T Pre1 Ds;
+
+st_cst (t_out (act A) U T) Pre Cs :=
+  _if (det_mem A Pre)
+(Pre1 = Pre /\ Cs = Ds)
+(Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) Ds)
+  /\ st_cst T (cons U Pre1) Ds.
+
+Define before : tm -> tm -> trace -> prop by
+before A B (t_in (act N) M T)  := N = A \/ (_not (N = B \/ M = B) /\ (M = A \/ before A B T));
+before A B (t_out (act N) M T) := N = A \/ (_not (N = B \/ M = B) /\ (M = A \/ before A B T)).
+
+Define unify_trace : list tm -> trace -> tm -> list sub_pair -> prop by 
+unify_trace Vs (t_in  (act A) N T) M Subst := unify nil A M Vs Subst \/ unify nil N M Vs Subst \/ unify_trace Vs T M Subst;
+unify_trace Vs (t_out (act A) N T) M Subst := unify nil A M Vs Subst \/ unify nil N M Vs Subst \/ unify_trace Vs T M Subst.
+
+Define stap : tm -> tm -> trace -> prop by
+stap A B emp;
+stap A B (t_bind AbsT) := nabla x, stap A B (AbsT x);
+
+stap A B T :=
+  det_or (T = t_in Act M T') (T = t_out Act M T') /\
+  get_var B nil VsB /\
+  trace_vars T VsB Vars /\
+  forall Sub, _distinct(unify_trace Vars T A Sub) ->
+    (
+      exists TTheta, copytrace Sub T TTheta /\
+      exists Cs, st_cst TTheta nil Cs /\
+      exists Vs, trace_vars TTheta nil Vs /\ 
+      forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
+        (
+	  exists ATheta, copyterm Sub A ATheta /\
+	  exists BTheta, copyterm Sub B BTheta /\
+	  exists AThetaTheta, copyterm Sol ATheta AThetaTheta /\
+	  exists BThetaTheta, copyterm Sol BTheta BThetaTheta /\
+	  exists TThetaTheta, copytrace Sol TTheta TThetaTheta /\
+	  before AThetaTheta BThetaTheta TThetaTheta
+        )
+    ).

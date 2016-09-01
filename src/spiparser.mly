@@ -123,10 +123,27 @@
     let q = app (constid (pos 0) "keycycle_def" ) [a'] in 
     Spi.QueryKeyCycle (pos 0, q)
 
+  (* Add symbolic trace analysis *)
+  let term_abstract_ids tm vars =
+    let term = constid (pos 0) "defTerm" in 
+    let abs  = constid (pos 0) "defTermAbs" in 
+    List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars
+               (app term [tm])
+
+  let stapquery a b p =
+    let pvars = Input.get_freeids (app par_op [p]) in
+    let avars = Input.get_freeids (app par_op [a]) in
+    let bvars = Input.get_freeids (app par_op [b]) in
+    let a' = term_abstract_ids a bvars in
+    let b' = term_abstract_ids b bvars in
+    let p' = abstract_ids p pvars in
+    let q = app (constid (pos 0) "stap_def" ) [a'; b'; p'] in
+    Spi.QueryStap (pos 0, q)
+
 %}
 
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE /* Add key cycle */
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE STAP /* Add key cycle, symbolic trace analysis */
 %token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU CHECKSIGN ADEC UNBLIND GETMSG	/* Asymmetric encryption, Blind, Sign, Hash, Mac, CheckSign, Adec, Unblind, Getmsg */
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
@@ -151,7 +168,8 @@ input_query:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
 | BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
 | SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
-| KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }			/* Add key cycle */
+| KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }					/* Add key cycle */
+| STAP LPAREN texp COMMA texp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 }	/* Add symbolic trace analysis */
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }

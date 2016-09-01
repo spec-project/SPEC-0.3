@@ -173,6 +173,33 @@ let prove_keycycle a =
   in 
      do_cleanup (do_query success failure) a reset
 
+(* Add symbolic trace analysis *)
+let prove_stap a =
+  let t0 = Unix.gettimeofday () in 
+  let time =
+      (fun () ->
+         if !System.time then
+           Format.printf "Running time: + %.0fs\n" (Unix.gettimeofday () -. t0))
+  in
+  let reset =
+      let s = Term.save_state () in
+      let ns = Term.save_namespace () in
+        fun () -> Term.restore_state s ; Term.restore_namespace ns
+  in
+  let found = ref false in
+  let success = (fun s k -> 
+         time () ;
+         found := true ;
+         Printf.printf "\nSymbolic trace analysis for A <~ B in P holds.\n" ;
+    )
+  in    
+  let failure = (fun () -> 
+       time () ; 
+       if not !found then Printf.printf "\nSymbolic trace analysis for A <~ B in P does not hold.\n"
+     ) 
+  in 
+     do_cleanup (do_query success failure) a reset
+
 let prove_show_def a = 
   let pre_show_def = Input.pre_predconstid (Input.dummy_pos) (Spi.Process.show_def_str) in 
   let d = Input.pre_qstring (Input.dummy_pos) a in 
@@ -286,6 +313,9 @@ let rec process_spi ?(interactive=false) parse lexbuf =
       | Spi.QueryKeyCycle (a,b) ->
 	  let q = System.translate_query b in
   	    System.clear_tables () ; prove_keycycle q
+      | Spi.QueryStap (a,b) ->
+	  let q = System.translate_query b in
+  	    System.clear_tables () ; prove_stap q
       | Spi.Command (c,a) -> command lexbuf (c,a)
     end ;
     if interactive then flush stdout

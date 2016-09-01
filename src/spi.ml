@@ -84,6 +84,7 @@ type input =
   | Def     of string * int * (Input.pos * Input.preterm * Input.preterm)
   | Query   of Input.pos * Input.preterm
   | QueryKeyCycle of Input.pos * Input.preterm	(* Add key cycle *)
+  | QueryStap of Input.pos * Input.preterm (* Add symbolic trace analysis *)
   | Command of string * string list
 
 

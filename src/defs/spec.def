@@ -24,6 +24,7 @@
 #include "bisim2latex.def".
 #include "trace.def".
 #include "keycycle.def".
+#include "stap.def".
 
 % Dummy definition; to be updated dynamically through the SPEC
 % frontend. 
@@ -279,6 +280,22 @@ keycycle_def (defProc P) :=
   printstr "\nChecking key cycle for: \n" /\
   print_proc R /\ printstr "\n" /\
   get_trace R T /\ 
-  detect_keycycle_trace T
-.
+  detect_keycycle_trace T.
+
+% Add symbolic trace analysis
+Kind def_term type.
+Type defTerm tm -> def_term.
+Type defTermAbs  (tm -> def_term) -> def_term. 
+
+Define stap_def : def_term -> def_term -> def_body -> prop by
+stap_def (defTermAbs x\A x) (defTermAbs x\B x) P :=
+  nabla x, stap_def (A (var x)) (B (var x)) P;
+stap_def (defTerm A) (defTermAbs x\B x) P :=
+  nabla x, stap_def (defTerm A) (B (var x)) P;
+stap_def (defTerm A) (defTerm B) (defAbs x\P x) :=
+  nabla x, stap_def (defTerm A) (defTerm B) (P (var x));
+stap_def (defTerm A) (defTerm B) (defProc P) :=
+  expand_defs P R /\
+  printstr "A: " /\ print_term A /\ printstr "\nB: " /\ print_term B /\ printstr "\nP: " /\ print_proc R /\ printstr "\n"
+  /\ forall T, get_trace R T -> stap A B T.
 
