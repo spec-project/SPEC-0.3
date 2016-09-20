@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SPEC                                                                     
-% Copyright (C) 2011-2012 Alwen Tiu                                             
+% Copyright (C) 2011-2016 Alwen Tiu, Ross Horne
 %
 % This program is free software; you can redistribute it and/or modify     
 % it under the terms of the GNU General Public License as published by     
@@ -282,20 +282,16 @@ keycycle_def (defProc P) :=
   get_trace R T /\ 
   detect_keycycle_trace T.
 
-% Add symbolic trace analysis
-Kind def_term type.
-Type defTerm tm -> def_term.
-Type defTermAbs  (tm -> def_term) -> def_term. 
-
-Define stap_def : def_term -> def_term -> def_body -> prop by
-stap_def (defTermAbs x\A x) (defTermAbs x\B x) P :=
+% Add symbolic trace analysis 
+Define stap_def : def_stap_act -> def_stap_act -> def_body -> prop by
+stap_def (defStapActAbs x\A x) (defStapActAbs x\B x) P :=
   nabla x, stap_def (A (var x)) (B (var x)) P;
-stap_def (defTerm A) (defTermAbs x\B x) P :=
-  nabla x, stap_def (defTerm A) (B (var x)) P;
-stap_def (defTerm A) (defTerm B) (defAbs x\P x) :=
-  nabla x, stap_def (defTerm A) (defTerm B) (P (var x));
-stap_def (defTerm A) (defTerm B) (defProc P) :=
+stap_def (defStapAct A) (defStapActAbs x\B x) P :=
+  nabla x, stap_def (defStapAct A) (B (var x)) P;
+stap_def (defStapAct A) (defStapAct B) (defAbs x\P x) :=
+  nabla x, stap_def (defStapAct A) (defStapAct B) (P (var x));
+stap_def (defStapAct A) (defStapAct B) (defProc P) :=
   expand_defs P R /\
-  printstr "A: " /\ print_term A /\ printstr "\nB: " /\ print_term B /\ printstr "\nP: " /\ print_proc R /\ printstr "\n"
+  printstr "A: " /\ print_stap_action A /\ printstr "\nB: " /\ print_stap_action B /\ printstr "\nP: " /\ print_proc R /\ printstr "\n"
   /\ forall T, get_trace R T -> stap A B T.
 

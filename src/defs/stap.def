@@ -1,70 +1,120 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SPEC 
-% Copyright (C) 2011-2016 Alwen Tiu, Ross Horne 
+% SPEC
+% Copyright (C) 2011-2016 Alwen Tiu, Ross Horne
 %
-% This program is free software; you can redistribute it and/or modify 
-% it under the terms of the GNU General Public License as published by 
+% This program is free software; you can redistribute it and/or modify
+% it under the terms of the GNU General Public License as published by
 % the Free Software Foundation; either version 2 of the License, or
-% (at your option) any later version.  
+% (at your option) any later version.
 %
-% This program is distributed in the hope that it will be useful,  
-% but WITHOUT ANY WARRANTY; without even the implied warranty of   
+% This program is distributed in the hope that it will be useful,
+% but WITHOUT ANY WARRANTY; without even the implied warranty of
 % MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-% GNU General Public License for more details. 
+% GNU General Public License for more details.
 %
 % You should have received a copy of the GNU General Public License
-% along with this code; if not, write to the Free Software Foundation, 
-% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA 
+% along with this code; if not, write to the Free Software Foundation,
+% Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #include "trace.def".
 
+Kind stap_action type.
+Type stap_act_in  tm -> tm -> stap_action.
+Type stap_act_out tm -> tm -> stap_action.
+
+Kind def_stap_act type.
+Type defStapAct stap_action -> def_stap_act.
+Type defStapActAbs (tm -> def_stap_act) -> def_stap_act.
+
+% Print stap action
+Define print_stap_action : stap_action -> prop by
+print_stap_action (stap_act_in A B)  := print_term A /\ printstr "(" /\ print_term B /\ printstr ")";
+print_stap_action (stap_act_out A B) := print_term A /\ printstr "<" /\ print_term B /\ printstr ">".
+
+% Print trace with action
+Define ptrace_action : trace -> prop
+by
+ptrace_action (t_bind T) := nabla x, ptrace_action (T x);
+ptrace_action emp := printstr "emp" ; 
+ptrace_action (t_in (act A) M T) :=
+  print_term A /\ printstr "(" /\ print_term M /\ printstr ")." /\ 
+  ptrace_action T ; 
+ptrace_action (t_out (act A) M T) :=
+  print_term A /\ printstr "<" /\ print_term M /\ printstr ">." /\ 
+  ptrace_action T.
+Define print_trace_action : trace -> prop
+by
+print_trace_action T :=
+  printstr "\n[" /\ ptrace_action T /\ printstr "]\n".
 
 % Convert a trace (without binders) to deducibility constraints.
-Define st_cst : trace -> list tm -> list constraint -> prop
+Define stap_trace_cst : trace -> list tm -> list constraint -> prop
 by 
-st_cst emp Pre nil;
-
-st_cst (t_in (act A) U T) Pre Cs :=
+stap_trace_cst emp Pre nil;
+stap_trace_cst (t_in (act A) U T) Pre Cs :=
   _if (det_mem A Pre)
-(Cs = cons (dedl Pre U) Ds /\ Pre1 = Pre)
-(Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) (cons (dedl Pre1 U) Ds))
-  /\ st_cst T Pre1 Ds;
-
-st_cst (t_out (act A) U T) Pre Cs :=
+    (Cs = cons (dedl Pre U) Ds /\ Pre1 = Pre)
+    (Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) (cons (dedl Pre1 U) Ds))
+  /\ stap_trace_cst T Pre1 Ds;
+stap_trace_cst (t_out (act A) U T) Pre Cs :=
   _if (det_mem A Pre)
-(Pre1 = Pre /\ Cs = Ds)
-(Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) Ds)
-  /\ st_cst T (cons U Pre1) Ds.
+    (Pre1 = Pre /\ Cs = Ds)
+    (Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) Ds)
+  /\ stap_trace_cst T (cons U Pre1) Ds.
 
-Define before : tm -> tm -> trace -> prop by
-before A B (t_in (act N) M T)  := N = A \/ (_not (N = B \/ M = B) /\ (M = A \/ before A B T));
-before A B (t_out (act N) M T) := N = A \/ (_not (N = B \/ M = B) /\ (M = A \/ before A B T)).
+% Combine two substitution list with common variable list
+Define stap_combine_subst : list sub_pair -> list sub_pair -> list sub_pair -> prop by
+stap_combine_subst nil nil nil;
+stap_combine_subst (cons (sub V V) Subst1) (cons (sub V V) Subst2) (cons (sub V V) Subst) := stap_combine_subst Subst1 Subst2 Subst;
+stap_combine_subst (cons (sub V A) Subst1) (cons (sub V V) Subst2) (cons (sub V A) Subst) := _not(V = A) /\ stap_combine_subst Subst1 Subst2 Subst;
+stap_combine_subst (cons (sub V V) Subst1) (cons (sub V B) Subst2) (cons (sub V B) Subst) := _not(V = B) /\ stap_combine_subst Subst1 Subst2 Subst.
 
-Define unify_trace : list tm -> trace -> tm -> list sub_pair -> prop by 
-unify_trace Vs (t_in  (act A) N T) M Subst := unify nil A M Vs Subst \/ unify nil N M Vs Subst \/ unify_trace Vs T M Subst;
-unify_trace Vs (t_out (act A) N T) M Subst := unify nil A M Vs Subst \/ unify nil N M Vs Subst \/ unify_trace Vs T M Subst.
+% stap_unify A B M N Vs Subst
+% One substitution list to unify A and B; M and N
+Define stap_unify : tm -> tm -> tm -> tm -> list tm -> list sub_pair -> prop by
+stap_unify A B M N Vs Subst := unify nil A B Vs Subst1 /\ unify nil M N Vs Subst2 /\ stap_combine_subst Subst1 Subst2 Subst.
 
-Define stap : tm -> tm -> trace -> prop by
+Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by 
+unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst;
+unify_trace Vs (t_out (act A) M T) StapAct Subst := (StapAct = stap_act_out B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst.
+
+% Get variable list in stap_action
+Define stap_get_var : stap_action -> list tm -> list tm -> prop by
+stap_get_var (stap_act_in  N M) VarIn VarOut := get_var N VarIn VarOut1 /\ get_var M VarOut1 VarOut;
+stap_get_var (stap_act_out N M) VarIn VarOut := get_var N VarIn VarOut1 /\ get_var M VarOut1 VarOut.
+
+% Apply substitution to stap_action
+Define copy_stap_action : list sub_pair -> stap_action -> stap_action -> prop by
+copy_stap_action Subst (stap_act_in  A M) (stap_act_in  B N) := copyterm Subst A B /\ copyterm Subst M N;
+copy_stap_action Subst (stap_act_out A M) (stap_act_out B N) := copyterm Subst A B /\ copyterm Subst M N.
+
+Define before : stap_action -> stap_action -> trace -> list tm -> prop by
+before A B (t_in  (act M) N T) Vs :=  _not(B = stap_act_in  U V /\ stap_unify M U N V Vs Subst) /\ ((A = stap_act_in  X Y /\ stap_unify M X N Y Vs Subst) \/ before A B T Vs);
+before A B (t_out (act M) N T) Vs :=  _not(B = stap_act_out U V /\ stap_unify M U N V Vs Subst) /\ ((A = stap_act_out X Y /\ stap_unify M X N Y Vs Subst) \/ before A B T Vs).
+
+Define stap : stap_action -> stap_action -> trace -> prop by
 stap A B emp;
 stap A B (t_bind AbsT) := nabla x, stap A B (AbsT x);
 
 stap A B T :=
-  det_or (T = t_in Act M T') (T = t_out Act M T') /\
-  get_var B nil VsB /\
+  det_or (T = t_in Act M T') (T = t_out Act M T') /\	
+  stap_get_var B nil VsB /\
   trace_vars T VsB Vars /\
+  % Case when Sub does not exist ?
   forall Sub, _distinct(unify_trace Vars T A Sub) ->
     (
       exists TTheta, copytrace Sub T TTheta /\
-      exists Cs, st_cst TTheta nil Cs /\
-      exists Vs, trace_vars TTheta nil Vs /\ 
+      exists Cs, stap_trace_cst TTheta nil Cs /\
+      exists Vs, trace_vars TTheta nil Vs /\
       forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
         (
-	  exists ATheta, copyterm Sub A ATheta /\
-	  exists BTheta, copyterm Sub B BTheta /\
-	  exists AThetaTheta, copyterm Sol ATheta AThetaTheta /\
-	  exists BThetaTheta, copyterm Sol BTheta BThetaTheta /\
+	  exists ATheta, copy_stap_action Sub A ATheta /\
+	  exists BTheta, copy_stap_action Sub B BTheta /\
+	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\
+	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\
 	  exists TThetaTheta, copytrace Sol TTheta TThetaTheta /\
-	  before AThetaTheta BThetaTheta TThetaTheta
+	  % Vs ?
+	  before AThetaTheta BThetaTheta TThetaTheta Vs
         )
     ).

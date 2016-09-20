@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SPEC                                                                     
-% Copyright (C) 2011-2012 Alwen Tiu                                             
+% Copyright (C) 2011-2016 Alwen Tiu, Ross Horne
 %
 % This program is free software; you can redistribute it and/or modify     
 % it under the terms of the GNU General Public License as published by     
@@ -44,7 +44,7 @@ mem_bitrace M N (cons X L) :=
       true
       (mem_bitrace M N B).
    
-% print bitraces
+% Print bitraces
 Define pbitrace : list bt_pair -> prop
 by 
 pbitrace nil ; 
@@ -109,8 +109,8 @@ fCS1 (cons V Vs) H Sub1 Sub2_In Sub2_Out :=
   prefix V H H1 /\ bt2thy H1 Thy /\ 
   copyterm Sub1 V M /\
   apply_subst_thy Sub1 Sub2_In Thy Thy1 /\ 
-  reduce Thy1 Thy2 /\ %println " Trying: " /\ printstr " Term: " /\ print_term M /\ printstr " Thy: " /\ print_thy Thy2 /\ printstr " H: " /\ print_bitrace H1 /\
-  deduce_r Thy2 M N /\ %println " OK! " /\
+  reduce Thy1 Thy2 /\
+  deduce_r Thy2 M N /\
   fCS1 Vs H Sub1 (cons (sub V N) Sub2_In) Sub2_Out.
 
 Define fun_CS1 : list tm -> list bt_pair -> list sub_pair -> list sub_pair -> prop

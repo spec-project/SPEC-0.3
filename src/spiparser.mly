@@ -1,6 +1,6 @@
 /***************************************************************************
 * SPEC                                                                     *
-* Copyright (C) 2011-2012 Alwen Tiu                                        *
+* Copyright (C) 2011-2016 Alwen Tiu, Ross Horne                            *
 *                                                                          *
 * This program is free software; you can redistribute it and/or modify     *
 * it under the terms of the GNU General Public License as published by     *
@@ -62,7 +62,8 @@
   (* Adec, Unblind, Getmsg *)
   let letadec_op = constid (pos 0) "letadec"
   let letunblind_op = constid (pos 0) "letunblind"
-  (* let letgetmsg_op = constid (pos 0) "letgetmsg" *)
+  let stap_out_op = constid (pos 0) "stap_act_out"
+  let stap_in_op  = constid (pos 0) "stap_act_in"
 
   let app s t = Input.pre_app (pos 0) s t 
   let lambda v t = Input.pre_lambda (pos 0) [v] t 
@@ -124,18 +125,18 @@
     Spi.QueryKeyCycle (pos 0, q)
 
   (* Add symbolic trace analysis *)
-  let term_abstract_ids tm vars =
-    let term = constid (pos 0) "defTerm" in 
-    let abs  = constid (pos 0) "defTermAbs" in 
+  let stap_abstract_ids sa vars =
+    let stap_action = constid (pos 0) "defStapAct" in 
+    let abs  = constid (pos 0) "defStapActAbs" in 
     List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars
-               (app term [tm])
+               (app stap_action [sa])
 
   let stapquery a b p =
     let pvars = Input.get_freeids (app par_op [p]) in
     let avars = Input.get_freeids (app par_op [a]) in
     let bvars = Input.get_freeids (app par_op [b]) in
-    let a' = term_abstract_ids a bvars in
-    let b' = term_abstract_ids b bvars in
+    let a' = stap_abstract_ids a bvars in
+    let b' = stap_abstract_ids b bvars in
     let p' = abstract_ids p pvars in
     let q = app (constid (pos 0) "stap_def" ) [a'; b'; p'] in
     Spi.QueryStap (pos 0, q)
@@ -169,7 +170,7 @@ input_query:
 | BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
 | SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
 | KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }					/* Add key cycle */
-| STAP LPAREN texp COMMA texp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 }	/* Add symbolic trace analysis */
+| STAP LPAREN saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 }	/* Add symbolic trace analysis */
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }
@@ -208,7 +209,6 @@ pexp:
 | lpref IN pexp { let t,(v1,v2) = $1 in app let_op [t; lambda v1 (lambda v2 $3)] }
 | ladecpref IN pexp { let (a1,a2),b = $1 in app letadec_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
 | lunblindpref IN pexp { let (a1,a2),b = $1 in app letunblind_op [a1;a2; lambda b $3] }		/* Adec, Unblind, Getmsg */
-/*| lgetmsgpref IN pexp { let a,b = $1 in app letgetmsg_op [a; lambda b $3] }*/			/* Adec, Unblind, Getmsg */
 | BANG pexp { app bang_op [$2] }
 | TAU DOT pexp { app tau_op [$3] }
 | TAU { app tau_op [zero_op] }
@@ -303,6 +303,10 @@ ltexp:
 atexp:
 | LPAREN texp RPAREN { $2 }
 
+/* Stap Action */
+saexp:
+| name_id LANGLE texp RANGLE { app stap_out_op [$1;$3] }
+| name_id LPAREN texp RPAREN { app stap_in_op [$1;$3] }
 %%
 
 
