@@ -99,7 +99,6 @@ stap_unify A B M N Vs Subst := unify nil A B Vs Subst1 /\ unify nil M N Vs Subst
 % B is not unified with t_out (act A) (var X)
 Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by
 unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst;
-%unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ _if (M = var X) (stap_unify A B N N Vs Subst) (stap_unify A B M N Vs Subst)) \/ unify_trace Vs T StapAct Subst;
 unify_trace Vs (t_out (act A) M T) StapAct Subst := (StapAct = stap_act_out B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst.
 
 % Get variable list in stap_action
