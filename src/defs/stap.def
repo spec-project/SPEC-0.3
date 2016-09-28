@@ -32,21 +32,41 @@ Define print_stap_action : stap_action -> prop by
 print_stap_action (stap_act_in A B)  := print_term A /\ printstr "(" /\ print_term B /\ printstr ")";
 print_stap_action (stap_act_out A B) := print_term A /\ printstr "<" /\ print_term B /\ printstr ">".
 
-% Print trace with action
-Define ptrace_action : trace -> prop
+% Get a stap trace of a process (not necessarily a completed trace).
+% stap trace does not contain tau
+Define get_stap_trace_proc  : list tm -> trace -> proc -> trace -> prop,
+       get_stap_trace_agent : list tm -> trace -> action -> agent -> trace -> prop,
+       get_stap_trace_cont  : list tm -> trace -> continuation -> trace -> prop 
 by
-ptrace_action (t_bind T) := nabla x, ptrace_action (T x);
-ptrace_action emp := printstr "emp" ; 
-ptrace_action (t_in (act A) M T) :=
-  print_term A /\ printstr "(" /\ print_term M /\ printstr ")." /\ 
-  ptrace_action T ; 
-ptrace_action (t_out (act A) M T) :=
-  print_term A /\ printstr "<" /\ print_term M /\ printstr ">." /\ 
-  ptrace_action T.
-Define print_trace_action : trace -> prop
-by
-print_trace_action T :=
-  printstr "\n[" /\ ptrace_action T /\ printstr "]\n".
+
+get_stap_trace_agent Vs T1 A (con M P) T :=
+		add_out A M T1 T2 /\ get_stap_trace_proc Vs T2 P T ;
+get_stap_trace_agent Vs T1 A (abs P) (t_bind T) :=
+		nabla x, 
+		      add_in A (var x) T1 (T2 x) /\
+		      get_stap_trace_proc (cons (var x) Vs) (T2 x) (P (var x)) (T x) ;
+get_stap_trace_agent Vs T1 A (new P) (t_bind T) :=
+		nabla x, get_stap_trace_agent Vs T1 A (P (nm x)) (T x) ;
+
+get_stap_trace_cont Vs T1 (contProc A Q Sub) T :=
+	       copytrace Sub T1 T2 /\ 
+	       get_stap_trace_proc Vs T2 Q T ;
+          
+get_stap_trace_cont Vs T1 (contAgent A Q Sub) T :=
+	       copytrace Sub T1 T2 /\
+	       get_stap_trace_agent Vs T2 A Q T ;
+
+get_stap_trace_cont Vs T1 (abscont C) (t_bind T) :=
+	       nabla x, get_stap_trace_cont (cons (var x) Vs) T1 (C x) (T x) ;
+
+get_stap_trace_proc Vs T P T ;
+get_stap_trace_proc Vs T1 P T := c_oneAbs Vs P C /\ get_stap_trace_cont Vs T1 C T ;
+get_stap_trace_proc Vs T1 P T := c_oneCon Vs P C /\ get_stap_trace_cont Vs T1 C T. 
+
+
+% Get stap trace
+Define get_stap_trace : proc -> trace -> prop by
+get_stap_trace P T := get_stap_trace_proc nil emp P T.
 
 % Convert a trace (without binders) to deducibility constraints.
 Define stap_trace_cst : trace -> list tm -> list constraint -> prop
@@ -75,8 +95,11 @@ stap_combine_subst (cons (sub V V) Subst1) (cons (sub V B) Subst2) (cons (sub V 
 Define stap_unify : tm -> tm -> tm -> tm -> list tm -> list sub_pair -> prop by
 stap_unify A B M N Vs Subst := unify nil A B Vs Subst1 /\ unify nil M N Vs Subst2 /\ stap_combine_subst Subst1 Subst2 Subst.
 
-Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by 
+% unify an action B with trace T
+% B is not unified with t_out (act A) (var X)
+Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by
 unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst;
+%unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ _if (M = var X) (stap_unify A B N N Vs Subst) (stap_unify A B M N Vs Subst)) \/ unify_trace Vs T StapAct Subst;
 unify_trace Vs (t_out (act A) M T) StapAct Subst := (StapAct = stap_act_out B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst.
 
 % Get variable list in stap_action
@@ -89,32 +112,35 @@ Define copy_stap_action : list sub_pair -> stap_action -> stap_action -> prop by
 copy_stap_action Subst (stap_act_in  A M) (stap_act_in  B N) := copyterm Subst A B /\ copyterm Subst M N;
 copy_stap_action Subst (stap_act_out A M) (stap_act_out B N) := copyterm Subst A B /\ copyterm Subst M N.
 
-Define before : stap_action -> stap_action -> trace -> list tm -> prop by
-before A B (t_in  (act M) N T) Vs :=  _not(B = stap_act_in  U V /\ stap_unify M U N V Vs Subst) /\ ((A = stap_act_in  X Y /\ stap_unify M X N Y Vs Subst) \/ before A B T Vs);
-before A B (t_out (act M) N T) Vs :=  _not(B = stap_act_out U V /\ stap_unify M U N V Vs Subst) /\ ((A = stap_act_out X Y /\ stap_unify M X N Y Vs Subst) \/ before A B T Vs).
+Define before : stap_action -> stap_action -> trace -> prop by
+%before A B emp;
+before A B (t_in  (act M) N T) :=  _not(B = stap_act_in  U V /\ M = U /\ N = V) /\ ((A = stap_act_in  X Y /\ M = X /\ N = Y) \/ before A B T);
+before A B (t_out (act M) N T) :=  _not(B = stap_act_out U V /\ M = U /\ N = V) /\ ((A = stap_act_out X Y /\ M = X /\ N = Y) \/ before A B T).
 
 Define stap : stap_action -> stap_action -> trace -> prop by
 stap A B emp;
 stap A B (t_bind AbsT) := nabla x, stap A B (AbsT x);
 
 stap A B T :=
-  det_or (T = t_in Act M T') (T = t_out Act M T') /\	
+  det_or (T = t_in Act M T') (T = t_out Act M T') /\
+  printstr "\nT : " /\ print_trace_action T /\
   stap_get_var B nil VsB /\
   trace_vars T VsB Vars /\
-  % Case when Sub does not exist ?
-  forall Sub, _distinct(unify_trace Vars T A Sub) ->
+  forall Sub, _distinct(unify_trace Vars T B Sub) ->
     (
+      printstr "\nSub :" /\ print_subst Sub /\
       exists TTheta, copytrace Sub T TTheta /\
       exists Cs, stap_trace_cst TTheta nil Cs /\
       exists Vs, trace_vars TTheta nil Vs /\
       forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
         (
+	  printstr "\nSol :" /\ print_subst Sol /\
 	  exists ATheta, copy_stap_action Sub A ATheta /\
 	  exists BTheta, copy_stap_action Sub B BTheta /\
-	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\
-	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\
+	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\ printstr "\nAThetaTheta" /\ print_stap_action AThetaTheta /\
+	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\ printstr "\nBThetaTheta" /\ print_stap_action BThetaTheta /\
 	  exists TThetaTheta, copytrace Sol TTheta TThetaTheta /\
-	  % Vs ?
-	  before AThetaTheta BThetaTheta TThetaTheta Vs
+	  printstr "\nTThetaTheta : " /\ print_trace_action TThetaTheta /\
+	  before AThetaTheta BThetaTheta TThetaTheta
         )
     ).

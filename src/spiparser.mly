@@ -132,11 +132,9 @@
                (app stap_action [sa])
 
   let stapquery a b p =
-    let pvars = Input.get_freeids (app par_op [p]) in
-    let avars = Input.get_freeids (app par_op [a]) in
-    let bvars = Input.get_freeids (app par_op [b]) in
-    let a' = stap_abstract_ids a bvars in
-    let b' = stap_abstract_ids b bvars in
+    let pvars = Input.get_freeids (app par_op [a;b;p]) in
+    let a' = stap_abstract_ids a pvars in
+    let b' = stap_abstract_ids b pvars in
     let p' = abstract_ids p pvars in
     let q = app (constid (pos 0) "stap_def" ) [a'; b'; p'] in
     Spi.QueryStap (pos 0, q)
