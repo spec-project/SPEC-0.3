@@ -52,6 +52,7 @@ rule token = parse
 | "sim" { SIM }
 | "keycycle" { KEYCYCLE }
 | "stap" { STAP }
+| "absurd" { ABSURD }
 | "," { COMMA }
 | ";" { SEMICOLON }
 | "nu" { NU }

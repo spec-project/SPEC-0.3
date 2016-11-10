@@ -22,13 +22,19 @@
 Kind stap_action type.
 Type stap_act_in  tm -> tm -> stap_action.
 Type stap_act_out tm -> tm -> stap_action.
+Type absurd stap_action.
 
 Kind def_stap_act type.
 Type defStapAct stap_action -> def_stap_act.
 Type defStapActAbs (tm -> def_stap_act) -> def_stap_act.
 
+Kind stap_body type.
+Type defStapBody def_stap_act -> def_stap_act -> def_body -> stap_body.
+Type defStapBodyAbs (tm -> stap_body) -> stap_body.
+
 % Print stap action
 Define print_stap_action : stap_action -> prop by
+print_stap_action absurd := printstr "absurd";
 print_stap_action (stap_act_in A B)  := print_term A /\ printstr "(" /\ print_term B /\ printstr ")";
 print_stap_action (stap_act_out A B) := print_term A /\ printstr "<" /\ print_term B /\ printstr ">".
 
@@ -129,17 +135,19 @@ stap A B T :=
     (
       printstr "\nSub :" /\ print_subst Sub /\
       exists TTheta, copytrace Sub T TTheta /\
+      printstr "\nTTheta :" /\ print_trace_action TTheta /\
       exists Cs, stap_trace_cst TTheta nil Cs /\
       exists Vs, trace_vars TTheta nil Vs /\
       forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
         (
-	  printstr "\nSol :" /\ print_subst Sol /\
+	  printstr "\n\tSol :" /\ print_subst Sol /\
+	  % A = absurd will be false in this step
 	  exists ATheta, copy_stap_action Sub A ATheta /\
 	  exists BTheta, copy_stap_action Sub B BTheta /\
-	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\ printstr "\nAThetaTheta" /\ print_stap_action AThetaTheta /\
-	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\ printstr "\nBThetaTheta" /\ print_stap_action BThetaTheta /\
+	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\ printstr "\n\tAThetaTheta : " /\ print_stap_action AThetaTheta /\
+	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\ printstr "\n\tBThetaTheta : " /\ print_stap_action BThetaTheta /\
 	  exists TThetaTheta, copytrace Sol TTheta TThetaTheta /\
-	  printstr "\nTThetaTheta : " /\ print_trace_action TThetaTheta /\
+	  printstr "\n\tTThetaTheta : " /\ print_trace_action TThetaTheta /\
 	  before AThetaTheta BThetaTheta TThetaTheta
         )
     ).

@@ -1,0 +1,55 @@
+% 0. - --> E: A, B, kOld, {A, kOld}Kb 
+% 1. A --> B: A, Na 
+% 2. B --> S: B, {A,Na,Nb}Kb 
+% 3. S --> A: {B,k,Na,Nb}kA, {A,k}Kb (k new session key) 
+% 4. A --> B: {A,k}kB, {Nb}k 
+
+
+A(a, b, c_ab, c_as, kas) :=
+  nu(na).
+  c_ab< <a, na> >.
+  c_as(x).				% < {B,k,Na,Nb}kA, {A,k}Kb >
+  let <m1,n1> = x in
+  case m1 of enc(y, kas) in
+  let <m2,n2> = y in
+  let <m3,n3> = n2 in
+  let <m4,n4> = n3 in
+  [b = m2] 
+  [na = m4]
+  c_ab< <n1, enc(n4, m3)> >;
+
+
+B(a, b, c_ab, c_bs, kbs, secret) := 
+  nu(nb).
+  c_ab(x).
+  let <m1,n1> = x in 
+  [a = m1]
+  c_bs< <b, enc(<a, < n1, nb > >, kbs)> >.
+  c_ab(y).				% {A,k}kB, {Nb}k 
+  let <m1,n1> = y in 
+  case m1 of enc(z, kbs) in
+  let <m2,n2> = z in 
+  case n1 of enc(t, n2) in
+  [a = m2] 
+  [nb = t] 
+  c_ab< enc(secret, n2) >;
+
+
+S(a, b, c_as, c_bs, kas, kbs) := 
+  nu(kab). 
+  c_bs(x).				% < B, { < A, < Na, Nb > > }Kb
+  let <m1,n1> = x in
+  case n1 of enc(y, kbs) in 
+  let <m2,n2> = y in
+  [b = m1] 
+  [a = m2]
+  c_as< <enc(< b, < kab, n2 > >, kas), enc(<a, kab>, kbs)> > ;
+
+System(x, c_ab, c_as, c_bs, secret) :=
+  nu(a, b, k_old, kas,kbs).
+  x<<a,b,k_old,enc(<a,k_old>,kbs)>>.
+  (A{a, b, c_ab, c_as, kas} | B{a, b, c_ab, c_bs, kbs, secret} | S{a, b, c_as, c_bs, kas, kbs});
+  
+% #load "examples/stap/stap-yahalom.spi";
+% Secrecy: The environments never learns secret
+% stap(nu(secret),absurd,guard(secret),System{x, c_ab,c_as,c_bs,secret} | guard(y));

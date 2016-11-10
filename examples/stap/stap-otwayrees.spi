@@ -1,0 +1,71 @@
+% Otway-Rees protocol
+%
+% I is a malicious insider, k the new secret key 
+% 0. - --> E: A, B, I, kI 
+% 1. A --> B: nA, A, B, {nA,A,B}kA 
+% 2. B --> S: nA, A, B, {nA,A,B}kA, nB, {nA,A,B}kB 
+% 3. S --> B: nA, {k,nA}kA, {k,nB}kB 
+% 4. B --> A: nA, {k,nA}kA 
+
+% There is a subtle attack on this protocol. 
+% The attack shows up in configurations that include a server S, an agent A 
+% that may act either as the receiver or as the responder of a given session, 
+% and a malicious insider I that has registered 
+% himself as a participant, with identifier I and a long-term key kI shared 
+% with S. The role of the intruder is played by the environment. 
+% Agent A is willing to engage in a session with both B and I. 
+% We show below the code corresponding to this 'minimal' configuration.
+%
+% Section 7 - Symbolic Trace Analysis of cryptographic protocols (Extended version) - Michele Boreale 
+
+Initiator(a,b,ska,c_a,accept) :=
+  nu(na).
+  c_a< < < < na,a >,b >,enc(< < na,a >,b >,ska)> >.
+  c_a(x).				% x <-- <m1, enc(y,ska)>
+  let <m1,n1> = x in
+  [m1 = na] case n1 of enc(y,ska) in
+  let <m2,n2> = y in
+  [n2 = na] accept<hash(x)>;
+
+
+Responder(a,b,skb,c_a,c_s):=
+  c_a(x).				% x <-- <m3, n3, n2, n1>
+  let <m1,n1> = x in
+  let <m2,n2> = m1 in
+  [n2 = b] let <m3,n3> = m2 in
+  [n3 = a] nu(nb).
+  c_s< < <x, nb>, enc(m1,skb)>>.
+  c_s(y).
+  let <m4,n4> = y in
+  case y of enc(z,skb) in
+  let <m5,n5> = z in
+  [n5 = nb] let <m6,n6> = m4 in
+  [m6 = m3] c_a<m4>;
+  
+
+Server(a,b,ska,skb,c_s) :=
+  c_s(x).				% x <-- <m5, n5, n4, enc(z,ska), n2, enc(y,skb)>
+  let <m1,n1> = x in
+  case n1 of enc(y,skb) in
+  let <m2,n2> = m1 in
+  let <m3,n3> = m2 in
+  case n3 of enc(z,ska) in
+  [y = z] [m3 = y] let <m4,n4> = m3 in
+  [n4 = b] let <m5,n5> = m4 in
+  [n5 = a] nu(k).
+  c_s<<m5, enc(<k,m5>,ska), enc(<k,n2>,skb)>>;
+
+System(x, c_a, c_s, accept_ab, accept_ac) :=
+  nu(a,b,c,ska,skb,skc).
+  x<<a,b,c,skc,accept_ab,accept_ac>>.
+  (
+    Initiator {a, b, ska, c_a, accept_ab} |
+    Initiator {a, c, ska, c_a, accept_ac} |
+    Responder {a, c, skc, c_a,c_s} |
+    Server {a,c,ska,skc,c_s}
+  );
+
+% #load "examples/stap/stap-otwayrees.spi";
+% stap(nu(accept_ab,accept_ac), absurd, accept_ac<hash(t)>, System{x, c_a, c_s, accept_ab, accept_ac});
+
+

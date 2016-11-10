@@ -97,11 +97,6 @@ simplify (letunblind M N (x\ P x)) Q :=
   _if (R = (x\ zero))
       (Q = zero)
       (Q = (letunblind M N R)) ;
-%simplify (letgetmsg M (x\ P x)) Q := 
-%  (nabla x, simplify (P x) (R x)) /\ 
-%  _if (R = (x\ zero))
-%      (Q = zero)
-%      (Q = (letgetmsg M R)) ;
 
 simplify (let M (x\y\ P x y)) Q :=
   (nabla x y, simplify (P x y) (R x y)) /\ 

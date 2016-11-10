@@ -282,11 +282,16 @@ keycycle_def (defProc P) :=
   get_trace R T /\ 
   detect_keycycle_trace T.
 
-% Add symbolic trace analysis 
-Define stap_def : def_stap_act -> def_stap_act -> def_body -> prop by
-stap_def (defStapActAbs x\A x) (defStapActAbs x\B x) (defAbs x\P x) :=
-  nabla x, stap_def (A (var x)) (B (var x)) (P (var x));
-stap_def (defStapAct A) (defStapAct B) (defProc P) :=
+% Add symbolic trace analysis
+Define stap_body_def : def_stap_act -> def_stap_act -> def_body -> prop by
+stap_body_def (defStapActAbs x\A x) (defStapActAbs x\B x) (defAbs x\P x) :=
+  nabla x, stap_body_def (A (var x)) (B (var x)) (P (var x));
+stap_body_def (defStapAct A) (defStapAct B) (defProc P) :=
   expand_defs P R /\
   printstr "A: " /\ print_stap_action A /\ printstr "\nB: " /\ print_stap_action B /\ printstr "\nP: " /\ print_proc R /\ printstr "\n" /\
-  forall T, get_stap_trace R T -> stap A B T.
+  (B = absurd \/ forall T, get_stap_trace R T -> stap A B T).
+
+Define stap_def : stap_body -> prop by
+stap_def (defStapBodyAbs x\SB x) := nabla x, stap_def (SB (nm x));
+stap_def (defStapBody A B P) := stap_body_def A B P.
+

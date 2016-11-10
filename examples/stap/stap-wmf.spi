@@ -1,64 +1,38 @@
 % Wide mouthed frog protocol. 
+% A -> S : {k}kas
+% S -> B : {k}ksb
+% A -> B : {d}k
 
 A(datum,kas,c_ab,c_as) := 
- nu(kab).
- c_as<enc(kab,kas)>.
- c_ab<<enc(datum,kab),enc(datum,kab)>> ;
+  nu(kab).
+  c_as<enc(kab,kas)>.
+  c_ab<enc(datum,kab)> ;
 
 S(kas,ksb,c_as,c_sb) := 
- c_as(x).
- case x of enc(y,kas) in
- c_sb<enc(y,ksb)> ;
+  c_as(x).
+  case x of enc(y,kas) in
+  c_sb<enc(y,ksb)> ;
 
 B(ksb,c_ab,c_sb,accept) :=
   c_sb(x).
   case x of enc(y,ksb) in 
   c_ab(z).
-  let <m1,n1> = z in
-  case m1 of enc(w,y) in
+  case z of enc(w,y) in
   accept<hash(z)>;
 
 Inst(c_as,c_sb,c_ab,accept,datum) :=
   nu(kas,ksb).
   (A{datum,kas,c_ab,c_as} | S{kas,ksb,c_as,c_sb} | B{ksb,c_ab,c_sb,accept});
 
-B_spec(datum,ksb,c_ab,c_sb,accept) :=
-  c_sb(x).
-  case x of enc(y,ksb) in 
-  c_ab(z).
-  let <m1,n1> = z in
-  case m1 of enc(w,y) in
-  [w = datum] accept<hash(z)>;
-
-Inst_spec(c_as,c_sb,c_ab,accept,datum) :=
-  nu(kas,ksb).
-  (A{datum,kas,c_ab,c_as} | S{kas,ksb,c_as,c_sb} | B_spec{datum,ksb,c_ab,c_sb,accept});
-
-A_secrecy(datum,kas,c_ab,c_as) := 
- nu(kab).
- c_as<enc(kab,kas)>.
- c_ab<enc(datum,kab)> ;
-
-B_secrecy(ksb,c_ab,c_sb,accept) :=
-  c_sb(x).
-  case x of enc(y,ksb) in 
-  c_ab(z).
-  case z of enc(w,y) in
-  accept<z>;
-
-Inst_secrecy(c_as,c_sb,c_ab,accept,datum) :=
-  nu(kas,ksb).
-  (A_secrecy{datum,kas,c_ab,c_as} | S{kas,ksb,c_as,c_sb} | B_secrecy{ksb,c_ab,c_sb,accept});
-
 % Authentication
-% 1. bisim(Inst_spec{c_as,c_sb,c_ab,accept,x}, Inst{c_as,c_sb,c_ab,accept,x});	--> Holds (24s)
-% 2. if B accepts as 'good' a datum "datum" encrypted under key "kab" then this message has actually been sent by A
-% stap(c_ab<<t,t>>,accept<hash(<t,t>)>,Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Holds (36s)
-% Explanation: Only channel c_ab outputs <<t,t>> - Only channel accept outputs hash(<t,t>)
-% stap(accept<hash(<t,t>)>,c_ab<<t,t>>,Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Does not hold (6s)
+% If B accepts as 'good' a datum "datum" encrypted under key "kab" then this message has actually been sent by A
+% stap(nu(datum,c_ab,accept),c_ab<t>,accept<hash(t)>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Holds (43s)
+% Explanation: Only accept channel outputs the message with the format hash(t)
+% stap(nu(datum,c_ab,accept),accept<hash(t)>,c_ab<t>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Does not hold (5s)
 
 % Secrecy
-% 1. bisim(Inst_spec{c_as,c_sb,c_ab,accept,x}, Inst{c_as,c_sb,c_ab,accept,y});	--> Holds (28s)
-% 2. The environment should never learn the confidential datum (datum)
-% stap(guard<hash(hash(t))>,guard<hash(t)>,nu(datum).(Inst_secrecy{c_as,c_sb,c_ab,accept,datum} | guard(x).[x=datum]guard<hash(datum)>)); --> Holds (1304s)
-% Explanation: Channel "guard" never outputs hash(hash(t)) - Only channel "guard" might outputs hash(t)
+% The environment should never learn the confidential datum (datum)
+% stap(nu(datum),absurd,guard(datum),Inst{c_as,c_sb,c_ab,accept,datum} | guard(x)); --> Holds (896s)
+
+
+

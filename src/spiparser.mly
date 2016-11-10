@@ -64,6 +64,7 @@
   let letunblind_op = constid (pos 0) "letunblind"
   let stap_out_op = constid (pos 0) "stap_act_out"
   let stap_in_op  = constid (pos 0) "stap_act_in"
+  let absurd_op = constid (pos 0) "absurd"
 
   let app s t = Input.pre_app (pos 0) s t 
   let lambda v t = Input.pre_lambda (pos 0) [v] t 
@@ -131,19 +132,44 @@
     List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars
                (app stap_action [sa])
 
-  let stapquery a b p =
-    let pvars = Input.get_freeids (app par_op [a;b;p]) in
-    let a' = stap_abstract_ids a pvars in
-    let b' = stap_abstract_ids b pvars in
-    let p' = abstract_ids p pvars in
-    let q = app (constid (pos 0) "stap_def" ) [a'; b'; p'] in
+  let rec remove_duplicate lst lst' =
+    match lst' with
+    | [] -> lst
+    | h::t -> remove_duplicate (List.filter (fun x -> x <> h) lst) t
+
+  let defStapBody n a b p =
+    let vars = Input.get_freeids (app par_op [a;b;p]) in
+    let vars' = remove_duplicate vars n in
+    let a' = stap_abstract_ids a vars' in
+    let b' = stap_abstract_ids b vars' in
+    let p' = abstract_ids p vars' in
+    app (constid (pos 0) "defStapBody" ) [a'; b'; p']
+
+  let defStapBodyAbs a b = 
+    let abs_var x t = app (constid (pos 0) "defStapBodyAbs" ) [lambda x t] in 
+        List.fold_right abs_var a b
+
+  let stapquery n a b p =
+    let n' = List.map (fun (x,y,z) -> y) n in
+    let sb = defStapBody n' a b p in
+    let sb' = defStapBodyAbs n sb in
+    let q = app (constid (pos 0) "stap_def" ) [sb'] in
+    Spi.QueryStap (pos 0, q)
+
+  let stapqueryshort a b p =
+    let vars = Input.get_freeids (app par_op [a;b;p]) in
+    let a' = stap_abstract_ids a vars in
+    let b' = stap_abstract_ids b vars in
+    let p' = abstract_ids p vars in
+    let sb = app (constid (pos 0) "defStapBody" ) [a'; b'; p'] in
+    let q = app (constid (pos 0) "stap_def" ) [sb] in
     Spi.QueryStap (pos 0, q)
 
 %}
 
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE STAP /* Add key cycle, symbolic trace analysis */
-%token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU CHECKSIGN ADEC UNBLIND GETMSG	/* Asymmetric encryption, Blind, Sign, Hash, Mac, CheckSign, Adec, Unblind, Getmsg */
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE STAP
+%token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU ABSURD CHECKSIGN ADEC UNBLIND GETMSG
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
 %token <string> AID
@@ -167,8 +193,9 @@ input_query:
 | head DEF pexp SEMICOLON { mkdef $1 $3  }
 | BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
 | SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
-| KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }					/* Add key cycle */
-| STAP LPAREN saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 }	/* Add symbolic trace analysis */
+| KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }
+| STAP LPAREN nupref COMMA saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 $9 }
+| STAP LPAREN saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapqueryshort $3 $5 $7 }
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }
 | SHARP ID AID SEMICOLON { Spi.Command ($2, [$3] ) }
@@ -187,7 +214,6 @@ head:
             raise (Spi.Duplicate_agent_def $1)       
           else ($1,$3) 
       }
-
 
 pexp:
 | agent { $1 }
@@ -305,6 +331,7 @@ atexp:
 saexp:
 | name_id LANGLE texp RANGLE { app stap_out_op [$1;$3] }
 | name_id LPAREN texp RPAREN { app stap_in_op [$1;$3] }
+| ABSURD { absurd_op }
 %%
 
 
