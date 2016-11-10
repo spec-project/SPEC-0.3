@@ -194,7 +194,7 @@ input_query:
 | BISIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_false)) ; mkquery $3 $5 }
 | SIM LPAREN pexp COMMA pexp RPAREN SEMICOLON  { System.update_def (Spi.Process.sim_opt) (Term.lambda 0 (Term.op_true)) ; mkquery $3 $5 }
 | KEYCYCLE LPAREN pexp RPAREN SEMICOLON { kcquery $3 }
-| STAP LPAREN nupref COMMA saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapquery $3 $5 $7 $9 }
+| nupref DOT STAP LPAREN saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapquery $1 $5 $7 $9 }
 | STAP LPAREN saexp COMMA saexp COMMA pexp RPAREN SEMICOLON { stapqueryshort $3 $5 $7 }
 | SHARP ID SEMICOLON { Spi.Command ($2, [])}
 | SHARP ID STRING SEMICOLON { Spi.Command ($2, [$3]) }

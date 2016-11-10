@@ -52,4 +52,4 @@ System(x, c_ab, c_as, c_bs, secret) :=
   
 % #load "examples/stap/stap-yahalom.spi";
 % Secrecy: The environments never learns secret
-% stap(nu(secret),absurd,guard(secret),System{x, c_ab,c_as,c_bs,secret} | guard(y));
+% nu(secret).stap(absurd,guard(secret),System{x, c_ab,c_as,c_bs,secret} | guard(y));

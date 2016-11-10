@@ -101,7 +101,7 @@ stap_combine_subst (cons (sub V V) Subst1) (cons (sub V B) Subst2) (cons (sub V 
 Define stap_unify : tm -> tm -> tm -> tm -> list tm -> list sub_pair -> prop by
 stap_unify A B M N Vs Subst := unify nil A B Vs Subst1 /\ unify nil M N Vs Subst2 /\ stap_combine_subst Subst1 Subst2 Subst.
 
-% unify an action B with trace T
+% Unify an action B with trace T
 % B is not unified with t_out (act A) (var X)
 Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by
 unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst;
@@ -128,26 +128,27 @@ stap A B (t_bind AbsT) := nabla x, stap A B (AbsT x);
 
 stap A B T :=
   det_or (T = t_in Act M T') (T = t_out Act M T') /\
-  printstr "\nT : " /\ print_trace_action T /\
+  %printstr "\nT : " /\ print_trace_action T /\
+  printstr "." /\
   stap_get_var B nil VsB /\
   trace_vars T VsB Vars /\
   forall Sub, _distinct(unify_trace Vars T B Sub) ->
     (
-      printstr "\nSub :" /\ print_subst Sub /\
+      %printstr "\nSub :" /\ print_subst Sub /\
       exists TTheta, copytrace Sub T TTheta /\
-      printstr "\nTTheta :" /\ print_trace_action TTheta /\
+      %printstr "\nTTheta :" /\ print_trace_action TTheta /\
       exists Cs, stap_trace_cst TTheta nil Cs /\
       exists Vs, trace_vars TTheta nil Vs /\
       forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
         (
-	  printstr "\n\tSol :" /\ print_subst Sol /\
+	  %printstr "\n\tSol :" /\ print_subst Sol /\
 	  % A = absurd will be false in this step
 	  exists ATheta, copy_stap_action Sub A ATheta /\
 	  exists BTheta, copy_stap_action Sub B BTheta /\
-	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\ printstr "\n\tAThetaTheta : " /\ print_stap_action AThetaTheta /\
-	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\ printstr "\n\tBThetaTheta : " /\ print_stap_action BThetaTheta /\
+	  exists AThetaTheta, copy_stap_action Sol ATheta AThetaTheta /\ %printstr "\n\tAThetaTheta : " /\ print_stap_action AThetaTheta /\
+	  exists BThetaTheta, copy_stap_action Sol BTheta BThetaTheta /\ %printstr "\n\tBThetaTheta : " /\ print_stap_action BThetaTheta /\
 	  exists TThetaTheta, copytrace Sol TTheta TThetaTheta /\
-	  printstr "\n\tTThetaTheta : " /\ print_trace_action TThetaTheta /\
+	  %printstr "\n\tTThetaTheta : " /\ print_trace_action TThetaTheta /\
 	  before AThetaTheta BThetaTheta TThetaTheta
         )
     ).
