@@ -253,7 +253,6 @@ solve Vs S_In Pre (cons C Post) S_Out :=
         _if (solved_form C)
             (append Pre (cons C nil) Pre1 /\ solve Vs S_In Pre1 Post S_Out ) % RH: When in solved form move to pre.
             (
-              
               iter_red4 C D
               /\
               (

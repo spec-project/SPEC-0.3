@@ -75,19 +75,19 @@ Define get_stap_trace : proc -> trace -> prop by
 get_stap_trace P T := get_stap_trace_proc nil emp P T.
 
 % Convert a trace (without binders) to deducibility constraints.
-Define stap_trace_cst : trace -> list tm -> list constraint -> prop
+Define stap_trace_cst : trace -> list tm -> list tm -> list constraint -> prop
 by 
-stap_trace_cst emp Pre nil;
-stap_trace_cst (t_in (act A) U T) Pre Cs :=
-  _if (det_mem A Pre)
-    (Cs = cons (dedl Pre U) Ds /\ Pre1 = Pre)
-    (Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) (cons (dedl Pre1 U) Ds))
-  /\ stap_trace_cst T Pre1 Ds;
-stap_trace_cst (t_out (act A) U T) Pre Cs :=
-  _if (det_mem A Pre)
-    (Pre1 = Pre /\ Cs = Ds)
-    (Pre1 = cons A Pre /\ Cs = cons (dedl Pre A) Ds)
-  /\ stap_trace_cst T (cons U Pre1) Ds.
+stap_trace_cst emp Pre Chnl nil;
+stap_trace_cst (t_in (act A) U T) Pre Chnl Cs :=
+  _if (det_mem A Chnl)
+    (Chnl1 = Chnl /\ Cs = cons (dedl Pre U) Ds)
+    (Chnl1 = cons A Chnl /\ Cs = cons (dedl Pre A) (cons (dedl Pre U) Ds))
+  /\ stap_trace_cst T Pre Chnl1 Ds;
+stap_trace_cst (t_out (act A) U T) Pre Chnl Cs :=
+  _if (det_mem A Chnl)
+    (Chnl1 = Chnl /\ Cs = Ds)
+    (Chnl1 = cons A Chnl /\ Cs = cons (dedl Pre A) Ds)
+  /\ stap_trace_cst T (cons U Pre) Chnl1 Ds.
 
 % Combine two substitution list with common variable list
 Define stap_combine_subst : list sub_pair -> list sub_pair -> list sub_pair -> prop by
@@ -137,7 +137,7 @@ stap A B T :=
       %printstr "\nSub :" /\ print_subst Sub /\
       exists TTheta, copytrace Sub T TTheta /\
       %printstr "\nTTheta :" /\ print_trace_action TTheta /\
-      exists Cs, stap_trace_cst TTheta nil Cs /\
+      exists Cs, stap_trace_cst TTheta nil nil Cs /\
       exists Vs, trace_vars TTheta nil Vs /\
       forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
         (

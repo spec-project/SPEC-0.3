@@ -26,13 +26,13 @@ Inst(c_as,c_sb,c_ab,accept,datum) :=
 
 % Authentication
 % If B accepts as 'good' a datum "datum" encrypted under key "kab" then this message has actually been sent by A
-% nu(datum,c_ab,accept).stap(c_ab<t>,accept<hash(t)>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Holds (43s)
+% nu(datum,c_ab,accept).stap(c_ab<t>,accept<hash(t)>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Holds (5s)
 % Explanation: Only accept channel outputs the message with the format hash(t)
-% nu(datum,c_ab,accept).stap(accept<hash(t)>,c_ab<t>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Does not hold (5s)
+% nu(datum,c_ab,accept).stap(accept<hash(t)>,c_ab<t>,x<<c_ab,accept>>.Inst{c_as,c_sb,c_ab,accept,datum}); 	--> Does not hold (2s)
 
 % Secrecy
 % The environment should never learn the confidential datum (datum)
-% nu(datum).stap(absurd,guard(datum),Inst{c_as,c_sb,c_ab,accept,datum} | guard(x)); --> Holds (896s)
+% nu(datum).stap(absurd,guard(datum),Inst{c_as,c_sb,c_ab,accept,datum} | guard(x)); --> Holds (65s)
 
 
 
