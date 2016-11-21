@@ -1,0 +1,81 @@
+% Needham Schroeder public key protocol
+% Specification from Security Protocols Open Repository
+% A,B,S :   	Principal
+% Na,Nb :   	Nonce
+% KPa,KPb,KPs,KSa,KSb,KSs :   	Key
+% KPa,KSa :   	is a key pair
+% KPb,KSb :   	is a key pair
+% KPs,KSs :   	is a key pair
+
+% 1.   	A 	-> 	S 	:   	A,B
+% 2.   	S 	-> 	A 	:   	{KPb, B}KSs
+% 3.   	A 	-> 	B 	:   	{Na, A}KPb
+% 4.   	B 	-> 	S 	:   	B,A
+% 5.   	S 	-> 	B 	:   	{KPa, A}KSs
+% 6.   	B 	-> 	A 	:   	{Na, Nb}KPa
+% 7.   	A 	-> 	B 	:   	{Nb}KPb
+
+% 8. 	B	-> 	A	:	{secret}Nb
+
+% Last step is added to turn the authentication problem into a secrecy problem.
+
+Initiator(ch, s, a, ka, b, ks) :=
+%   s< <a,b> >.				% Step 1
+   s(x).    				% Step 2
+   let <y, sg> = x in 
+   [checksign(y,sg,pub(ks))] 
+   let <pkz,z> = y in
+   [z = b]
+   nu(na).
+   ch< aenc(<na, a>, pkz) >.		% Step 3
+   ch(m).	     	  		% step 6
+   let n = adec(m, ka) in
+   let <n1, n2> = n in
+   [n1 = na]
+   ch< aenc(n2, pkz) >;			% Step 7
+
+
+Responder(ch, s, b, kb, a_i, ks, secret) :=
+   ch(x).				% Step 3
+   let y = adec(x, kb) in
+   let <na, a> = y in
+ %  s < <b, a> >.			% Step 4
+   [a = a_i]s(z).      				% Step 5
+   let <u, sg> = z in
+   [checksign(u, sg, pub(ks))]
+   let <kpa, c> = u in
+   [c = a]
+   nu(nb).
+   ch< aenc(<na, nb>, kpa) >.		% Step 6
+   ch(m).	      	   		% Step 7
+   let w = adec(m, kb) in
+   [w = nb]
+   ch< enc(secret, nb) >;
+
+
+System1(x)  :=
+   nu(a,b,c,ch_s,ch_i,ch_r,ka,kb,kc,ks).
+   x<ch_i>.x<ch_r>.x<ch_s>.	% channel names for initiator, responder and server
+   x<pub(ks)>.			% server is encoded implicitly, by announcing all signed public key pairs 
+   x< < <pub(ka),a>, sign(<pub(ka),a>, ks) > >.
+   x< < <pub(kb),b>, sign(<pub(kb),b>, ks) > >.
+   x< < <pub(kc),c>, sign(<pub(kc),c>, ks) > >.
+   x<kc>.			% c is the attacker, its secret key is public
+   (
+    x(y).Initiator{ch_i, ch_s, a, ka, y, ks} |
+    Responder{ch_r, ch_s, b, kb, a, ks, a}
+   );
+
+System2(x)  :=
+   nu(a,b,c,ch_s,ch_i,ch_r,ka,kb,kc,ks).
+   x<ch_i>.x<ch_r>.x<ch_s>.	% channel names for initiator, responder and server
+   x<pub(ks)>.			% server is encoded implicitly, by announcing all signed public key pairs 
+   x< < <pub(ka),a>, sign(<pub(ka),a>, ks) > >.
+   x< < <pub(kb),b>, sign(<pub(kb),b>, ks) > >.
+   x< < <pub(kc),c>, sign(<pub(kc),c>, ks) > >.
+   x<kc>.			% c is the attacker, its secret key is public
+   (
+    x(y).Initiator{ch_i, ch_s, a, ka, y, ks} |
+    Responder{ch_r, ch_s, b, kb, a, ks, b}
+   );
+
