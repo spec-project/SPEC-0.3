@@ -47,4 +47,4 @@ S(a, b, c_as, c_bs, kas, kbs) :=
   
 % #load "examples/stap/stap-yahalom.spi";
 % Secrecy: The environments never learns secret
-% nu(secret).stap(absurd,guard(secret),nu(a, b, k_old, kas,kbs).x<<a,b,k_old,enc(<a,k_old>,kbs)>>.(A{a, b, c_ab, c_as, kas} | B{a, b, c_ab, c_bs, kbs, secret} | S{a, b, c_as, c_bs, kas, kbs} | guard(y)));
+% nu(secret).stap(absurd,guard(secret),nu(a, b, k_old, kas,kbs).x<<a,b,k_old,enc(<a,k_old>,kbs)>>.(A{a, b, c_ab, c_as, kas} | B{a, b, c_ab, c_bs, kbs, secret} | S{a, b, c_as, c_bs, kas, kbs} | guard(y)));	 --> Holds (+ 13698s)

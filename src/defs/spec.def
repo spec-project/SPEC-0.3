@@ -289,7 +289,8 @@ stap_body_def (defStapActAbs x\A x) (defStapActAbs x\B x) (defAbs x\P x) :=
 stap_body_def (defStapAct A) (defStapAct B) (defProc P) :=
   expand_defs P R /\
   printstr "A: " /\ print_stap_action A /\ printstr "\nB: " /\ print_stap_action B /\ printstr "\nP: " /\ print_proc R /\ printstr "\n" /\
-  (B = absurd \/ forall T, get_stap_trace R T -> stap A B T).
+%  (B = absurd \/ forall T, get_stap_trace R T -> stap A B T).
+  (B = absurd \/ _not(get_stap_trace R T /\ _not(stap A B T))).
 
 Define stap_def : stap_body -> prop by
 stap_def (defStapBodyAbs x\SB x) := nabla x, stap_def (SB (nm x));
