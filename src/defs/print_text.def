@@ -126,9 +126,9 @@ proc2text File L (let M (x\y\ P x y)) :=
   proc2text_aux File L (P (bn x) (bn y)) ; 
 
 % CheckSign
-proc2text File L (checksign Z X Y P) :=
+proc2text File L (checksign X Y P) :=
   print_str_list File L /\
-  fprintstr File "[checksign(" /\ term2text File Z /\ fprintstr File " , " /\ term2text File X /\ fprintstr File " , " /\ term2text File Y /\ fprintstr File ")]" /\
+  fprintstr File "[checksign(" /\ term2text File X /\ fprintstr File " , " /\ term2text File Y /\ fprintstr File ")]" /\
   proc2text_aux File L P ;
 
 % Adec, Unblind, Getmsg
@@ -143,7 +143,13 @@ proc2text File L (letunblind M N (x\ P x)) :=
   nabla x, 
     fprintstr File "let " /\ 
     term2text File (bn x) /\ fprintstr File " = unblind(" /\ term2text File M /\ fprintstr File ", " /\ term2text File N /\ fprintstr File ")" /\ fprintstr File " in " /\
-    proc2text_aux File L (P (bn x)) ; 
+    proc2text_aux File L (P (bn x)) ;
+proc2text File L (letgetmsg M (x\ P x)) :=
+  print_str_list File L /\
+  nabla x,
+    fprintstr File "let " /\
+    term2text File (bn x) /\ fprintstr File " = getmsg(" /\ term2text File M /\ fprintstr File ")" /\ fprintstr File " in " /\
+    proc2text_aux File L (P (bn x)) ;
 
 proc2text File L (bang P) :=
   print_str_list File L /\  

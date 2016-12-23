@@ -1,0 +1,320 @@
+#include "defs/constraint-system.def".
+
+Type a name.
+Type b name.
+Type c name.
+Type d name.
+Type h name.
+Type i name.
+Type k name.
+Type m name.
+Type n name.
+Type x name.
+Type y name.
+Type z name.
+Type na name.
+Type nb name.
+Type n3 name.
+Type n4 name.
+Type tt name.
+Type na1 name.
+Type agent_A name.
+Type agent_B name.
+Type agent_S name.
+Type pk name.
+Type pka name.
+Type pkb name.
+
+Define example : nat -> list tm -> list constraint -> prop
+by
+
+example 1 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  Cs = (cons (dedc (cons (nm a) (cons (var x) nil)) (nm a)) nil);
+
+example 2 Vs Cs :=
+  Vs = nil /\
+  Cs = (cons (dedc (cons (nm a) nil) (pub (nm a))) nil);
+
+%
+% SHOULD BE YES - Example 1 - TODO key is a variable
+%
+example 3 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc nil (var x)) /\
+  T1 = (cons (aen (nm m) (nm pk)) nil) /\
+  T2 = (cons (aen (nm m) (pub (var x))) T1) /\
+  C2 = (dedc T2 (nm m)) /\
+  Cs = (cons C1 (cons C2 nil));
+
+%
+% SHOULD BE NO - Example 2 - TODO key is a variable
+%
+example 4 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  T1 = (cons (var x) nil) /\
+  T2 = (cons (aen (pr (nm m) (var y)) (var x)) T1) /\
+  T3 = (cons (var y) T2) /\
+  C1 = (dedc T3 (nm m)) /\
+  Cs = (cons C1 nil);
+
+%
+% SHOULD BE YES - Example 3 - TODO key is a variable
+%
+example 5 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) (cons (var z) nil))) /\
+  C1 = (dedc nil (var x)) /\
+  C2 = (dedc (cons (pub (var x)) nil) (var y)) /\
+  C3 = (dedc (cons (pub (var x)) nil) (var z)) /\
+  T1 = (cons (aen (pr (aen (nm m) (var y))(var z)) (var z)) nil) /\
+  T2 = (cons (nm pk) T1) /\
+  T3 = (cons (pub (var x)) T2) /\
+  C4 = (dedc T3 (nm m)) /\
+  Cs = (cons C1 (cons C2 (cons C3 (cons C4 nil))));
+
+example 6 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  T0 = (cons (pub (nm a)) (cons (pub (nm b))
+       (cons (pub (nm i)) (cons (nm i)
+       (cons (aen (pr (nm na1) (pub (nm a))) (pub (nm b))) nil))))) /\
+  T1 = (cons (aen (pr (nm na) (pub (nm a))) (pub (nm i))) T0) /\
+  T2 = (cons (aen (pr (var x) (nm nb)) (pub (nm a))) T1) /\
+  T3 = (cons (aen (var y) (pub (nm i))) T2) /\
+  C1 = (dedc T1 (aen (pr (var x) (pub (nm a))) (pub (nm b)))) /\
+  C2 = (dedc T2 (aen (pr (nm na) (var y)) (pub (nm a)))) /\
+  C3 = (dedc T3 (aen (nm nb) (pub (nm b)))) /\
+  Cs = (cons C1 nil);
+
+
+example 7 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  Cs = nil;
+
+
+example 8 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (pub (nm a)) nil) /\
+  T2 = (cons (nm m) T1) /\
+  C1 = (dedc T2 (aen (nm m) (pub (nm a)))) /\
+  Cs = (cons C1 nil);
+
+
+
+example 9 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (nm k) nil) /\
+  T2 = (cons (nm m) T1) /\
+  C1 = (dedc T2 (en (nm m) (nm k))) /\
+  Cs = (cons C1 nil);
+
+
+
+example 10 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (nm a) nil) /\
+  T2 = (cons (nm m) T1) /\
+  C1 = (dedc T2 (aen (nm m) (nm a))) /\
+  Cs = (cons C1 nil);
+
+example 11 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (nm a) nil) /\
+  C1 = (dedc T1 (pub (nm a))) /\
+  Cs = (cons C1 nil);
+
+
+
+example 12 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (nm k) nil) /\
+  T2 = (cons (aen (nm m) (pub (nm k))) T1) /\
+  C1 = (dedc T2 (nm m)) /\
+  Cs = (cons C1 nil);
+
+
+example 13 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (pub (nm k)) nil) /\
+  C1 = (dedc T1 (pub(nm k))) /\
+  Cs = (cons C1 nil);
+
+
+
+example 14 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (aen (nm m) (pub (nm k))) nil) /\
+  Cs = (cons (dedc T1 (aen (nm m) (pub (nm k)))) nil);
+
+example 15 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (aen (nm m) (nm k)) nil) /\
+  C1 = (dedc T1 (aen (nm m) (nm k))) /\
+  Cs = (cons C1 nil);
+
+example 16 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (pr (nm a) (nm b)) nil) /\
+  C1 = (dedc T1 (pr (nm a) (nm b))) /\
+  Cs = (cons C1 nil);
+
+example 17 Vs Cs :=
+  Vs = nil /\
+  T1 = (cons (sign (nm m) (nm k)) nil) /\
+  C1 = (dedc T1 (sign (nm m) (nm k))) /\
+  Cs = (cons C1 nil);
+
+example 18 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  T0 = (cons (nm a) (cons (nm b) (cons (pub (nm i)) (cons (nm i) nil)))) /\
+  T1 = (cons (aen (pr (nm na) (nm a)) (pub (nm i))) T0) /\
+  T2 = (cons (aen (pr (var x) (nm nb)) (nm a)) T1) /\
+  T3 = (cons (aen (var y) (pub (nm i))) T2) /\
+  C1 = (dedc T1 (aen (pr (var x) (nm a)) (nm b))) /\
+  C2 = (dedc T2 (aen (pr (nm na) (var y)) (nm a))) /\
+  C3 = (dedc T3 (aen (nm nb) (nm b))) /\
+  Cs = (cons C1 (cons C2 (cons C3 nil)));
+
+example 19 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  T1 = (cons (aen (var x) (nm b)) nil) /\
+  C1 = (dedc T1 (aen (nm nb) (nm b))) /\
+  Cs = (cons C1 nil);
+
+% aenc(?x,b) |- aenc(nb,b) --> YES
+example 20 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  T1 = (cons (aen (var x) (nm b)) nil) /\
+  C1 = (dedc T1 (aen (nm nb) (nm b))) /\
+  Cs = (cons C1 nil);
+
+% nil |- ?x ; 
+% b   |- aenc(nb,b)
+% --> NO
+example 21 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  T1 = (cons (nm b) nil) /\
+  C0 = (dedc nil (var x)) /\
+  C1 = (dedc T1 (aen (nm nb) (nm b))) /\
+  Cs = (cons C0 (cons C1 nil));
+
+% aenc(?x,pub(b)) , b |- nb --> YES
+example 22 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  T0 = (cons (nm b) nil) /\
+  T1 = (cons (aen (var x) (pub (nm b))) T0) /\
+  C1 = (dedc T1 (nm nb)) /\
+  Cs = (cons C1 nil);
+
+% ?x |- a ;		% ?x |- a
+% ?x |- b		% ?y |- b
+% --> NO		% --> YES
+example 23 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  T1 = (cons (var x) nil) /\
+  C1 = (dedc T1 (nm a)) /\
+  C2 = (dedc T1 (nm b)) /\
+  Cs = (cons C1 (cons C2 nil));
+
+example 24 Vs Cs :=
+  Vs = nil /\
+  C1 = (dedc nil (aen (nm nb) (nm b))) /\
+  Cs = (cons C1 nil);
+
+example 25 Vs Cs :=
+  Vs = nil /\
+  C1 = (dedc nil (aen (nm nb) (pub (nm b)))) /\
+  Cs = (cons C1 nil);
+
+example 26 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc nil (aen (var x) (pub (nm b)))) /\
+  Cs = (cons C1 nil);
+
+example 27 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc nil (aen (var x) (nm b))) /\
+  Cs = (cons C1 nil);
+
+example 28 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc nil (aen (pr (var x) (nm a)) (nm b))) /\
+  Cs = (cons C1 nil);
+
+example 29 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc nil (aen (pr (var x) (nm a)) (pub (nm b)))) /\
+  Cs = (cons C1 nil);
+
+example 30 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc (cons (nm a) nil) (aen (pr (var x) (nm a)) (pub (nm b)))) /\
+  Cs = (cons C1 nil);
+
+% Individual constraint test_solve 18.
+example 31 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  T0 = (cons (nm a) (cons (nm b) (cons (pub (nm i)) (cons (nm i) nil)))) /\
+  T1 = (cons (aen (pr (nm na) (nm a)) (pub (nm i))) T0) /\
+  T2 = (cons (aen (pr (var x) (nm nb)) (nm a)) T1) /\
+  T3 = (cons (aen (var y) (pub (nm i))) T2) /\
+  C1 = (dedc T1 (aen (pr (var x) (nm a)) (nm b))) /\
+  C2 = (dedc T2 (aen (pr (nm na) (var y)) (nm a))) /\
+  C3 = (dedc T3 (aen (nm nb) (nm b))) /\
+  Cs = (cons C3 nil);
+
+% test_solve 18. Replace var x -> nm c; var y -> nm d
+example 32 Vs Cs :=
+  Vs = (cons (var x) (cons (var y) nil)) /\
+  T0 = (cons (nm a) (cons (nm b) (cons (pub (nm i)) (cons (nm i) nil)))) /\
+  T1 = (cons (aen (pr (nm na) (nm a)) (pub (nm i))) T0) /\
+  T2 = (cons (aen (pr (nm c) (nm nb)) (nm a)) T1) /\
+  T3 = (cons (aen (nm d) (pub (nm i))) T2) /\
+  C1 = (dedc T1 (aen (pr (nm c) (nm a)) (nm b))) /\
+  C2 = (dedc T2 (aen (pr (nm na) (nm d)) (nm a))) /\
+  C3 = (dedc T3 (aen (nm nb) (nm b))) /\
+%  Cs = (cons C1 (cons C2 (cons C3 nil)));
+  Cs = (cons C1 (cons C2 (cons C3 nil)));
+
+example 33 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = (dedc (cons (var x) nil) (nm a)) /\
+  C2 = (dedc (cons (var x) nil) (nm b)) /\
+  Cs = (cons C1 (cons C2 nil));
+
+example 34 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = dedc (cons (nm n) (cons (sign (blind (var x) (nm n)) (nm k)) nil)) (sign (nm a) (nm k)) /\
+  Cs = cons C1 nil;
+
+example 35 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = dedc (cons (blind (var x) (nm n)) (cons (nm n) nil)) (sign (nm a) (nm k)) /\
+  C2 = dedc (cons (blind (var x) (nm n)) (cons (sign (blind (var x) (nm n)) (nm k)) (cons (nm n) nil))) (sign (nm a) (nm k)) /\
+%  Cs = cons C1 nil.
+  Cs = cons C2 nil ;
+
+example 36 Vs Cs :=
+  Vs = cons (var x) (cons (var y) nil) /\
+  T1 = cons (nm a) nil /\
+  T2 = cons (aen (pr (nm m) (var y)) (var x)) T1 /\
+  T3 = cons (var y) T2 /\
+  C1 = dedc T1 (var x) /\
+  C2 = dedc T1 (var y) /\
+  C3 = dedc T3 (nm m) /\
+  Cs = cons C1 (cons C2 (cons C3 nil)) ;
+
+example 37 Vs Cs :=
+  Vs = (cons (var x) nil) /\
+  C1 = dedc (cons (nm a) nil) (var x) /\
+  C2 = dedc (cons (nm a) (cons (nm n) (cons (sign (blind (var x) (nm n)) (nm k)) nil))) (sign (nm a) (nm k)) /\
+  Cs = cons C1 (cons C2 nil) .
+
+
+Define test_solve : nat -> prop
+by
+test_solve N := 
+    example N Vs Cs /\ 
+    %printstr "Variables: " /\ print_list Vs /\ printstr "\n" /\
+    printstr "Solving: " /\ cs_print_list_cst Cs /\ printstr "\n" /\
+    _distinct(cs_solve_constraints Vs Cs Sol) /\
+    printstr "Solution: " /\ print_subst Sol /\ printstr "\n".

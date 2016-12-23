@@ -233,8 +233,8 @@ by
 iter_red4 (dedl S M) (dedl T M) := decpr S T ;
 iter_red4 (dedr S M) (dedr S M).
 
-% rewriting deducibility constraints to a solved form.
-% we relax the condition of the solved form a bit; we shall
+% Rewriting deducibility constraints to a solved form.
+% We relax the condition of the solved form a bit; We shall
 % allow both (dedl S (var V)) and (dedr S (var V)) in the solved form.
 
 Define solved_form : constraint -> prop
@@ -276,7 +276,7 @@ Define solve_constraints : list tm -> list constraint -> list sub_pair -> prop
 by
 solve_constraints Vs Cs Subst :=
   trim_cst Cs nil Ds /\
-  id_subst Vs IdSubst /\ % RH: generates identity substitution (initial substitution for solve prodeedure).
+  id_subst Vs IdSubst /\ % RH: generates identity substitution (initial substitution for solve prodcedure).
   (solve Vs IdSubst nil Ds Subst).
 
 

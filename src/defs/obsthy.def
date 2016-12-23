@@ -72,6 +72,7 @@ deduce_r Thy (pub X) (pub Y) := deduce_r Thy X Y ;
 deduce_r Thy (blind U V) (blind R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
 % Sign, Hash, Mac
 deduce_r Thy (sign U V) (sign R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
+deduce_r Thy (sign U V) (sign R T) := member (mp (sign (var X) V) (sign (var Y) T)) Thy /\ deduce_r Thy U R ;
 deduce_r Thy (hs X) (hs Y) := deduce_r Thy X Y ;
 deduce_r Thy (mac U V) (mac X Y) := deduce_r Thy U R /\ deduce_r Thy V T.
 % deduce_r Thy (vk X) (vk Y) := deduce_r Thy X Y ;
@@ -272,6 +273,7 @@ decom_enc_aenc (cons (mp (sign U V) (sign R T)) Thy) NE1 E1 NE2 E2 :=
 		    decom_enc_aenc Thy NE1 NewE1 NE2 E2
 		)
 	);
+
 
 decom_enc_aenc (cons X Thy) NE1 E1 NE2 E2 :=
   _not(X = mp (en U V) (en R T) \/ X = mp (aen U V) (aen R T) \/ X = mp (blind U V) (blind R T) \/ X = mp (sign U V) (sign R T) 
