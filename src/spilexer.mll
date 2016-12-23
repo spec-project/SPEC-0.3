@@ -48,6 +48,7 @@ rule token = parse
 | "=" { EQ }
 | "~=" { NEQ }
 | ":=" { DEF }
+| "?" { QMARK }
 | "bisim" { BISIM }
 | "sim" { SIM }
 | "keycycle" { KEYCYCLE }

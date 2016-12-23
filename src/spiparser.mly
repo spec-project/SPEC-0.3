@@ -33,6 +33,7 @@
   let cons_op = constid (pos 0) "cons"
   let def_op =  constid (pos 0) "def" 
   let ct_op = constid (pos 0) "ct"
+  let var_op = constid (pos 0) "var"
   let zero_op = constid (pos 0) "zero"
   let done_op = constid (pos 0) "done"
   let par_op = constid (pos 0) "par" 
@@ -93,6 +94,7 @@
     List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars   (* RH: Builds lambda-abstraction in Bedwyr for each v in vars wrapped with defAbs from proc.def. *)
                (app proc [tm])   (* RH: Base case of fold_right building a process before vars are abstracted.*)
 
+(*
   let mkdef a b = 
     let agentname,vars = a in (* RH: Can now ignore vars on this line, since vars are defined by default. Alternatively check all vars are declared as in MWB. *)
     let vars = List.map (fun (x,y,z) -> y) vars in
@@ -102,14 +104,12 @@
                   (List.filter (fun x -> not (List.mem x vars))
                     (Input.get_freeids b))]
     in
-    let proc = constid (pos 0) "defProc" in 
-    let abs  = constid (pos 0) "defAbs" in 
     let agent_def = constid (pos 0) "agent_def" in 
     let b = abstract_ids b vars in
     let d = (app agent_def [(qstring (pos 0) agentname); b]) in 
     if vars != [] then
        Format.printf "Free variable(s): %s.\n" (String.concat " " vars) ;
-    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))   
+    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))
 
   let mkquery a b = (* RH: bisim_fun is the string corresponding to the function in spec.def. *)
     let vars = Input.get_freeids (app par_op [a;b]) in
@@ -117,6 +117,22 @@
     let b' = abstract_ids b vars in 
     let q = app (constid (pos 0) "bisim_def" ) [nil_op; a';b'] in 
     Spi.Query (pos 0, q)
+*)
+
+  let mkdef a b =
+    let agentname,vars = a in
+    let proc = constid (pos 0) "defProc" in 
+    let abs  = constid (pos 0) "defAbs" in
+    let agent_def = constid (pos 0) "agent_def" in
+    let b = List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [v] t]) vars 
+                 (app proc [b]) in
+    let d = change_freeids (app agent_def [(qstring (pos 0) agentname); b]) in
+    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0))) 
+
+  let mkquery a b = 
+    let q = app (constid (pos 0) "bisim_def") [a;b] in 
+    Spi.Query (pos 0, change_freeids q)
+
 
   (* Add key cycle *)
   let kcquery a =
@@ -168,7 +184,7 @@
 %}
 
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE STAP
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON QMARK BISIM SIM KEYCYCLE STAP
 %token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU ABSURD CHECKSIGN ADEC UNBLIND GETMSG
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID
