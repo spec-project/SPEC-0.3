@@ -33,7 +33,7 @@
 Kind tm type.
 Kind name type.
 
-%Type ct		(string -> tm).		% constants
+Type ct		(string -> tm).		% constants
 Type var	(name -> tm).		% variables        % RH: Consider making (name,string) pairs for pretty printing purposes.
 Type nm		(name -> tm).		% names
 Type bn		(tm -> tm).		% constructor for marking bound names; needed when recursing over binders. 

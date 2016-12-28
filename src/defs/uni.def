@@ -23,7 +23,7 @@
 Kind tm_type type.
 
 Type nm_type	tm_type.
-%Type ct_type 	tm_type.
+Type ct_type 	tm_type.
 Type var_type 	tm_type.
 Type pr_type	tm_type.
 Type en_type	tm_type.
@@ -45,7 +45,7 @@ Type sub (tm -> tm -> sub_pair).
 
 
 Define closed : tm -> prop by 
-%closed (ct X) ; 
+closed (ct X) ; 
 closed (nm X) ;
 closed (pr U V) := closed U /\ closed V ; 
 closed (en U V) := closed U /\ closed V;
@@ -61,7 +61,7 @@ closed (mac U V) := closed U /\ closed V.
 
 % get_var Term VarIn VarOut
 Define get_var : tm -> list tm -> list tm -> prop by 
-%  get_var (ct X) VarIn VarIn ; 
+  get_var (ct X) VarIn VarIn ; 
   get_var (nm X) VarIn VarIn ;
   get_var (var V) VarIn VarOut  := insert (var V) VarIn VarOut ;
   get_var (pr X Y) VarIn VarOut := get_var X VarIn Vs /\ get_var Y Vs VarOut ;
@@ -78,7 +78,7 @@ Define get_var : tm -> list tm -> list tm -> prop by
 
 Define msg_type : tm -> tm_type -> prop by 
   msg_type (nm X) nm_type ; 
-%  msg_type (ct X) ct_type ;
+  msg_type (ct X) ct_type ;
   msg_type (var X) var_type ;
   msg_type (pr U V) pr_type ;
   msg_type (en U V) en_type;
@@ -107,7 +107,7 @@ Define free : tm -> tm -> prop by
   free V (mac X Y) := free V X \/ free V Y.
 
 Define not_free : tm -> tm -> prop by 
-%  not_free (var V) (ct A) ;
+  not_free (var V) (ct A) ;
   not_free (var V) (nm A) ;
   not_free (var V) (var W) := _not(V = W) ;
   not_free V (pr X Y) := not_free V X /\ not_free V Y ;
@@ -128,7 +128,7 @@ Define simp_cp : tm -> tm -> prop by
   simp_cp (var X) (var X) ; 
   simp_cp (bn X)  X ;      % bound name
   simp_cp (nm X) (nm X) ;  % free name
-%  simp_cp (ct X) (ct X) ;  % constants
+  simp_cp (ct X) (ct X) ;  % constants
   simp_cp (pr X Y) (pr U V) := simp_cp X U /\ simp_cp Y V ; 
   simp_cp (en X Y) (en U V) := simp_cp X U /\ simp_cp Y V;
   % Asymmetric Encryption
@@ -153,7 +153,7 @@ Define copyterm : list sub_pair  -> tm -> tm -> prop by
         (T = (var X)) ; 
   copyterm L (bn X)  X ;      % bound name
   copyterm L (nm X) (nm X) ;  % free name
-%  copyterm L (ct X) (ct X) ;  % constants
+  copyterm L (ct X) (ct X) ;  % constants
   copyterm L (pr X Y) (pr U V) := copyterm L X U /\ copyterm L Y V ;
   copyterm L (en X Y) (en U V) := copyterm L X U /\ copyterm L Y V;
   % Asymmetric Encryption
