@@ -79,14 +79,20 @@
      match l with
      | [] | [_] -> assert false
      | [a;b] -> app pr_op [a;b]
-     | x::r -> let t = mkpairs r in app pr_op [x;t] 
-            
+     | x::r -> let t = mkpairs r in app pr_op [x;t]
 
-  let change_freeids t =
+  let get_ctsids t =
     let vs = Input.get_freeids t in
-    let sub = List.map (fun s -> (s,app ct_op [qstring (pos 0) s]) ) vs in
-    Input.pre_freeidsubst sub t  
+    List.filter ( fun x -> String.get x 0 != '?') vs
 
+  let get_glvids t =
+    let vs = Input.get_freeids t in
+    List.filter (fun x -> String.get x 0 == '?') vs
+
+  let change_ctids t =
+    let vs = get_ctsids t in
+    let sub = List.map (fun s -> (s,app ct_op [qstring (pos 0) s]) ) vs in
+    Input.pre_freeidsubst sub t
 
   let abstract_ids tm vars =
     let proc = constid (pos 0) "defProc" in 
@@ -94,7 +100,6 @@
     List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [pos 0, v, Input.Typing.fresh_typaram ()] t]) vars   (* RH: Builds lambda-abstraction in Bedwyr for each v in vars wrapped with defAbs from proc.def. *)
                (app proc [tm])   (* RH: Base case of fold_right building a process before vars are abstracted.*)
 
-(*
   let mkdef a b = 
     let agentname,vars = a in (* RH: Can now ignore vars on this line, since vars are defined by default. Alternatively check all vars are declared as in MWB. *)
     let vars = List.map (fun (x,y,z) -> y) vars in
@@ -102,46 +107,25 @@
                  vars;
                  List.sort (fun x y -> if x < y then 0 else 1)
                   (List.filter (fun x -> not (List.mem x vars))
-                    (Input.get_freeids b))]
+                    (get_glvids b))]
     in
     let agent_def = constid (pos 0) "agent_def" in 
     let b = abstract_ids b vars in
     let d = (app agent_def [(qstring (pos 0) agentname); b]) in 
-    if vars != [] then
-       Format.printf "Free variable(s): %s.\n" (String.concat " " vars) ;
-    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0)))
+    Spi.Def (agentname,List.length vars,(pos 0,change_ctids d,Input.pre_true (pos 0)))
 
-  let mkquery a b = (* RH: bisim_fun is the string corresponding to the function in spec.def. *)
-    let vars = Input.get_freeids (app par_op [a;b]) in
-    let a' = abstract_ids a vars in
-    let b' = abstract_ids b vars in 
-    let q = app (constid (pos 0) "bisim_def" ) [nil_op; a';b'] in 
-    Spi.Query (pos 0, q)
-*)
+  let mkquery a b =
+    let vars = get_glvids (app par_op [a;b]) in
+    let q = app (constid (pos 0) "bisim_def") [nil_op; abstract_ids a vars; abstract_ids b vars] in 
+    Spi.Query (pos 0, change_ctids q)
 
-  let mkdef a b =
-    let agentname,vars = a in
-    let proc = constid (pos 0) "defProc" in 
-    let abs  = constid (pos 0) "defAbs" in
-    let agent_def = constid (pos 0) "agent_def" in
-    let b = List.fold_right (fun v t -> app abs [Input.pre_lambda (pos 0) [v] t]) vars 
-                 (app proc [b]) in
-    let d = change_freeids (app agent_def [(qstring (pos 0) agentname); b]) in
-    Spi.Def (agentname,List.length vars,(pos 0,d,Input.pre_true (pos 0))) 
-
-  let mkquery a b = 
-    let q = app (constid (pos 0) "bisim_def") [a;b] in 
-    Spi.Query (pos 0, change_freeids q)
-
-
-  (* Add key cycle *)
+  (* Key cycle query *)
   let kcquery a =
-    let vars = Input.get_freeids (app par_op [a]) in
-    let a' = abstract_ids a vars in
-    let q = app (constid (pos 0) "keycycle_def" ) [a'] in 
-    Spi.QueryKeyCycle (pos 0, q)
+    let vars = get_glvids (app par_op [a]) in
+    let q = app (constid (pos 0) "keycycle_def" ) [abstract_ids a vars] in 
+    Spi.QueryKeyCycle (pos 0, change_ctids q)
 
-  (* Add symbolic trace analysis *)
+  (* Symbolic trace analysis *)
   let stap_abstract_ids sa vars =
     let stap_action = constid (pos 0) "defStapAct" in 
     let abs  = constid (pos 0) "defStapActAbs" in 
@@ -154,12 +138,9 @@
     | h::t -> remove_duplicate (List.filter (fun x -> x <> h) lst) t
 
   let defStapBody n a b p =
-    let vars = Input.get_freeids (app par_op [a;b;p]) in
+    let vars = get_glvids (app par_op [a;b;p]) in
     let vars' = remove_duplicate vars n in
-    let a' = stap_abstract_ids a vars' in
-    let b' = stap_abstract_ids b vars' in
-    let p' = abstract_ids p vars' in
-    app (constid (pos 0) "defStapBody" ) [a'; b'; p']
+    app (constid (pos 0) "defStapBody" ) [stap_abstract_ids a vars'; stap_abstract_ids b vars'; abstract_ids p vars']
 
   let defStapBodyAbs a b = 
     let abs_var x t = app (constid (pos 0) "defStapBodyAbs" ) [lambda x t] in 
@@ -170,21 +151,18 @@
     let sb = defStapBody n' a b p in
     let sb' = defStapBodyAbs n sb in
     let q = app (constid (pos 0) "stap_def" ) [sb'] in
-    Spi.QueryStap (pos 0, q)
+    Spi.QueryStap (pos 0, change_ctids q)
 
   let stapqueryshort a b p =
-    let vars = Input.get_freeids (app par_op [a;b;p]) in
-    let a' = stap_abstract_ids a vars in
-    let b' = stap_abstract_ids b vars in
-    let p' = abstract_ids p vars in
-    let sb = app (constid (pos 0) "defStapBody" ) [a'; b'; p'] in
+    let vars = get_glvids (app par_op [a;b;p]) in
+    let sb = app (constid (pos 0) "defStapBody" ) [stap_abstract_ids a vars; stap_abstract_ids b vars; abstract_ids p vars] in
     let q = app (constid (pos 0) "stap_def" ) [sb] in
-    Spi.QueryStap (pos 0, q)
+    Spi.QueryStap (pos 0, change_ctids q)
 
 %}
 
 
-%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON QMARK BISIM SIM KEYCYCLE STAP
+%token LPAREN RPAREN LBRAK RBRAK LANGLE RANGLE LBRAC RBRAC SEMICOLON BISIM SIM KEYCYCLE STAP
 %token ZERO DONE DOT EQ NEQ COMMA NU PAR PLUS ENC HASH AENC PUB BLIND SIGN VK MAC TAU ABSURD CHECKSIGN ADEC UNBLIND GETMSG
 %token DEF CASE LET OF IN SHARP BANG
 %token <string> ID

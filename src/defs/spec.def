@@ -248,31 +248,14 @@ check_def A :=
 
 
 % RH: Added for open progressing bisimulation.
-%Define  bisim_def : list bt_pair -> def_body -> def_body -> prop by 
-%bisim_def H (defAbs x\A x) (defAbs x\B x) :=
-%  nabla x, exists H1,
-%   append H (cons (in (var x) (var x)) nil) H1 /\ 
-%   bisim_def H1 (A (var x)) (B (var x)) ;
-%bisim_def H (defProc P) (defProc Q) :=
-%  expand_defs P R /\ 
-%  expand_defs Q T /\
-%  _if (progressing_opt)
-%      (_if sim_opt
-%           (printstr "Checking progressing similarity for: \n")
-%           (printstr "Checking progressing bisimilarity for: \n"))
-%      (_if sim_opt
-%           (printstr "Checking strong similarity for: \n")
-%           (printstr "Checking strong bisimilarity for: \n"))
-%  /\ 
-%  print_proc R /\ printstr "\n" /\
-%  printstr " and \n" /\ 
-%  print_proc T /\ printstr "\n" /\
-%  bisim H R T.
-
-Define  bisim_def : proc -> proc -> prop by 
-bisim_def P Q :=
-   expand_defs P R /\ 
-   expand_defs Q T /\
+Define  bisim_def : list bt_pair -> def_body -> def_body -> prop by
+bisim_def H (defAbs x\A x) (defAbs x\B x) :=
+  nabla x, exists H1,
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   bisim_def H1 (A (var x)) (B (var x)) ;
+bisim_def H (defProc P) (defProc Q) :=
+  expand_defs P R /\ 
+  expand_defs Q T /\
   _if (progressing_opt)
       (_if sim_opt
            (printstr "Checking progressing similarity for: \n")
@@ -284,7 +267,7 @@ bisim_def P Q :=
   print_proc R /\ printstr "\n" /\
   printstr " and \n" /\ 
   print_proc T /\ printstr "\n" /\
-  bisim nil R T.
+  bisim H R T.
 
 % Add key cycle
 Define  keycycle_def : def_body -> prop by
