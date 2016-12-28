@@ -271,7 +271,7 @@ Define solve_constraints : list tm -> list constraint -> list sub_pair -> prop
 by
 solve_constraints Vs Cs Subst :=
   trim_cst Cs nil Ds /\
-  id_subst Vs IdSubst /\ % RH: generates identity substitution (initial substitution for solve prodeedure).
+  id_subst Vs IdSubst /\ % RH: generates identity substitution (initial substitution for solve prodcedure).
   (solve Vs IdSubst nil Ds Subst).
 
 

@@ -1,0 +1,9 @@
+bisim(
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).let w = getmsg(y) in [checksign(y,pub(k))][w = blind(blind(blind(n,n),m),a)]a<a> ,
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y)
+);
+
+bisim(
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).let w = getmsg(y) in [checksign(y,pub(k))][w = blind(blind(n,a),k)]a<a> ,
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y)
+);

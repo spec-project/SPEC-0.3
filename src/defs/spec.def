@@ -99,8 +99,8 @@ expand_defs (let M (x\y\P x y)) (let N (x\y\ Q x y)) :=
 expand_defs (taup P) (taup Q) := expand_defs P Q;  % RH: Added for tau.
 
 % CheckSign
-expand_defs (checksign Z X Y P) (checksign W U V Q) :=
-  simp_cp Z W /\ simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ; 
+expand_defs (checksign X Y P) (checksign U V Q) :=
+  simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ; 
 % Adec, Unblind, Getmsg
 expand_defs (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
   simp_cp M U /\ simp_cp N V /\
@@ -108,9 +108,9 @@ expand_defs (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
 expand_defs (letunblind M N (x\ P x)) (letunblind U V (x\ Q x)) :=
   simp_cp M U /\ simp_cp N V /\
   nabla x, expand_defs (P (bn x)) (Q x) ;
-%expand_defs (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) :=
-%  simp_cp M N /\
-%  nabla x, expand_defs (P (bn x)) (Q x) ;
+expand_defs (letgetmsg M (x\ P x)) (letgetmsg N (x\ Q x)) :=
+  simp_cp M N /\
+  nabla x, expand_defs (P (bn x)) (Q x) ;
 
 expand_defs (bang P) (bang Q) := expand_defs P Q.
 
@@ -225,6 +225,15 @@ free_names_proc (letadec M N P) Acc L :=
   free_names_term N Acc1 Acc2 /\
   nabla x, 
   free_names_proc (P (bn x)) Acc2 L ; 
+free_names_proc  (letunblind M N P) Acc L :=
+  free_names_term M Acc AccI /\
+  free_names_term N AccI AccII /\
+  nabla x,
+  free_names_proc (P (bn x)) AccII L ;
+free_names_proc (letgetmsg M P) Acc L :=
+  free_names_term M Acc AccI /\
+  nabla x,
+  free_names_proc (P (bn x)) AccI L ;
 
 free_names_proc (bang P) Acc L := 
   free_names_proc P Acc L.

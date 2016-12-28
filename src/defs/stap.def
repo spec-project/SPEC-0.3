@@ -18,6 +18,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #include "trace.def".
+#include "constraint-system.def".
 
 Kind stap_action type.
 Type stap_act_in  tm -> tm -> stap_action.
@@ -80,14 +81,16 @@ by
 stap_trace_cst emp Pre Chnl nil;
 stap_trace_cst (t_in (act A) U T) Pre Chnl Cs :=
   _if (det_mem A Chnl)
-    (Chnl1 = Chnl /\ Cs = cons (dedl Pre U) Ds)
-    (Chnl1 = cons A Chnl /\ Cs = cons (dedl Pre A) (cons (dedl Pre U) Ds))
+    (Chnl1 = Chnl /\ Cs = cons (dedc Pre U) Ds)
+    (Chnl1 = cons A Chnl /\ Cs = cons (dedc Pre A) (cons (dedc Pre U) Ds))
   /\ stap_trace_cst T Pre Chnl1 Ds;
 stap_trace_cst (t_out (act A) U T) Pre Chnl Cs :=
   _if (det_mem A Chnl)
     (Chnl1 = Chnl /\ Cs = Ds)
-    (Chnl1 = cons A Chnl /\ Cs = cons (dedl Pre A) Ds)
-  /\ stap_trace_cst T (cons U Pre) Chnl1 Ds.
+    (Chnl1 = cons A Chnl /\ Cs = cons (dedc Pre A) Ds)
+  /\ PreI = cons U Pre /\
+  decpr PreI PreII /\
+  stap_trace_cst T PreII Chnl1 Ds.
 
 % Combine two substitution list with common variable list
 Define stap_combine_subst : list sub_pair -> list sub_pair -> list sub_pair -> prop by
@@ -102,7 +105,6 @@ Define stap_unify : tm -> tm -> tm -> tm -> list tm -> list sub_pair -> prop by
 stap_unify A B M N Vs Subst := unify nil A B Vs Subst1 /\ unify nil M N Vs Subst2 /\ stap_combine_subst Subst1 Subst2 Subst.
 
 % Unify an action B with trace T
-% B is not unified with t_out (act A) (var X)
 Define unify_trace : list tm -> trace -> stap_action -> list sub_pair -> prop by
 unify_trace Vs (t_in  (act A) M T) StapAct Subst := (StapAct = stap_act_in  B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst;
 unify_trace Vs (t_out (act A) M T) StapAct Subst := (StapAct = stap_act_out B N /\ stap_unify A B M N Vs Subst) \/ unify_trace Vs T StapAct Subst.
@@ -139,7 +141,7 @@ stap A B T :=
       %printstr "\nTTheta :" /\ print_trace_action TTheta /\
       exists Cs, stap_trace_cst TTheta nil nil Cs /\
       exists Vs, trace_vars TTheta nil Vs /\
-      forall Sol, _distinct(solve_constraints Vs Cs Sol) ->
+      forall Sol, _distinct(cs_solve_constraints Vs Cs Sol) ->
         (
 	  %printstr "\n\tSol :" /\ print_subst Sol /\
 	  % A = absurd will be false in this step

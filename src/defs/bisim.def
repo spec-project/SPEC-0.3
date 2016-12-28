@@ -44,22 +44,22 @@ Define fun_RSRC1 : list bt_pair -> list tm -> list sub_pair -> constraint ->
 by 
 fun_RSRC1 H OriVars Sub C Sol Sub1 Sub2 :=
   bitrace_cst 1 H nil Cs /\
-  apply_list Sub Cs Ds /\ 
+  cs_apply_list Sub Cs Ds /\
   append Ds (cons C nil) Constraints /\
-  constraints_vars Constraints CstVars /\ 
-  _distinct(solve_constraints CstVars Constraints Sol) /\ 
+  cs_constraints_vars Constraints CstVars /\
+  _distinct(cs_solve_constraints CstVars Constraints Sol) /\
   compose OriVars Sub Sol Sub1 /\
-  fun_CS1 OriVars H Sub1 Sub2. % RH: bitrace consistency is checked here. Sub2 is generated w.r.t. the (consistent) bitrace.
+  fun_CS1 OriVars H Sub1 Sub2 . % RH: bitrace consistency is checked here. Sub2 is generated w.r.t. the (consistent) bitrace.
 
 Define fun_RSRC2 : list bt_pair -> list tm -> list sub_pair -> constraint -> 
       		      list sub_pair -> list sub_pair -> list sub_pair -> prop
 by
 fun_RSRC2 H OriVars Sub C Sol Sub1 Sub2 :=
   bitrace_cst 2 H nil Cs /\ 
-  apply_list Sub Cs Ds /\
+  cs_apply_list Sub Cs Ds /\
   append Ds (cons C nil) Constraints /\ 
-  constraints_vars Constraints CstVars /\ 
-  _distinct(solve_constraints CstVars Constraints Sol) /\ 
+  cs_constraints_vars Constraints CstVars /\ 
+  _distinct(cs_solve_constraints CstVars Constraints Sol) /\ 
   compose OriVars Sub Sol Sub2 /\ % printstr " RSRC2: " /\ psubst Sub2 /\ pbitrace H /\
   fun_CS2 OriVars H Sub1 Sub2. 
 
@@ -72,15 +72,15 @@ by
 ref1_cont H Vs (contProc A Q Sub) (conRefProc Sub1 Sub2 A P) :=
   fun_RS1 H Sub Sol Sub1 Sub2 /\ 
   copyproc Sol Q P ; 
-ref1_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) := 
-  bt2thy H Thy /\ 
-  split_thy Thy S1 S2 /\ 
-  copylist Sub S1 S /\ 
-  C = (dedl S M) /\ 
+ref1_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) :=
+  bt2thy H Thy /\
+  split_thy Thy S1 S2 /\
+  copylist Sub S1 S /\
+  C = (dedc S M) /\
   _distinct (fun_RSRC1 H Vs Sub C Sol Sub1 Sub2) /\ % RH: Added distinct here to cut down refinements.
   % printstr " Refinement: " /\ printstr " sub1: " /\ psubst Sub1 /\ printstr " sub2: " /\ psubst Sub2 /\ printstr " H: " /\ pbitrace H /\ println "" /\
-  copyterm Sol M N /\ 
-  copyagent Sol Q P ; 
+  copyterm Sol M N /\
+  copyagent Sol Q P; 
 ref1_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) := 
   nabla x, ref1_cont H Vs (Cont x) (Cts x).
 
@@ -93,7 +93,7 @@ ref2_cont H Vs (contAgent (act M) Q Sub) (conRefAgent Sub1 Sub2 (act N) P) :=
   bt2thy H Thy /\ 
   split_thy Thy S1 S2 /\ 
   copylist Sub S2 S /\ 
-  C = (dedl S M) /\ 
+  C = (dedc S M) /\ 
   _distinct (fun_RSRC2 H Vs Sub C Sol Sub1 Sub2) /\ % RH: Added distinct here to cut down refinements.
   copyterm Sol M N /\ 
   copyagent Sol Q P ; 
@@ -261,7 +261,12 @@ decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
         _if (det_mem (mp (aen X K) (aen Y M)) Thy)
             (L = Acc)
             (L = (cons (out (aen X K) (aen Y M)) Acc))
-      ) ;
+      );
+% Pub
+decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
+  _if (det_mem (mp (pub X) (pub Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (pub X) (pub Y)) Acc));
 % Blind
 decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
   _if (deduce_r Thy K M)
@@ -271,12 +276,6 @@ decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
             (L = Acc)
             (L = (cons (out (blind X K) (blind Y M)) Acc))
       ) ;
-
-% Pub
-decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
-  _if (det_mem (mp (pub X) (pub Y)) Thy)
-      (L = Acc)
-      (L = (cons (out (pub X) (pub Y)) Acc)) ;
 % Sign
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
  _if (det_mem (mp (sign X Y) (sign U V)) Thy)
@@ -368,7 +367,7 @@ bisimAbs2 H P (absRef x\ Cts x) :=
 % [bisimCon1,bisimCon2] These deal with the case where the cases involving the output transitions
 % in the definition of bisimulation. The continuation in this case is an agent. 
 
-bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) := 
+bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
   apply_subst_bt Sub1 Sub2 H H1 /\ 
   bt2thy H1 Thy /\ 
   reduce Thy ThyRed /\ 
@@ -447,9 +446,9 @@ bisimAgent H Thy (new x\ P x) (new x\ Q x) :=
 
 % [bisim] The main procedure for open progressing bisimulation checking.
 
-bisim H P Q := 
+bisim H P Q :=
   print_bisim H P Q /\ 
-  bitrace_vars H Vs /\ 
+  bitrace_vars H Vs /\
   % _rigid P /\ _rigid Q /\ _rigid Vs /\ 
   (forall Cont, _distinct (c_one Vs P Cont) ->
       (forall Cts, 
@@ -463,7 +462,7 @@ bisim H P Q :=
       )
   )
   /\
-  (forall Cont, _distinct (c_oneCon Vs P Cont) -> 
+  (forall Cont, _distinct (c_oneCon Vs P Cont) ->
       (forall Cts, 
         _distinct (ref1_cont H Vs Cont Cts) -> (bisimCon1 H Q Cts)
       )
@@ -484,7 +483,7 @@ _if sim_opt true
       )
   )
   /\
-  (forall Cont, _distinct (c_oneCon Vs Q Cont) -> 
+  (forall Cont, _distinct (c_oneCon Vs Q Cont) ->
       (forall Cts, 
         _distinct (ref2_cont H Vs Cont Cts) -> (bisimCon2 H P Cts)
       )
