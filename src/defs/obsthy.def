@@ -61,7 +61,7 @@ print_thy Thy :=
 Define deduce_r : list thy_pair -> tm -> tm -> prop 
 by 
 deduce_r Thy (var V) (var V) ;
-%deduce_r Thy (ct C) (ct C) ; % RH: Not sure why constants where included here.
+deduce_r Thy (ct C) (ct C) ;
 deduce_r Thy M N := det_mem (mp M N) Thy ;
 deduce_r Thy (pr U V) (pr R T) := deduce_r Thy U R /\ deduce_r Thy V T ; 
 deduce_r Thy (en U V) (en R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
@@ -90,7 +90,7 @@ deduce_r Thy (mac U V) (mac X Y) := deduce_r Thy U R /\ deduce_r Thy V T.
 Define deduce_inv_r : list thy_pair -> tm -> tm -> prop 
 by
 deduce_inv_r Thy (var V) (var V) ; 
-%deduce_inv_r Thy (ct C) (ct C) ; % RH: Not sure why constants where included here.
+deduce_inv_r Thy (ct C) (ct C) ;
 deduce_inv_r Thy M N := det_mem (mp N M) Thy ; 
 deduce_inv_r Thy (pr U V) (pr R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ; 
 deduce_inv_r Thy (en U V) (en R T) :=  deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ;
@@ -111,7 +111,7 @@ deduce_inv_r Thy (mac U V) (mac R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy
 Define ded1_r : list tm -> tm -> prop
 by
 ded1_r S (var V) ; 
-%ded1_r S (ct C) ; 
+ded1_r S (ct C) ; 
 ded1_r S M := det_mem M S ; 
 % ded1_r S M := member M S ; 
 ded1_r S (pr U V) := ded1_r S U /\ ded1_r S V ; 
@@ -127,16 +127,16 @@ ded1_r S (hs X) := ded1_r S X ;
 ded1_r S (mac U V) := ded1_r S U /\ ded1_r S V.
 % ded1_r S (vk X) := ded1_r S X ;
 
-% saturation of theories
+% Saturation of theories
 
 Define id_pair : tm -> tm -> prop 
 by
-id_pair (var X) (var X).
-%id_pair (ct X) (ct X).
+id_pair (var X) (var X) ;
+id_pair (ct X) (ct X) .
 
-  % insert (mp U R) Thy Thy1,
-  % insert (mp V T) Thy1 Thy2, 
-  % decom_pair Thy2 Res.
+% insert (mp U R) Thy Thy1,
+% insert (mp V T) Thy1 Thy2, 
+% decom_pair Thy2 Res.
 
 Define decom_pair : list thy_pair -> list thy_pair -> prop
 by
@@ -151,10 +151,7 @@ decom_pair (cons X Thy) Res :=
   insert X Res1 Res.
 
 
-%%% TODO: add reduction rules for asymmetric encryption and signing.
-
 % Asymmetric Encryption - Rename decom_enc -> decom_enc_aenc
-
 % [decom_enc_aenc]
 % decom_enc_aenc Thy NE1 E1 NE2 E2.
 % Thy is an input theory. 
@@ -326,7 +323,7 @@ Define iter_reduce : list thy_pair -> list thy_pair -> list thy_pair ->
 by 
 iter_reduce NE1 E1 NE2 E2 :=
   decom_enc_aenc E1 NE1 nil NE E /\
-  _if (equal E1 E) % RH: checks no new pairs where added in the reduction step.
+  _if (equal E1 E) % RH: Checks no new pairs where added in the reduction step.
       (NE2 = NE /\ E2 = E)
       (iter_reduce NE E NE2 E2).
 
@@ -341,15 +338,13 @@ remove_thy_vars (cons P ThyIn) ThyOut :=
        (remove_thy_vars ThyIn ThyOut)
        (remove_thy_vars ThyIn Thy /\ ThyOut = (cons P Thy)).
 
-% remove constant pairs from a theory
-
-%Define remove_thy_consts : list thy_pair -> list thy_pair -> prop
-%by 
-%remove_thy_consts nil nil ; 
-%remove_thy_consts (cons P ThyIn) ThyOut :=
-%  _if (P = (mp (ct X) (ct X)))
-%      (remove_thy_consts ThyIn ThyOut)
-%      (remove_thy_consts ThyIn Thy /\ ThyOut = (cons P Thy)).
+% Remove constant pairs from a theory
+Define remove_thy_consts : list thy_pair -> list thy_pair -> prop by 
+remove_thy_consts nil nil ; 
+remove_thy_consts (cons P ThyIn) ThyOut :=
+  _if (P = (mp (ct X) (ct X)))
+      (remove_thy_consts ThyIn ThyOut)
+      (remove_thy_consts ThyIn Thy /\ ThyOut = (cons P Thy)).
 
 Define reduce : list thy_pair -> list thy_pair -> prop
 by
@@ -358,14 +353,13 @@ reduce Thy1 Thy2 :=
   filter_enc Thy NE1 E1 /\
   iter_reduce NE1 E1 NE2 E2 /\
   append NE2 E2 Thy3 /\ 
-  remove_thy_vars Thy3 Thy2.
-  %   remove_thy_vars Thy3 Thy4 /\ remove_thy_consts Thy4 Thy2. % RH: No need for constants.
+  remove_thy_vars Thy3 Thy4 /\ remove_thy_consts Thy4 Thy2.
 
-% RH: checks that two messages have the same type by looking at the outermost constructor.
+% RH: Checks that two messages have the same type by looking at the outermost constructor.
 Define eq_msg_type : tm -> tm -> prop
 by 
 eq_msg_type (var X) (var X) ; 
-%eq_msg_type (ct X) (ct X)  RH: Removed constants.
+eq_msg_type (ct X) (ct X) ;
 eq_msg_type (nm X) (nm Y) ;
 eq_msg_type (pr X Y) (pr U V) ;
 eq_msg_type (en X Y) (en U V) ;
@@ -507,13 +501,13 @@ Define thy_consistent : list thy_pair -> prop % RH: not used as far as I can see
 by
 thy_consistent Thy :=
   reduce Thy Thy1 /\ 
-  thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc3 Thy1	. % Asymmetric Encryption - thy_cc4
+  thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc3 Thy1	.
 
 
 % Checking consistency of reduced theories
 Define thy_red_consistent : list thy_pair -> prop 
 by
-thy_red_consistent Thy := %print_thy Thy /\
+thy_red_consistent Thy :=
   thy_cc1 Thy /\
   %thy_cc2_alt Thy /\
   thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\

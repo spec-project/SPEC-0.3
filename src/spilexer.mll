@@ -30,7 +30,7 @@
           pos_lnum = 1 + lexbuf.lex_curr_p.pos_lnum }
 }
 
-let name = ['a' - 'z']['A' - 'Z' 'a'-'z' '_' '0'-'9' ] *
+let name = ('?')?['a' - 'z']['A' - 'Z' 'a'-'z' '_' '0'-'9' ] *
 let aname = ['A' - 'Z']['A' - 'Z' 'a'-'z' '_' '0'-'9' ] *
 let blank = ' ' | '\t' | '\r'
 let instring = [^'"'] *

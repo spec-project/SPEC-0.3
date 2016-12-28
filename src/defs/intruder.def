@@ -89,19 +89,21 @@ Define trim_cst : list constraint -> list tm -> list constraint -> prop by
 trim_cst nil Rhs nil ; 
 trim_cst (cons C L) Rhs Ds :=
   rhs_cst C M /\
-  _if (det_mem M Rhs)
+  _if (M = ct X)
+    (trim_cst L Rhs Ds)
+    (
+      _if (det_mem M Rhs)
       (trim_cst L Rhs Ds)
       (trim_cst L (cons M Rhs) Cs /\ Ds = (cons C Cs))
-      .
+    ).
 
 
 
-Define redundant : constraint -> list constraint -> prop by
-redundant C (cons D L) :=
-  _if (rhs_cst C M /\ rhs_cst D M)
-      true
-      (redundant C L).
+Define redundant_aux : constraint -> list constraint -> prop by
+redundant_aux C (cons D L) := det_or (rhs_cst C M /\ rhs_cst D M) (redundant_aux C L).
 
+Define redundant : constraint -> list constraint -> prop by 
+redundant C L := det_or (rhs_cst C (ct X)) (redundant_aux C L).
 
 Define red1 : list tm -> constraint -> list constraint -> list constraint ->
               list constraint -> list sub_pair -> prop
@@ -156,36 +158,29 @@ red 3 Vs (dedl S M) Cs Ds :=
 % So we add (dedr T V) instead of (dedr S V) to the constraints Cs.
 red 5 Vs (dedl S M) Cs Ds :=
   select S (en U V) T /\
-  (insert V T T1) /\
-  (insert U T1 T2) /\
+  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\
+  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
 % % Asymmetric Encryption
 red 5 Vs (dedl S M) Cs Ds :=
   select S (aen U (pub X)) T /\
-  (insert X T T1) /\
-  (insert U T1 T2) /\
+  _if (msg_type X ct_type) (T1 = T) (insert X T T1) /\
+  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
   Ds = cons (dedr T X) (cons (dedl T2 M) Cs);
 
 % % Blind
 red 5 Vs (dedl S M) Cs Ds :=
   select S (blind U V) T /\
-  (insert V T T1) /\
-  (insert U T1 T2) /\
+  _if (msg_type V ct_type) (T1 = T) (insert V T T1) /\
+  _if (msg_type U ct_type) (T2 = T1) (insert U T1 T2) /\
   Ds = cons (dedr T V) (cons (dedl T2 M) Cs);
 
-% % Sign, Blind
+% % Sign, Blind - Remove or add constant
 red 5 Vs (dedl S L) Cs Ds :=
   select S (sign (blind M N) K) T /\
   _not (det_mem (sign M K) T) /\ % RH: Sign M K must not be in the assumptions, or the rule has been applied or is redundant.
   Ds = cons (dedr T N) (cons (dedl (cons (sign M K) S) L) Cs).
- 
-
-% % Sign
-%red 5 Vs (dedl S M) Cs Ds :=
-%  select S (sign U V) T /\
-%  _not (det_mem U T) /\
-%  Ds = cons (dedl (cons U S) M) Cs.
 
 % % Signing. Keep the signed message (SPEC original commented source code). 
 % red 5 Vs (dedl S M) Cs Ds :=
@@ -200,7 +195,7 @@ by
 red5_aen_var (dedl S M) Pre Post Cs Subst :=
    select S (aen U (var X)) T /\
    Subst = (cons (sub (var X) (pub (var X))) nil) /\
-   (insert U T T1) /\
+   _if (msg_type U ct_type) (T1 = T) (insert U T T1) /\
    apply_list Subst Pre Pre1 /\
    apply_list Subst Post Post1 /\
    apply Subst (dedl T1 M) C /\
@@ -216,8 +211,8 @@ red5_aen_var (dedl S M) Pre Post Cs Subst :=
 Define decpr : list tm -> list tm -> prop by 
 decpr nil nil ;
 decpr (cons (pr U V) L) R :=
-  (insert V L L1) /\
-  (insert U L1 L2) /\
+  _if (msg_type V ct_type) (L1 = L)  (insert V L L1) /\
+  _if (msg_type U ct_type) (L2 = L1) (insert U L1 L2) /\
   decpr L2 R ;
 %decpr (cons (sign U V) L) (cons (sign U V) R) :=
 %  (insert U L L1)
@@ -234,7 +229,7 @@ iter_red4 (dedl S M) (dedl T M) := decpr S T ;
 iter_red4 (dedr S M) (dedr S M).
 
 % Rewriting deducibility constraints to a solved form.
-% We relax the condition of the solved form a bit; We shall
+% We relax the condition of the solved form a bit; we shall 
 % allow both (dedl S (var V)) and (dedr S (var V)) in the solved form.
 
 Define solved_form : constraint -> prop

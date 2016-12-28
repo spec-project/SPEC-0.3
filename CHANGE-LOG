@@ -1,23 +1,28 @@
 Version 0.3
 -----------
-- 25/04/16:
-* Open progressing bisimulation working (Added pbisim, sim).
-* Definitions are open.
+- 28/12/16
+ * Added global variable. Global variable is defined by putting
+   question mark before name (?)
+ * Constants are brought back.
 
-* Added aenc, pub, blind, sign, hash, mac, adec, unblind, getmsg syntax.
+- 25/04/16:
+ * Open progressing bisimulation working (Added pbisim, sim).
+ * Definitions are open.
+
+ * Added aenc, pub, blind, sign, hash, mac, adec, unblind, getmsg syntax.
 
 Version 0.2
 -----------
 - 23/01/13:
-* Migrated to the syntax of Bedwyr 1.4.
-* Type checking is now built into Bedwyr, so typecheck.def is no
-  longer needed.
-* Changed slightly the syntax of 'let' construct to conform with
-  the original syntax of spi-calculus.
-* Various changes in the parsing of spi expressions. They are now
-  parsed into the intermediate term structure of Bedwyr 1.4.
-* Added a command to enable/disable reflexivity checking.
-* Added a command to enable/disable trace printing.
+ * Migrated to the syntax of Bedwyr 1.4.
+ * Type checking is now built into Bedwyr, so typecheck.def is no
+   longer needed.
+ * Changed slightly the syntax of 'let' construct to conform with
+   the original syntax of spi-calculus.
+ * Various changes in the parsing of spi expressions. They are now
+   parsed into the intermediate term structure of Bedwyr 1.4.
+ * Added a command to enable/disable reflexivity checking.
+ * Added a command to enable/disable trace printing.
 
 Version 0.1.2
 -------------

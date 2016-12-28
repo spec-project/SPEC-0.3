@@ -145,7 +145,7 @@ show_def A :=
 
 Define free_names_term : tm -> list tm -> list tm -> prop
 by 
-%free_names_term (ct X) Acc L := insert (ct X) Acc L ;
+free_names_term (ct X) Acc L := insert (ct X) Acc L ;
 free_names_term (nm X) Acc L := insert (nm X) Acc L ;
 free_names_term (var X) Acc L := insert (var X) Acc L ;
 free_names_term (bn X) Acc Acc ; 
@@ -257,8 +257,7 @@ check_def A :=
 
 
 % RH: Added for open progressing bisimulation.
-
-Define  bisim_def : list bt_pair -> def_body -> def_body -> prop by 
+Define  bisim_def : list bt_pair -> def_body -> def_body -> prop by
 bisim_def H (defAbs x\A x) (defAbs x\B x) :=
   nabla x, exists H1,
    append H (cons (in (var x) (var x)) nil) H1 /\ 

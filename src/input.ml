@@ -130,7 +130,10 @@ let free_args pre_term =
   in
   in_app pre_term
 
-let get_freeids_old t = (* RH: This has the bug that fv(t u) =/= fv(t) \cup fv(u). The bug is fixed below using sets. *)
+(* Get free ids in SPEC-0.2
+- RH: This has the bug that fv(t u) =/= fv(t) \cup fv(u). The bug is fixed below using sets. *)
+(*
+let get_freeids t =
   let filter xs ys = 
       let xs = List.map (fun (x,y,z) -> y) xs in 
        List.filter (fun a -> not (List.mem a xs)) ys in
@@ -144,6 +147,7 @@ let get_freeids_old t = (* RH: This has the bug that fv(t u) =/= fv(t) \cup fv(u
     | _ -> vs 
   in
     aux [] t
+*)
 
 (* RH: alternative to get_freeids fixing alpha-conversion bug *)
 module StringSet = Set.Make(
