@@ -262,6 +262,11 @@ decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
             (L = Acc)
             (L = (cons (out (aen X K) (aen Y M)) Acc))
       ) ;
+% Pub
+decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
+  _if (det_mem (mp (pub X) (pub Y)) Thy)
+      (L = Acc)
+      (L = (cons (out (pub X) (pub Y)) Acc)) ;
 % Blind
 decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
   _if (deduce_r Thy K M)
@@ -271,12 +276,6 @@ decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
             (L = Acc)
             (L = (cons (out (blind X K) (blind Y M)) Acc))
       ) ;
-
-% Pub
-decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
-  _if (det_mem (mp (pub X) (pub Y)) Thy)
-      (L = Acc)
-      (L = (cons (out (pub X) (pub Y)) Acc)) ;
 % Sign
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
  _if (det_mem (mp (sign X Y) (sign U V)) Thy)
@@ -293,7 +292,8 @@ decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
       (L = Acc)
       (L = (cons (out (mac X Y) (mac U V)) Acc)) .
 
-%decomp_bt_pair Thy Acc X Y L := % RH: Added to allow anything to be indistinguishable in a theory.
+% RH: Added to allow anything to be indistinguishable in a theory.
+%decomp_bt_pair Thy Acc X Y L :=
 %  _if (det_mem (mp X Y) Thy \/ det_mem (out X Y) Acc)
 %      (L = Acc)
 %      (L = (cons (out X Y) Acc)).
