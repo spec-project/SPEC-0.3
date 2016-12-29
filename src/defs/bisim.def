@@ -292,7 +292,8 @@ decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
       (L = Acc)
       (L = (cons (out (mac X Y) (mac U V)) Acc)) .
 
-%decomp_bt_pair Thy Acc X Y L := % RH: Added to allow anything to be indistinguishable in a theory.
+% RH: Added to allow anything to be indistinguishable in a theory.
+%decomp_bt_pair Thy Acc X Y L :=
 %  _if (det_mem (mp X Y) Thy \/ det_mem (out X Y) Acc)
 %      (L = Acc)
 %      (L = (cons (out X Y) Acc)).

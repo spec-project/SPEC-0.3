@@ -72,7 +72,7 @@ deduce_r Thy (pub X) (pub Y) := deduce_r Thy X Y ;
 deduce_r Thy (blind U V) (blind R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
 % Sign, Hash, Mac
 deduce_r Thy (sign U V) (sign R T) := deduce_r Thy U R /\ deduce_r Thy V T ;
-deduce_r Thy (sign U V) (sign R T) := member (mp (sign (var X) V) (sign (var Y) T)) Thy /\ deduce_r Thy U R ;
+deduce_r Thy (sign U V) (sign R T) := _cut(member (mp (sign (var X) V) (sign (var Y) T)) Thy) /\ deduce_r Thy U R ;
 deduce_r Thy (hs X) (hs Y) := deduce_r Thy X Y ;
 deduce_r Thy (mac U V) (mac X Y) := deduce_r Thy U R /\ deduce_r Thy V T.
 % deduce_r Thy (vk X) (vk Y) := deduce_r Thy X Y ;
@@ -101,6 +101,7 @@ deduce_inv_r Thy (pub X) (pub Y) := deduce_inv_r Thy X Y;
 deduce_inv_r Thy (blind U V) (blind R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ;
 % Sign, Hash, Mac
 deduce_inv_r Thy (sign U V) (sign R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy V T ;
+deduce_inv_r Thy (sign U V) (sign R T) := _cut(member (mp (sign (var X) V) (sign (var Y) T)) Thy) /\ deduce_inv_r Thy U R ;
 deduce_inv_r Thy (hs X) (hs Y) := deduce_inv_r Thy X Y ;
 deduce_inv_r Thy (mac U V) (mac R T) := deduce_inv_r Thy U R /\ deduce_inv_r Thy V T.
 % deduce_inv_r Thy (vk X) (vk Y) := deduce_inv_r Thy X Y ;

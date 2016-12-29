@@ -279,9 +279,9 @@ separate Pre (cons Cs CsL) NewPre NewPost :=
 % Simplication rules and Transformation rule do not change T
 Define cs_solve : list tm -> list constraint -> list constraint -> list sub_pair -> list sub_pair -> list constraint -> list constraint -> prop by
 cs_solve Vs Pre Post SubstIn SubstOut LoopDedcIn LoopMbscIn :=
-  %printstr "\nBefore Trim: " /\ cs_print_list_cst Post /\
+  %printstr "\nBefore Simplification: " /\ cs_print_list_cst Post /\
   simplication_rule Post PostI /\
-  %printstr "\nAfter Trim: " /\ cs_print_list_cst PostI /\
+  %printstr "\nAfter Simplification: " /\ cs_print_list_cst PostI /\
   append Pre PostI CsL /\
   _if (cs_solved_form CsL) (SubstOut = SubstIn)
     (
@@ -298,17 +298,31 @@ cs_solve Vs Pre Post SubstIn SubstOut LoopDedcIn LoopMbscIn :=
       )
     ) .
 
+% Decompose pair in constraint system
+% The initial constraint system does not contain membership constraint
 Define cs_decompose_pair : list constraint -> list constraint -> prop by
 cs_decompose_pair nil nil ;
-cs_decompose_pair (cons (mbsc V T U) CsLIn) (cons (mbsc V T U) CsLOut) := cs_decompose_pair CsLIn CsLOut ;
 cs_decompose_pair (cons (dedc T U) CsLIn) (cons (dedc T' U) CsLOut) := decpr T T' /\ cs_decompose_pair CsLIn CsLOut .
+
+% Remove redundant constraints
+% The initial constraint system does not contain membership constraint
+Define cs_trim_cst : list constraint -> list tm -> list constraint -> prop by 
+cs_trim_cst nil Rhs nil ;
+cs_trim_cst (cons (dedc T U) L) Rhs Ds :=
+  _if (U = ct X)
+    (cs_trim_cst L Rhs Ds)
+    (
+      _if (det_mem U Rhs)
+      (cs_trim_cst L Rhs Ds)
+      (cs_trim_cst L (cons U Rhs) Cs /\ Ds = (cons (dedc T U) Cs))
+    ) .
 
 Define cs_solve_constraints : list tm -> list constraint -> list sub_pair -> prop
 by
 cs_solve_constraints Vs CsL Subst :=
+  % This step might be redundant because of simplication_rule
+  % cs_trim_cst CsL nil CsLI /\
   id_subst Vs IdSubst /\
-  %cs_decompose_pair CsL CsLI /\
-  %cs_solve Vs nil CsLI IdSubst Subst nil nil
   cs_solve Vs nil CsL IdSubst Subst nil nil
 .
 

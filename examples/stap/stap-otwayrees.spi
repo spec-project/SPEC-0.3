@@ -55,9 +55,8 @@ Server(a,b,ska,skb,c_s) :=
   [n5 = a] nu(k).
   c_s<<m5, enc(<k,m5>,ska), enc(<k,n2>,skb)>>;
 
-System(x, c_a, c_s, accept_ab, accept_ac) :=
-  nu(a,b,c,ska,skb,skc).
-  x<<a,b,c,skc,accept_ab,accept_ac>>.
+System(c_a, c_s, accept_ab, accept_ac) :=
+  nu(ska,skb).
   (
     Initiator {a, b, ska, c_a, accept_ab} |
     Initiator {a, c, ska, c_a, accept_ac} |
@@ -66,6 +65,4 @@ System(x, c_a, c_s, accept_ab, accept_ac) :=
   );
 
 % #load "examples/stap/stap-otwayrees.spi";
-% nu(accept_ab,accept_ac).stap(absurd, accept_ac<hash(t)>, System{x, c_a, c_s, accept_ab, accept_ac});	--> Does not hold (+ 32281s)
-
-
+% stap(absurd, accept_ac<hash(t)>, System{c_a, c_s, accept_ab, accept_ac});	--> Does not hold (+ s)
