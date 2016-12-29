@@ -102,10 +102,10 @@ simplication_rule (cons (mbsc (pr U V) T W) CsL) CsOut :=
   simplication_rule (cons (mbsc V T W) CsL) CsOut ;
 % Rax
 simplication_rule (cons (dedc T U) CsL) CsOut :=
-  det_mem U T /\ simplication_rule CsL CsOut ;
+  (det_mem U T \/ U = ct M)/\ simplication_rule CsL CsOut ;
 % Rtriv
 simplication_rule (cons (dedc T U) CsL) CsOut :=
-  _not (det_mem U T) /\
+  _not (det_mem U T) /\ _not(U = ct M) /\
   _if (_cut(select CsL (dedc T' U) CsLI))
     (
       _if (subset T T') (simplication_rule (cons (dedc T U) CsLI) CsOut)

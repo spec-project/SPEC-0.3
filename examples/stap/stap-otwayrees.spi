@@ -66,6 +66,6 @@ System(x, c_a, c_s, accept_ab, accept_ac) :=
   );
 
 % #load "examples/stap/stap-otwayrees.spi";
-% nu(accept_ab,accept_ac).stap(absurd, accept_ab<hash(t)>, System{x, c_a, c_s, accept_ab, accept_ac});	--> Does not hold (+ s)
+% nu(accept_ab,accept_ac).stap(absurd, accept_ac<hash(t)>, System{x, c_a, c_s, accept_ab, accept_ac});	--> Does not hold (+ 32281s)
 
 

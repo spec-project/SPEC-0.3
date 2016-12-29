@@ -112,8 +112,4 @@ System_spec(a,b,s,minusone) :=
   | B_spec{a,b,kab,kbs,minusone} );
 
 % Query:
-% bisim(nu(a,b,s,minusone).x<<<<a,b>,s>,minusone>>.System{a,b,s,minusone}, nu(a,b,s,minusone).x<<<<a,b>,s>,minusone>>.System_spec{a,b,s,minusone});
-
-
-
-
+% bisim(System{a,b,s,minusone}, System_spec{a,b,s,minusone});
