@@ -7,62 +7,60 @@
 % 3. S --> B: nA, {k,nA}kA, {k,nB}kB 
 % 4. B --> A: nA, {k,nA}kA 
 
-% There is a subtle attack on this protocol. 
-% The attack shows up in configurations that include a server S, an agent A 
-% that may act either as the receiver or as the responder of a given session, 
-% and a malicious insider I that has registered 
-% himself as a participant, with identifier I and a long-term key kI shared 
-% with S. The role of the intruder is played by the environment. 
-% Agent A is willing to engage in a session with both B and I. 
-% We show below the code corresponding to this 'minimal' configuration.
-%
-% Section 7 - Symbolic Trace Analysis of cryptographic protocols (Extended version) - Michele Boreale 
+% "There is a subtle attack on this protocol. 
+%  The attack shows up in configurations that include a server S, an agent A 
+%  that may act either as the receiver or as the responder of a given session, 
+%  and a malicious insider I that has registered 
+%  himself as a participant, with identifier I and a long-term key kI shared 
+%  with S. The role of the intruder is played by the environment. 
+%  Agent A is willing to engage in a session with both B and I. 
+%  We show below the code corresponding to this 'minimal' configuration."
+% Section 7 - Symbolic Trace Analysis of cryptographic protocols (Extended version) - Michele Boreale
 
-Initiator(a,b,ska,c_a,accept) :=
+% Attack:
+% 1. A --> B: nA, A, B, {nA,A,B}kA
+% 2. I --> A: nI, I, A, {nI,I,A}kI
+% 3. A --> S: nI, I, A, {nI,I,A}kI, nA' {nI,I,A}kA
+% 4. I --> S: nI, I, A, {nI,I,A}kI, nA, {nI,I,A}kA
+% 5. S --> A: nI, {k, nI}kI, {k,nA}kA
+% 6. I --> A: nA, {k,nA}kA
+
+Initiator(agent_A,sk_A,agent_B,accept_AB) :=		% agent_A: Initiator / agent_B: Responder
   nu(na).
-  c_a< < < < na,a >,b >,enc(< < na,a >,b >,ska)> >.
-  c_a(x).				% x <-- <m1, enc(y,ska)>
+  env< < na, agent_A, agent_B, enc(<na, agent_A, agent_B>,ska) > >.
+  env(x).						% x <-- <m1, enc(<m2, n2>,ska)>
   let <m1,n1> = x in
-  [m1 = na] case n1 of enc(y,ska) in
+  [m1 = na] case n1 of enc(y,sk_A) in
   let <m2,n2> = y in
-  [n2 = na] accept<hash(x)>;
+  [n2 = na] accept_AB<x>;
 
-
-Responder(a,b,skb,c_a,c_s):=
-  c_a(x).				% x <-- <m3, n3, n2, n1>
+Responder(agent_A,agent_B,sk_B):=			% agentA: Initiator / agent_B: Responder
+  env(x).						% x <-- <m1, m2, m3, n3>
   let <m1,n1> = x in
-  let <m2,n2> = m1 in
-  [n2 = b] let <m3,n3> = m2 in
-  [n3 = a] nu(nb).
-  c_s< < <x, nb>, enc(m1,skb)>>.
-  c_s(y).
+  let <m2,n2> = n1 in
+  [m2 = agent_A] let <m3,n3> = n2 in
+  [m3 = agent_B] nu(nb).
+  env< < m1, agent_A, agent_B, n3, nb, enc(<m1,agent_A,agent_B>,sk_B) > >.
+  env(y).						% y <-- <m4, m5, enc(<m6, n6>,sk_B)>
   let <m4,n4> = y in
-  case y of enc(z,skb) in
-  let <m5,n5> = z in
-  [n5 = nb] let <m6,n6> = m4 in
-  [m6 = m3] c_a<m4>;
+  let <m5,n5> = n4 in
+  case n5 of enc(z,sk_B) in
+  let <m6,n6> = z in
+  [m4 = m1] [n6 = nb] env<<m1, m5>>;
   
-
-Server(a,b,ska,skb,c_s) :=
-  c_s(x).				% x <-- <m5, n5, n4, enc(z,ska), n2, enc(y,skb)>
+Server(agent_A,sk_A,agent_B,sk_B) :=			% agentA: Initiator / agent_B: Responder
+  env(x).						% x <-- <m1, m2, m3, enc(y,sk_A), m5, enc(z,sk_B)>
   let <m1,n1> = x in
-  case n1 of enc(y,skb) in
-  let <m2,n2> = m1 in
-  let <m3,n3> = m2 in
-  case n3 of enc(z,ska) in
-  [y = z] [m3 = y] let <m4,n4> = m3 in
-  [n4 = b] let <m5,n5> = m4 in
-  [n5 = a] nu(k).
-  c_s<<m5, enc(<k,m5>,ska), enc(<k,n2>,skb)>>;
-
-System(c_a, c_s, accept_ab, accept_ac) :=
-  nu(ska,skb).
-  (
-    Initiator {a, b, ska, c_a, accept_ab} |
-    Initiator {a, c, ska, c_a, accept_ac} |
-    Responder {a, c, skc, c_a,c_s} |
-    Server {a,c,ska,skc,c_s}
-  );
+  let <m2,n2> = n1 in
+  let <m3,n3> = n2 in
+  let <m4,n4> = n3 in
+  let <m5,n5> = n4 in
+  [m2 = agent_A][m3 = agent_B]
+  case m4 of enc(y,sk_A) in
+  case n5 of enc(z,sk_B) in
+  [<m1,m2,m3> = y]
+  [y = z] nu(k).
+  env<< m1, enc(<k, m1>, sk_A), enc(<k, m5>, sk_B) >>;
 
 % #load "examples/stap/stap-otwayrees.spi";
-% stap(absurd, accept_ac<hash(t)>, System{c_a, c_s, accept_ab, accept_ac});	--> Does not hold (+ s)
+% stap(absurd, accept_ab<?t>, nu(ska).env<<a,b,c,skc>>.(Initiator{a,ska,b,accept_ab}|Responder{c,a,ska}|Server{c,skc,a,ska}));	--> Does not hold (+ 117s)

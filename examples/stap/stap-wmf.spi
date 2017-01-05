@@ -18,7 +18,7 @@ B(ksb,c_ab,c_sb,accept) :=
   case x of enc(y,ksb) in 
   c_ab(z).
   case z of enc(w,y) in
-  accept<hash(z)>;
+  accept<z>;
 
 Inst(c_as,c_sb,c_ab,accept,datum) :=
   nu(kas,ksb).
@@ -26,13 +26,13 @@ Inst(c_as,c_sb,c_ab,accept,datum) :=
 
 % Authentication
 % If B accepts as 'good' a datum "datum" encrypted under key "kab" then this message has actually been sent by A
-% nu(datum).stap(c_ab<t>,accept<hash(t)>,Inst{c_as,c_sb,c_ab,accept,datum});	--> Holds (+ 2s)
+% nu(datum).stap(c_ab<?t>,accept<?t>,Inst{c_as,c_sb,c_ab,accept,datum});	--> Holds (+ 3s)
 % Explanation: Only accept channel outputs the message with the format hash(t)
-% nu(datum).stap(accept<hash(t)>,c_ab<t>,Inst{c_as,c_sb,c_ab,accept,datum});	--> Does not hold (+ 0s)
+% nu(datum).stap(accept<?t>,c_ab<?t>,Inst{c_as,c_sb,c_ab,accept,datum});	--> Does not hold (+ 0s)
 
 % Secrecy
 % The environment should never learn the confidential datum (datum)
-% nu(datum).stap(absurd,guard(datum),Inst{c_as,c_sb,c_ab,accept,datum} | guard(x));	--> Holds (+ 32s)
+% nu(datum).stap(absurd,guard(datum),Inst{c_as,c_sb,c_ab,accept,datum} | guard(x));	--> Holds (+ 30s)
 
 
 
