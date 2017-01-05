@@ -17,7 +17,7 @@
 (* Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             *)
 (****************************************************************************)
 
-(* Modified by Alwen Tiu, Ross Horne for SPEC, 2016 *)
+(* Modified by Alwen Tiu, Ross Horne for SPEC, 2017 *)
 
 {
   open Spiparser

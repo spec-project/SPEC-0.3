@@ -1,9 +1,15 @@
 Version 0.3
 -----------
-- 28/12/16
+- 28/12/16:
  * Added global variable. Global variable is defined by putting
    question mark before name (?)
  * Constants are brought back.
+
+- 01/09/16:
+ * Added symbolic trace analysis
+
+- 16/06/16:
+ * Added keycycle detection
 
 - 25/04/16:
  * Open progressing bisimulation working (Added pbisim, sim).
