@@ -1,6 +1,6 @@
 (****************************************************************************)
 (* SPEC                                                                     *)
-(* Copyright (C) 2011-2016 Alwen Tiu, Ross Horne			    *)
+(* Copyright (C) 2011-2017 Alwen Tiu, Ross Horne			    *)
 (*                                                                          *)
 (* This program is free software; you can redistribute it and/or modify     *)
 (* it under the terms of the GNU General Public License as published by     *)
@@ -28,7 +28,7 @@ let welcome_msg =
 Version 0.3
 
 This software is under GNU Public License.
-Copyright (c) 2011-2016 Alwen Tiu
+Copyright (c) 2011-2017 Alwen Tiu
 
 Type `#help;' to display available commands. 
 \n"
@@ -36,7 +36,7 @@ Type `#help;' to display available commands.
 let usage_msg =
   "SPEC.  
 This software is under GNU Public License.
-Copyright (c) 2011-2016 Alwen Tiu. 
+Copyright (c) 2011-2017 Alwen Tiu. 
 
 "
 
