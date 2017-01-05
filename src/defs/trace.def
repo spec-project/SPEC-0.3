@@ -46,7 +46,7 @@ ptrace (t_out A M T) :=
 Define print_trace : trace -> prop
 by
 print_trace T :=
-  printstr "\n[" /\ ptrace T /\ printstr "]\n".
+  printstr "\n" /\ ptrace T /\ printstr "\n".
 
 % Print trace with action
 Define ptrace_action : trace -> prop
@@ -62,7 +62,7 @@ ptrace_action (t_out (act A) M T) :=
 Define print_trace_action : trace -> prop
 by
 print_trace_action T :=
-  printstr "[" /\ ptrace_action T /\ printstr "]\n".
+  ptrace_action T /\ printstr "\n".
 
 Define copytrace : list sub_pair -> trace -> trace -> prop by
 
