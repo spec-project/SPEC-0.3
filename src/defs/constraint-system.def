@@ -165,13 +165,13 @@ transformation_rule_loop_dedc (dedc T (pub V)) CsL Ds LoopIn LoopOut :=
 ;
 % Rbd
 transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
-  sub_term_list (blind V U) T /\
+  _distinct(sub_term_list (blind V U) T) /\
   Ds = cons (dedc T (blind V U)) (cons (dedc T U) CsL)
   %/\ printstr "\nT4 Blind " /\ cs_print_list_cst (cons (dedc T V) CsL) /\ cs_print_list_cst Ds
 ;
 % Rget
 transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
-  sub_term_list (sign V U) T /\
+  _distinct(sub_term_list (sign V U) T) /\
   _not(det_mem (dedc T (sign V U)) LoopIn) /\
   LoopOut = cons (dedc T (sign V U)) LoopIn /\
   Ds = cons (dedc T (sign V U)) CsL
@@ -179,7 +179,7 @@ transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
 ;
 % Rpair
 transformation_rule_loop_dedc (dedc T U) CsL Ds LoopIn LoopOut :=
-  sub_term_list (pr M N) T /\ (U = M \/ U = N) /\
+  _distinct(sub_term_list (pr M N) T) /\ (U = M \/ U = N) /\
   _not(det_mem (dedc T (pr M N)) LoopIn) /\
   LoopOut = cons (dedc T (pr M N)) LoopIn /\
   Ds = cons (dedc T (pr M N)) CsL
@@ -187,7 +187,7 @@ transformation_rule_loop_dedc (dedc T U) CsL Ds LoopIn LoopOut :=
 ;
 % Rdec
 transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
-  sub_term_list (en V U) T /\
+  _distinct(sub_term_list (en V U) T) /\
   _not(det_mem (dedc T (en V U)) LoopIn) /\
   LoopOut = cons (dedc T (en V U)) LoopIn /\
   Ds = cons (dedc T (en V U)) (cons (dedc T U) CsL)
@@ -195,7 +195,7 @@ transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
 ;
 % Radec
 transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
-  sub_term_list (aen V (pub U)) T /\
+  _distinct(sub_term_list (aen V (pub U)) T) /\
   _not(det_mem (dedc T (aen V (pub U))) LoopIn) /\
   LoopOut = cons (dedc T (aen V (pub U))) LoopIn /\
   Ds = cons (dedc T (aen V (pub U))) (cons (dedc T U) CsL)
@@ -206,7 +206,7 @@ Define transformation_rule_loop_mbsc : constraint -> list constraint -> list con
 % Rbdsgn
 % In the rules Rbdsgn and Ra, Rb, Rc, pushing membership constraints before deducibility constraints might help to reduce running time
 transformation_rule_loop_mbsc (dedc T (sign V U)) CsL Ds LoopIn LoopOut :=
-  sub_term_list (sign W U) T /\ _not(V = W \/ det_mem (dedc T (sign W U)) LoopIn) /\
+  _distinct(sub_term_list (sign W U) T) /\ _not(V = W \/ det_mem (dedc T (sign W U)) LoopIn) /\
   LoopOut = cons (dedc T (sign W U)) LoopIn /\
   Ds = cons (dedc T (sign W U)) (cons (mbsc W T V) CsL)
   %/\ printstr "\nT6 Bdsgn " /\ cs_print_list_cst (cons (dedc T (sign V U)) CsL) /\ cs_print_list_cst Ds
@@ -224,7 +224,7 @@ transformation_rule 7 Cs Ds :=
 % Rb
 transformation_rule 8 Cs Ds :=
   select Cs (mbsc (var X) T' V) CsI /\ select CsI (dedc T (var X)) CsII /\
-  _not(T = T') /\ subset T T' /\ sub_term_list W T /\
+  _not(T = T') /\ subset T T' /\ _distinct(sub_term_list W T) /\
   Ds = cons (dedc T W) (cons (mbsc (var X) T W) (cons (mbsc W T' V) CsI))
   %/\ printstr "\nT8 Rb " /\ cs_print_list_cst Cs /\ cs_print_list_cst Ds
 ;
@@ -259,7 +259,7 @@ unify_constraint Vs Pre (dedc T U) Post Ds SubstIn SubstOut :=
   %/\ printstr "\nUnify " /\ append Pre (cons (dedc T U) Post) CsLI /\ cs_print_list_cst CsLI /\ cs_print_list_cst Ds
 ;
 unify_constraint Vs Pre (dedc T V) Post Ds SubstIn SubstOut :=
-  sub_term_list (aen V (var X)) T /\
+  _distinct(sub_term_list (aen V (var X)) T) /\
   Subst = (cons (sub (var X) (pub (var X))) nil) /\
   compose Vs SubstIn Subst SubstOut /\
   append Pre (cons (dedc T V) Post) CsL /\
