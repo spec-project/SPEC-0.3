@@ -267,11 +267,15 @@ decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
   _if (det_mem (mp (pub X) (pub Y)) Thy)
       (L = Acc)
       (L = (cons (out (pub X) (pub Y)) Acc)) ;
-% Blind - Unblind is not supported
+% Blind
 decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
-  _if (det_mem (mp (blind X K) (blind Y M)) Thy)
-    (L = Acc)
-    (L = (cons (out (blind X K) (blind Y M)) Acc)) ;
+  _if (deduce_r Thy K M)
+    (decomp_bt_pair THy Acc X Y L)
+    (
+        _if (det_mem (mp (blind X K) (blind Y M)) Thy)
+            (L = Acc)
+            (L = (cons (out (blind X K) (blind Y M)) Acc))
+    ) ;
 % Sign - Get message is not supported
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
  _if (det_mem (mp (sign X Y) (sign U V)) Thy)

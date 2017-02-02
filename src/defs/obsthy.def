@@ -240,9 +240,10 @@ decom_enc_aenc (cons (mp (mac U V) (mac R T)) Thy) NE1 E1 NE2 E2 :=
 decom_enc_aenc (cons (mp (blind U V) (blind R T)) Thy) NE1 E1 NE2 E2 :=
   append NE1 E1 Thy1 /\ 
   append Thy1 Thy Thy2 /\ 
-  _if (deduce_r Thy2 U R /\ deduce_r Thy2 V T)
+  _if (deduce_r Thy2 V T)
       (
-        decom_enc_aenc Thy NE1 E1 NE2 E2
+	decom_pair (cons (mp U R) Thy) NewThy /\
+	decom_enc_aenc NewThy NE1 E1 NE2 E2
       )
       (
         insert (mp (blind U V) (blind R T)) E1 NewE1 /\ 
@@ -258,9 +259,16 @@ decom_enc_aenc (cons (mp (sign U V) (sign R T)) Thy) NE1 E1 NE2 E2 :=
 	    decom_enc_aenc Thy NE1 E1 NE2 E2
 	)
 	(
-	    insert (mp (sign U V) (sign R T)) E1 NewE1 /\
-	    decom_enc_aenc Thy NE1 NewE1 NE2 E2
-	);
+	    _if (U = blind U1 U2 /\ R = blind R1 R2 /\ deduce_r Thy2 U2 R2)
+	      (
+		decom_pair (cons (mp (sign U1 V) (sign R1 T)) Thy) NewThy /\ 
+		decom_enc_aenc NewThy NE1 E1 NE2 E2
+	      )
+	      (
+		insert (mp (sign U V) (sign R T)) E1 NewE1 /\
+		decom_enc_aenc Thy NE1 NewE1 NE2 E2
+	      )
+	) ;
 
 
 decom_enc_aenc (cons X Thy) NE1 E1 NE2 E2 :=
@@ -415,7 +423,7 @@ by
 thy_cc6 Thy :=
   split_thy Thy S1 S2 /\ 
   forall M1 N1 M2 N2, member (mp (blind M1 N1) (blind M2 N2)) Thy 
-      -> (ded1_r S1 M1 /\ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 /\ ded1_r S2 N2 -> false).
+      -> (ded1_r S1 N1 -> false) /\ (ded1_r S2 N2 -> false).
 
 % Sign, Hash, Mac
 Define thy_cc7 : list thy_pair -> prop
