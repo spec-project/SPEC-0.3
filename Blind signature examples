@@ -1,9 +1,56 @@
+[*] NOTE: In this version of SPEC: getmsg is not allowed, unblind is not allowed
+[*] Syntax: checksign(y, sign(y,k), pub(k))
+
+P:=nu(n,k).a<n>.a(x).a<sign(x,k)>;
+Q:=nu(n,k).a<n>.a(x).a<sign(blind(x,n),k)>;
+
+--> SPEC: Bisimilar
+
+P:=nu(n,k).a<<n,pub(k)>>.a(x).a<sign(x,k)>;
+Q:=nu(n,k).a<<n,pub(k)>>.a(x).a<sign(blind(x,n),k)>;
+
+--> SPEC: Not bisimilar
+
+P:=nu(n,k1,k2).a<<n,pub(k1)>>.a(x).a<sign(x,k1)>;
+Q:=nu(n,k1,k2).a<<n,pub(k1)>>.a(x).a<sign(blind(x,n),k2)>;
+
+--> Not bisimilar
+
+P:=nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k1)>;
+Q:=nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k2)>;
+
+-> Not bisimilar
+
+[*] Check Sign
+
+P:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))]tau;
+Q:=nu(n,k).a<n>.a(x).a<sign(blind(x,n),k)>.a(y).[checksign(blind(n,n),y,pub(k))]tau;
+
+--> SPEC: Bisimilar
+
 bisim(
-  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).let w = getmsg(y) in [checksign(y,pub(k))][w = blind(blind(blind(n,n),m),a)]a<a> ,
+  nu(k,n).a<n>.a(x).a<sign(blind(x,n),k)>.a(y).[checksign(blind(n,a),y,pub(k))]a<a> ,
+  nu(k,n).a<n>.a(x).a<sign(blind(x,n),k)>.a(y)
+);
+
+--> SPEC: Bisimilar
+--> Should be not bisimilar
+
+bisim(
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).[checksign(blind(blind(blind(n,n),m),a),y,pub(k))]a<a> ,
   nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y)
 );
 
+--> SPEC: Bisimilar
+--> Should be not bisimilar
+
 bisim(
-  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).let w = getmsg(y) in [checksign(y,pub(k))][w = blind(blind(n,a),k)]a<a> ,
+  nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y).[checksign(blind(blind(n,a),k),y,pub(k))]a<a> ,
   nu(k,n,m).a<<n,m>>.a(x).a<sign(blind(x,n),k)>.a(y)
 );
+
+--> SPEC: Bisimilar
+
+P:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))]tau;
+Q:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))][x = blind(n,n)]tau;
+R:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))][x=n]tau;

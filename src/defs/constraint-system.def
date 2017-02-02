@@ -62,6 +62,7 @@ get_T_var (cons Cs CsL) Var TIn TOut :=
 
 % Check if a term is subterm of another term
 Define sub_term : tm -> tm -> prop by
+sub_term (ct X) (ct X) ;
 sub_term (nm X) (nm X) ;
 sub_term (var X) (var X) ;
 sub_term T (pr X Y) := T = pr X Y \/ sub_term T X \/ sub_term T Y ;
@@ -142,7 +143,7 @@ cs_solved_form CsL :=
     select CsL (mbsc V T U) CsLI /\
     (
       _not (V = var X) \/
-      _not (member (dedc T V) CsL) \/
+      _not (member (dedc T V) CsLI) \/
       member (mbsc V T' U') CsLI
     )
   ).
@@ -170,13 +171,13 @@ transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
   %/\ printstr "\nT4 Blind " /\ cs_print_list_cst (cons (dedc T V) CsL) /\ cs_print_list_cst Ds
 ;
 % Rget
-transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
-  _distinct(sub_term_list (sign V U) T) /\
-  _not(det_mem (dedc T (sign V U)) LoopIn) /\
-  LoopOut = cons (dedc T (sign V U)) LoopIn /\
-  Ds = cons (dedc T (sign V U)) CsL
-  %/\ printstr " T5 Sign "
-;
+%transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
+%  _distinct(sub_term_list (sign V U) T) /\
+%  _not(det_mem (dedc T (sign V U)) LoopIn) /\
+%  LoopOut = cons (dedc T (sign V U)) LoopIn /\
+%  Ds = cons (dedc T (sign V U)) CsL
+%  %/\ printstr " T5 Sign "
+%;
 % Rpair
 transformation_rule_loop_dedc (dedc T U) CsL Ds LoopIn LoopOut :=
   _distinct(sub_term_list (pr M N) T) /\ (U = M \/ U = N) /\
@@ -250,7 +251,6 @@ cs_apply_list Subst (cons C L) (cons D R) :=
 
 Define unify_constraint : list tm -> list constraint -> constraint -> list constraint -> list constraint -> list sub_pair -> list sub_pair -> prop
 by
-% reverse Pre PreI /\ append PreI Post CsL seems to be faster
 unify_constraint Vs Pre (dedc T U) Post Ds SubstIn SubstOut :=
   unify_list Vs T U Subst /\
   compose Vs SubstIn Subst SubstOut /\
@@ -259,7 +259,7 @@ unify_constraint Vs Pre (dedc T U) Post Ds SubstIn SubstOut :=
   %/\ printstr "\nUnify " /\ append Pre (cons (dedc T U) Post) CsLI /\ cs_print_list_cst CsLI /\ cs_print_list_cst Ds
 ;
 unify_constraint Vs Pre (dedc T V) Post Ds SubstIn SubstOut :=
-  _distinct(sub_term_list (aen V (var X)) T) /\
+  _cut(sub_term_list (aen V (var X)) T) /\
   Subst = (cons (sub (var X) (pub (var X))) nil) /\
   compose Vs SubstIn Subst SubstOut /\
   append Pre (cons (dedc T V) Post) CsL /\
@@ -275,7 +275,6 @@ separate Pre (cons Cs CsL) NewPre NewPost :=
     (NewPre = cons Cs NewPreI /\ NewPost = NewPostI)
     (NewPre = NewPreI /\ NewPost = cons Cs NewPostI).
 
-% When constructing constraint system, decomposing pair is needed in T
 % Simplication rules and Transformation rule do not change T
 Define cs_solve : list tm -> list constraint -> list constraint -> list sub_pair -> list sub_pair -> list constraint -> list constraint -> prop by
 cs_solve Vs Pre Post SubstIn SubstOut LoopDedcIn LoopMbscIn :=
@@ -300,6 +299,7 @@ cs_solve Vs Pre Post SubstIn SubstOut LoopDedcIn LoopMbscIn :=
 
 % Decompose pair in constraint system
 % The initial constraint system does not contain membership constraint
+% Pair decomposing is not necessary 
 Define cs_decompose_pair : list constraint -> list constraint -> prop by
 cs_decompose_pair nil nil ;
 cs_decompose_pair (cons (dedc T U) CsLIn) (cons (dedc T' U) CsLOut) := decpr T T' /\ cs_decompose_pair CsLIn CsLOut .

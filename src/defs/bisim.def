@@ -266,17 +266,13 @@ decomp_bt_pair Thy Acc (aen X K) (aen Y M) L :=
 decomp_bt_pair Thy Acc (pub X) (pub Y) L :=
   _if (det_mem (mp (pub X) (pub Y)) Thy)
       (L = Acc)
-      (L = (cons (out (pub X) (pub Y)) Acc));
-% Blind
+      (L = (cons (out (pub X) (pub Y)) Acc)) ;
+% Blind - Unblind is not supported
 decomp_bt_pair Thy Acc (blind X K) (blind Y M) L :=
-  _if (deduce_r Thy K M)
-      (decomp_bt_pair Thy Acc X Y L)
-      (
-        _if (det_mem (mp (blind X K) (blind Y M)) Thy)
-            (L = Acc)
-            (L = (cons (out (blind X K) (blind Y M)) Acc))
-      ) ;
-% Sign
+  _if (det_mem (mp (blind X K) (blind Y M)) Thy)
+    (L = Acc)
+    (L = (cons (out (blind X K) (blind Y M)) Acc)) ;
+% Sign - Get message is not supported
 decomp_bt_pair Thy Acc (sign X Y) (sign U V) L :=
  _if (det_mem (mp (sign X Y) (sign U V)) Thy)
       (L = Acc)
@@ -425,7 +421,7 @@ bisimAgent H Thy (abs x\P x) (abs x\Q x) :=
    bisim_upto H1 (P (var x)) (Q (var x)) ;
 
 bisimAgent H Thy (con M P) (con N Q) := 
-    decomp_bt_pair Thy nil M N L /\ 
+    decomp_bt_pair Thy nil M N L /\
     _if (L = nil)
         (bisim_upto H P Q)
         (

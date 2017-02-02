@@ -99,8 +99,8 @@ expand_defs (let M (x\y\P x y)) (let N (x\y\ Q x y)) :=
 expand_defs (taup P) (taup Q) := expand_defs P Q;  % RH: Added for tau.
 
 % CheckSign
-expand_defs (checksign X Y P) (checksign U V Q) :=
-  simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ; 
+expand_defs (checksign Z X Y P) (checksign W U V Q) :=
+  simp_cp Z W /\ simp_cp X U /\ simp_cp Y V /\ expand_defs P Q ;
 % Adec, Unblind, Getmsg
 expand_defs (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
   simp_cp M U /\ simp_cp N V /\

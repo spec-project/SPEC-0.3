@@ -72,8 +72,8 @@ norm (let M (x\y\ P x y)) (let N (x\y\ Q x y)) :=
   simp_cp M N /\ 
   nabla x y, norm (P (bn x) (bn y)) (Q x y) ;
 % CheckSign
-norm (checksign X Y P) (checksign U V R) :=  
-  simp_cp X U /\ simp_cp Y V /\ norm P R ; 
+norm (checksign Z X Y P) (checksign W U V R) := 
+  simp_cp Z W /\ simp_cp X U /\ simp_cp Y V /\ norm P R ;
 % Adec, Unblind, Getmsg
 norm (letadec M N (x\ P x)) (letadec U V (x\ Q x)) :=
   simp_cp M U /\ simp_cp N V /\

@@ -126,9 +126,9 @@ proc2text File L (let M (x\y\ P x y)) :=
   proc2text_aux File L (P (bn x) (bn y)) ; 
 
 % CheckSign
-proc2text File L (checksign X Y P) :=
+proc2text File L (checksign Z X Y P) :=
   print_str_list File L /\
-  fprintstr File "[checksign(" /\ term2text File X /\ fprintstr File " , " /\ term2text File Y /\ fprintstr File ")]" /\
+  fprintstr File "[checksign(" /\ term2text File Z /\ fprintstr File " , " /\ term2text File X /\ fprintstr File " , " /\ term2text File Y /\ fprintstr File ")]" /\
   proc2text_aux File L P ;
 
 % Adec, Unblind, Getmsg
