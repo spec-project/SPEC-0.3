@@ -16,8 +16,10 @@ Q:=nu(n,k1,k2).a<<n,pub(k1)>>.a(x).a<sign(blind(x,n),k2)>;
 
 --> Not bisimilar
 
-P:=nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k1)>;
-Q:=nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k2)>;
+bisim(
+  nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k1)>,
+  nu(n,k1,k2).a<<n,pub(k1),pub(k2)>>.a(x).a<sign(x,k2)>
+);
 
 -> Not bisimilar
 

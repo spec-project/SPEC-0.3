@@ -1,0 +1,114 @@
+P(a, skv, v) :=
+nu(b).a<<pub(skv),<blind(v,b),sign(blind(v,b),skv)>>>.
+a(m).[checksign(blind(v,b), m, pub(ska))] let x = unblind(m,b) in a<<v,x>>;
+
+Q(a, skv, v, start, stop) :=
+nu(b).a<<pub(skv),<blind(v,b),sign(blind(v,b),skv)>>>.
+a(m).[checksign(blind(v,b), m, pub(ska))] let x = unblind(m,b) in 
+start<start>.stop(z).
+ a<<v,x>>;
+
+R(start,stop) := start(x).start(x).stop<stop>.stop<stop> ;
+
+bisim(
+nu(start,stop).(
+ Q{a, ?skv1, ?v1, start, stop} | Q{a, ?skv2, ?v2, start, stop} | R{start, stop}
+),
+nu(start,stop).(
+ Q{a, ?skv1, ?v2, start, stop} | Q{a, ?skv2, ?v1, start, stop} | R{start, stop}
+)
+);
+
+
+bisim( P{a, ?skv1, ?v1} | P{a, ?skv2, ?v2 } , P{a, ?skv1, ?v2} | P{a, ?skv2, ?v1} );
+
+
+
+
+
+Expanded:
+
+bisim(
+nu(start,stop).(
+(nu(b).a<<pub(?skv1),<blind(?v1,b),sign(blind(?v1,b),?skv1)>>>.
+a(m).[checksign(m,pub(?ska))] let n = getmsg(m) in [n = blind(?v1,b)] let x = unblind(m,b) in
+start<start>.stop(z).
+ a<<?v1,x>>) | 
+(nu(b).a<<pub(?skv2),<blind(?v2,b),sign(blind(?v2,b),?skv2)>>>.
+a(m).[checksign(m,pub(?ska))] let n = getmsg(m) in [n = blind(?v2,b)] let x = unblind(m,b) in
+start<start>.stop(z).
+ a<<?v2,x>>)
+ |
+(start(x).start(x).stop<stop>.stop<stop>)
+),
+nu(start,stop).(
+( nu(b).a<<pub(?skv1),<blind(?v2,b),sign(blind(?v2,b),?skv1)>>>.
+a(m).[checksign(m,pub(?ska))] let n = getmsg(m) in [n = blind(?v2,b)] let x = unblind(m,b) in
+start<start>.stop(z).
+ a<<?v2,x>>)
+ | 
+(nu(b).a<<pub(?skv2),<blind(?v1,b),sign(blind(?v1,b),?skv2)>>>.
+a(m).[checksign(m,pub(?ska))] let n = getmsg(m) in [n = blind(?v1,b)] let x = unblind(m,b) in
+start<start>.stop(z).
+ a<<?v1,x>>)
+ |
+(start(x).start(x).stop<stop>.stop<stop>)
+)
+);
+
+
+
+
+U := nu(n,k).a<n>.a(x).a<sign(x,k)>;
+
+V := nu(n,k).a<n>.a(x).a<sign(blind(x,n),k)>;
+
+Should pass:
+
+bisim( U, V );
+
+U1 := nu(n,k).a<n>.a(x).a<sign(x,k)>.a<pub(k)>;
+
+V1 := nu(n,k).a<n>.a(x).a<sign(blind(x,n),k)>.a<pub(k)>;
+
+Should fail:
+
+bisim( U1, V1 );
+
+
+
+
+
+X2 := nu(r,b,k).a<blind(r,b)>.a(x).a<sign(x,k)>.a(y).[checksign(blind(r,b),y,pub(k))]a<r>;
+
+Y2 := nu(r,b,k).a<blind(r,b)>.a(x).a<sign(x,k)>.a(y).let z = unblind(y,b) in [checksign(r, z, pub(k))]a<r>;
+
+Z2 := nu(r,b,k).a<blind(r,b)>.a(x).a<sign(x,k)>.a(y);
+
+Should pass:
+
+bisim( X2 , Y2 );
+
+Should fail:
+
+bisim( X2, Z2 );
+bisim( Y2, Z2 );
+
+Should hold:
+
+bisim( nu(n).a<sign(n,k)> , nu(n).a<sign(k,n)> );
+
+
+
+M := nu(k,l).a<<pub(k),pub(l)>>.a(x).a<sign(x,k)> ;
+
+N := nu(k,l).a<<pub(k),pub(l)>>.a(x).a<sign(x,l)> ;
+
+bisim( M , N );
+
+
+M1 := nu(k,l,m).a<<pub(k),pub(l)>>.a<sign(m,k)> ;
+
+N1 := nu(k,l,m).a<<pub(k),pub(l)>>.a<sign(m,l)> ;
+
+bisim( M1 , N1 );

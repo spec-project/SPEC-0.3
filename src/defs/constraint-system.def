@@ -117,7 +117,7 @@ simplication_rule (cons (dedc T U) CsL) CsOut :=
 % Scycle is not necessary to check because of transformation_rule_loop_mbsc
 
 % Solved Form
-%Define cs_solved_form : list constraint -> prop by
+Define cs_solved_form : list constraint -> prop by
 %cs_solved_form CsL :=
 %  forall Cs, member Cs CsL -> (
 %    exists T, exists X, (
@@ -132,7 +132,6 @@ simplication_rule (cons (dedc T U) CsL) CsOut :=
 %  )
 %.
 % Using forall will cause Bedwyr error: Prover.Level_inconsistency
-Define cs_solved_form : list constraint -> prop by
 cs_solved_form nil ;
 cs_solved_form CsL :=
   _not (

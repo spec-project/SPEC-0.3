@@ -431,27 +431,25 @@ by
 thy_cc7 Thy :=
   split_thy Thy S1 S2 /\ 
   forall M1 N1 M2 N2, member (mp (sign M1 N1) (sign M2 N2)) Thy 
-      -> (ded1_r S1 M1 /\ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 /\ ded1_r S2 N2 -> false).
+      -> (ded1_r S1 M1 -> false \/ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 -> false \/ ded1_r S2 N2 -> false) /\
+         ((ded1_r S1 (pub N1) /\ ded1_r S1 M1) \/ (ded1_r S2 (pub N2) /\ ded1_r S2 M2) -> deduce_r Thy (pub N1) (pub N2) /\ deduce_r Thy M1 M2).
+% RH: The above says: if we don't have either message or key then keep the signature. Otherwise, we could reconstruct the signature from the message and key.
+% N.B. We could still construct the signature if we have (sign (blind M1 B1) N1) and (sign (blind M2 B2) N2), where S1 |- B1 and S2 |- B2
+% Also, if we can deduce the public key and the message then the public keys must be identical.
 
 Define thy_cc8 : list thy_pair -> prop
 by
 thy_cc8 Thy :=
   split_thy Thy S1 S2 /\ 
-  forall M1 N1 M2 N2, (member (mp (sign M1 N1) (sign M2 N2)) Thy /\ ded1_r S1 M1 /\ ded1_r S1 (pub N1)) -> (ded1_r S2 M2 /\ ded1_r S2 (pub N2) /\ deduce_r Thy (pub N1) (pub N2) /\ deduce_r Thy M1 M2).
+  forall M N, member (mp (hs M) (hs N)) Thy 
+      -> (ded1_r S1 M -> false) /\ (ded1_r S2 N -> false).
 
 Define thy_cc9 : list thy_pair -> prop
 by
 thy_cc9 Thy :=
   split_thy Thy S1 S2 /\ 
-  forall M N, member (mp (hs M) (hs N)) Thy 
-      -> (ded1_r S1 M -> false) /\ (ded1_r S2 N -> false).
-
-Define thy_cc10 : list thy_pair -> prop
-by
-thy_cc10 Thy :=
-  split_thy Thy S1 S2 /\ 
   forall M1 N1 M2 N2, member (mp (mac M1 N1) (mac M2 N2)) Thy 
-      -> (ded1_r S1 M1 /\ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 /\ ded1_r S2 N2 -> false).
+      -> (ded1_r S1 M1 -> false \/ ded1_r S1 N1 -> false) /\ (ded1_r S2 M2 -> false \/ ded1_r S2 N2 -> false).
 
 % Consistency condition 3: 
 % thy_cc3 Thy :=
@@ -513,7 +511,7 @@ Define thy_consistent : list thy_pair -> prop % RH: not used as far as I can see
 by
 thy_consistent Thy :=
   reduce Thy Thy1 /\ 
-  thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc9 Thy1 /\ thy_cc10 Thy1 /\
+  thy_cc1 Thy1 /\ thy_cc2 Thy1 /\ thy_cc4 Thy1 /\ thy_cc5 Thy1 /\ thy_cc6 Thy1 /\ thy_cc7 Thy1 /\ thy_cc8 Thy1 /\ thy_cc9 Thy1 /\
   thy_cc3 Thy1	.
 
 % Checking consistency of reduced theories
@@ -522,6 +520,6 @@ by
 thy_red_consistent Thy :=
   thy_cc1 Thy /\
   %thy_cc2_alt Thy /\
-  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ thy_cc9 Thy /\ thy_cc10 Thy /\
+  thy_cc4 Thy /\ thy_cc5 Thy /\ thy_cc6 Thy /\ thy_cc7 Thy /\ thy_cc8 Thy /\ thy_cc9 Thy /\
   thy_cc3 Thy. 
 
