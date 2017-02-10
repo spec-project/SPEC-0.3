@@ -56,3 +56,7 @@ bisim(
 P:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))]tau;
 Q:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))][x = blind(n,n)]tau;
 R:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[checksign(n,y,pub(k))][x=n]tau;
+
+
+P:=nu(n,k).a<n>.a(x).a<sign(blind(x,n),k)>.a(y).[y = sign(blind(blind(blind(x,n),n),n),k)]tau;
+Q:=nu(n,k).a<n>.a(x).a<sign(x,k)>.a(y).[y = sign(blind((blind (x,n)),n),k)]tau;

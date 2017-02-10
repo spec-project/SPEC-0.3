@@ -175,7 +175,7 @@ by
 fun_RC1 H C Sub1 Sub2 :=
   bitrace_vars H Vs /\ 
   bitrace_cst 1 H nil Cs /\ 
-  append Cs (cons C nil) Ds /\ 
+  append Cs (cons C nil) Ds /\
   fRC1 Vs H Ds Sub1 Sub2.
 
 Define fRC2 : list tm -> list bt_pair -> list constraint -> 
@@ -236,8 +236,8 @@ Define apply_RC : list bt_pair -> list thy_pair ->
                   list bt_pair -> list thy_pair -> prop
 by 
 
-apply_RC H_in Thy_in H_out Thy_out := 
-  select Thy_in (mp (en M N) (en R T))  Rest /\ 
+apply_RC H_in Thy_in H_out Thy_out :=
+  select Thy_in (mp (en M N) (en R T)) Rest /\ 
   split_thy Rest S1 S2 /\ 
   C1 = (dedc S1 N) /\
   C2 = (dedc S2 T) /\ 
