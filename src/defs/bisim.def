@@ -104,8 +104,15 @@ ref2_cont H Vs (abscont (x\ Cont x)) (absRef (x\Cts x)) :=
 
 Define inductive check_consistency : list bt_pair -> list thy_pair -> list bt_pair -> prop
 by 
-check_consistency H Thy L := bt_consistent_iter H Thy L. 
+check_consistency H Thy L := bt_consistent_iter H Thy L.
 
+Define inductive check_consistency_l : list bt_pair -> list thy_pair -> list bt_pair -> prop
+by 
+check_consistency_l H Thy L := bt_consistent_iter_l H Thy L. 
+
+Define inductive check_consistency_r : list bt_pair -> list thy_pair -> list bt_pair -> prop
+by 
+check_consistency_r H Thy L := bt_consistent_iter_r H Thy L. 
 
 Define get_var_inp : bt_pair -> list tm -> list tm -> prop
 by
@@ -300,7 +307,7 @@ decomp_bt_pair Thy Acc (mac X Y) (mac U V) L :=
 
 Define bisimTau1, bisimTau2, bisimAbs1, bisimAbs2,
        bisimCon1, bisimCon2 : list bt_pair -> proc -> refinement -> prop, 
-       bisimAgent : list bt_pair -> list thy_pair -> agent -> agent -> prop, 
+       bisimAgent, bisimAgent1, bisimAgent2 : list bt_pair -> list thy_pair -> agent -> agent -> prop, 
        bisim_upto : list bt_pair -> proc -> proc -> prop,
        coinductive bisim : list bt_pair -> proc -> proc -> prop
 by 
@@ -347,7 +354,7 @@ bisimAbs1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
       (progressing_oneAbs Q1 (act N) Q2)
       (oneAbs Q1 (act N) Q2))
   /\ 
-  bisimAgent H1 ThyRed P1 Q2 ; 
+  bisimAgent1 H1 ThyRed P1 Q2 ; 
 bisimAbs1 H Q (absRef x\ Cts x) :=
   nabla x, bisimAbs1 H Q (Cts x) ; 
 
@@ -361,7 +368,7 @@ bisimAbs2 H P (conRefAgent Sub1 Sub2 (act N) Q1) :=
       (progressing_oneAbs P1 (act M) P2)
       (oneAbs P1 (act M) P2))
   /\ 
-  bisimAgent H1 ThyRed P2 Q1 ; 
+  bisimAgent2 H1 ThyRed P2 Q1 ; 
 bisimAbs2 H P (absRef x\ Cts x) :=
   nabla x, bisimAbs2 H P (Cts x) ; 
 
@@ -378,7 +385,7 @@ bisimCon1 H Q (conRefAgent Sub1 Sub2 (act M) P1) :=
       (progressing_oneCon Q1 (act N) Q2) 
       (oneCon Q1 (act N) Q2))
   /\ 
-  bisimAgent H1 ThyRed P1 Q2 ; 
+  bisimAgent1 H1 ThyRed P1 Q2 ; 
 bisimCon1 H Q (absRef x\ Cts x) :=
   nabla x, bisimCon1 H Q (Cts x) ; 
 
@@ -392,7 +399,7 @@ bisimCon2 H P (conRefAgent Sub1 Sub2 (act N) Q1) :=
      (progressing_oneCon P1 (act M) P2)  
      (oneCon P1 (act M) P2))
   /\ 
-  bisimAgent H1 ThyRed P2 Q1 ; 
+  bisimAgent2 H1 ThyRed P2 Q1 ; 
 bisimCon2 H P (absRef x\ Cts x) :=
   nabla x, bisimCon2 H P (Cts x) ; 
 
@@ -444,6 +451,69 @@ bisimAgent H Thy (new x\ P x) (con N Q) :=
 
 bisimAgent H Thy (new x\ P x) (new x\ Q x) := 
   nabla x, bisimAgent H Thy (P (nm x)) (Q (nm x)) ; 
+
+%
+%
+%
+%
+%
+
+bisimAgent1 H Thy (abs x\P x) (abs x\Q x) := 
+  nabla x, exists H1,
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   bisim_upto H1 (P (var x)) (Q (var x)) ;
+
+bisimAgent1 H Thy (con M P) (con N Q) := 
+    decomp_bt_pair Thy nil M N L /\
+    _if (L = nil)
+        (bisim_upto H P Q)
+        (
+         check_consistency_l H Thy L /\
+         append H L H1 /\ 
+         bisim_upto H1 P Q
+        ) ;    
+bisimAgent1 H Thy (con M P) (new x\ Q x) :=
+  nabla x, bisimAgent1 H Thy (con M P) (Q (nm x)) ; 
+bisimAgent1 H Thy (new x\ P x) (con N Q) := 
+  nabla x, bisimAgent1 H Thy (P (nm x)) (con N Q) ; 
+
+bisimAgent1 H Thy (new x\ P x) (new x\ Q x) := 
+  nabla x, bisimAgent1 H Thy (P (nm x)) (Q (nm x)) ;
+
+%
+%
+%
+%
+%
+
+bisimAgent2 H Thy (abs x\P x) (abs x\Q x) := 
+  nabla x, exists H1,
+   append H (cons (in (var x) (var x)) nil) H1 /\ 
+   print_bisim H1 (P (var x)) (Q (var x)) /\ 
+   bisim_upto H1 (P (var x)) (Q (var x)) ;
+
+bisimAgent2 H Thy (con M P) (con N Q) := 
+    decomp_bt_pair Thy nil M N L /\
+    _if (L = nil)
+        (bisim_upto H P Q)
+        (
+         check_consistency_r H Thy L /\
+         append H L H1 /\ 
+         bisim_upto H1 P Q
+        ) ;    
+bisimAgent2 H Thy (con M P) (new x\ Q x) :=
+  nabla x, bisimAgent2 H Thy (con M P) (Q (nm x)) ; 
+bisimAgent2 H Thy (new x\ P x) (con N Q) := 
+  nabla x, bisimAgent2 H Thy (P (nm x)) (con N Q) ; 
+
+bisimAgent2 H Thy (new x\ P x) (new x\ Q x) := 
+  nabla x, bisimAgent2 H Thy (P (nm x)) (Q (nm x)) ; 
+%
+%
+%
+%
+%
 
 % [bisim] The main procedure for open progressing bisimulation checking.
 

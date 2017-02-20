@@ -65,7 +65,7 @@ Define get_T_var : list constraint -> tm -> list tm -> list tm -> prop by
 get_T_var nil Var TIn TOut ;
 get_T_var (cons Cs CsL) Var TIn TOut :=
   (Cs = dedc T U \/ Cs = mbsc V T U) /\
-  _if (get_var_list_tm T nil TVars /\ _not(det_mem Vars TVars) /\ get_var U nil UVars /\ det_mem Var UVars)
+  _if (get_var_list_tm T nil TVars /\ _not(det_mem Var TVars) /\ get_var U nil UVars /\ det_mem Var UVars)
     (
       _if (TIn = nil \/ subset T TIn) (get_T_var CsL Var T TOut) (get_T_var CsL Var TIn TOut)
     )
@@ -159,7 +159,7 @@ simplication_rule Processed (cons (dedc T U) CsL) CsOut SubstIn SubstOut Vs :=
       simplication_rule (cons (dedc T U) Processed) CsL CsOut SubstIn SubstOut Vs
     ).
 % Sf is not necessary to check
-% Scycle is not necessary to check because of transformation_rule_loop_mbsc
+% Need to check Scycle
 
 % Solved Form
 Define cs_solved_form : list constraint -> prop by
@@ -179,6 +179,7 @@ Define cs_solved_form : list constraint -> prop by
 % Using forall will cause Bedwyr error: Prover.Level_inconsistency
 cs_solved_form nil ;
 cs_solved_form CsL :=
+  _not (CsL = nil) /\
   _not (
     member (dedc T U) CsL /\
     _not (U = var X)
@@ -202,18 +203,12 @@ transformation_rule_loop_dedc (dedc T M) CsL Ds LoopIn LoopOut :=
   %/\ printstr "\nT3 " /\ cs_print_list_cst (cons (dedc T M) CsL) /\ cs_print_list_cst Ds
 ;
 % Rf
-transformation_rule_loop_dedc (dedc T (pub V)) CsL Ds LoopIn LoopOut :=
-  _not (det_mem (dedc T (pub V)) LoopIn) /\
-  LoopOut = cons (dedc T (pub V)) LoopIn /\
+transformation_rule_loop_dedc (dedc T M) CsL Ds LoopIn LoopOut :=
+  (M = pub V \/ M = hs V) /\
+  _not (det_mem (dedc T M) LoopIn) /\
+  LoopOut = cons (dedc T M) LoopIn /\
   Ds = cons (dedc T V) CsL
-  %/\ printstr " T3 Pub " /\ cs_print_list_cst (cons (dedc T (pub V)) CsL) /\ cs_print_list_cst Ds
-;
-% Rf
-transformation_rule_loop_dedc (dedc T (hs V)) CsL Ds LoopIn LoopOut :=
-  _not (det_mem (dedc T (hs V)) LoopIn) /\
-  LoopOut = cons (dedc T (hs V)) LoopIn /\
-  Ds = cons (dedc T V) CsL
-  %/\ printstr " T3 Hash " /\ cs_print_list_cst (cons (dedc T (hs V)) CsL) /\ cs_print_list_cst Ds
+  %/\ printstr " T3 Pub/Hash " /\ cs_print_list_cst (cons (dedc T (pub V)) CsL) /\ cs_print_list_cst Ds
 ;
 % Rbd
 transformation_rule_loop_dedc (dedc T V) CsL Ds LoopIn LoopOut :=
@@ -258,8 +253,8 @@ Define transformation_rule_loop_mbsc : constraint -> list constraint -> list con
 % Rbdsgn
 % In the rules Rbdsgn and Ra, Rb, Rc, pushing membership constraints before deducibility constraints might help to reduce running time
 transformation_rule_loop_mbsc (dedc T (sign V U)) CsL Ds LoopIn LoopOut :=
-  _distinct(sub_term_list (sign W U) T) /\ _not(V = W \/ det_mem (dedc T (sign W U)) LoopIn) /\
-  LoopOut = cons (dedc T (sign W U)) LoopIn /\
+  _distinct(sub_term_list (sign W U) T) /\ _not(V = W \/ det_mem (dedc T (sign V U)) LoopIn) /\
+  LoopOut = cons (dedc T (sign V U)) LoopIn /\
   Ds = cons (dedc T (sign W U)) (cons (mbsc W T V) CsL)
   %/\ printstr "\nT6 Bdsgn " /\ cs_print_list_cst (cons (dedc T (sign V U)) CsL) /\ cs_print_list_cst Ds
 .
@@ -324,7 +319,7 @@ cs_solve Vs Pre Post SubstInX SubstOut LoopDedcIn LoopMbscIn :=
   %printstr "\nBefore Simplification: " /\ cs_print_list_cst PreCsL /\
   simplication_rule nil PreCsL CsL SubstInX SubstIn Vs /\
   %printstr "\nAfter Simplification: " /\ cs_print_list_cst CsL /\
-  _if (cs_solved_form CsL) (SubstOut = SubstIn)
+  _if (cs_solved_form CsL /\ printstr "\n\n" /\ cs_print_list_cst CsL) (SubstOut = SubstIn)
     (
       separate CsL PreI NewPost /\
       _if (NewPost = nil) (transformation_rule TR CsL Ds /\ cs_solve Vs nil Ds SubstIn SubstOut LoopDedcIn LoopMbscIn)
@@ -381,3 +376,537 @@ cs_get_var_csts (cons C L) VarIn VarOut :=
 Define cs_constraints_vars : list constraint -> list tm -> prop by 
 cs_constraints_vars Cs Vars :=
   cs_get_var_csts Cs nil Vs /\ reverse Vs Vars.
+
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+
+Kind constraint_pair type.
+
+% Define membership constraints
+Type mbsc_pair thy_pair -> list thy_pair -> thy_pair -> constraint_pair.
+Type dedc_pair list thy_pair -> thy_pair -> constraint_pair.
+
+% Substitutions
+Kind subst_pair type. % Substitution pair
+Type mpsub list sub_pair -> list sub_pair -> subst_pair.
+
+Define cs_apply_pair : subst_pair -> constraint_pair -> constraint_pair -> prop by 
+cs_apply_pair (mpsub SubstL SubstR) (dedc_pair T1 (mp U1 V1)) (dedc_pair T2 (mp U2 V2)) :=
+  apply_subst_thy SubstL SubstR T1 T2 /\
+  copyterm SubstL U1 U2 /\ copyterm SubstR V1 V2 ;
+cs_apply_pair (mpsub SubstL SubstR) (mbsc_pair (mp U1 V1) T1 (mp M1 N1)) (mbsc_pair (mp U2 V2) T2 (mp M2 N2)) :=
+  apply_subst_thy SubstL SubstR T1 T2 /\
+  copyterm SubstL U1 U2 /\ copyterm SubstR V1 V2 /\
+  copyterm SubstL M1 M2 /\ copyterm SubstR N1 N2 .
+
+Define cs_apply_list_pair : subst_pair -> list constraint_pair -> list constraint_pair -> prop by 
+cs_apply_list_pair Subst nil nil ; 
+cs_apply_list_pair Subst (cons C L) (cons D R) :=
+  cs_apply_pair Subst C D /\ cs_apply_list_pair Subst L R.
+
+Define print_subst_pair : subst_pair -> prop by
+print_subst_pair (mpsub SubstL SubstR) := 
+  printstr "\nSubst Left: " /\ print_subst SubstL /\ printstr " - Subst Right: " /\ print_subst SubstR /\
+  printstr "\n------------------------------------------------------------------------------------------------------------------------\n".
+
+Define print_cst_pair : constraint_pair -> prop by
+print_cst_pair (dedc_pair T (mp U1 U2)) := printstr "\n" /\ print_thy T /\ printstr " |- " /\ print_term U1 /\ printstr " <-> " /\ print_term U2 ;
+print_cst_pair (mbsc_pair (mp V1 V2) T (mp U1 U2)) :=
+  printstr "\n" /\ print_term V1 /\ printstr " <-> " /\ print_term V2 /\ printstr "   Bd   " /\
+  print_thy T /\ printstr "   ,   " /\ print_term U1 /\ printstr " <-> " /\ print_term U2 .
+
+Define print_cst_pair_list : list constraint_pair -> prop by
+print_cst_pair_list nil := printstr "\n" ;
+print_cst_pair_list (cons Cs CsL) := print_cst_pair Cs /\ print_cst_pair_list CsL .
+
+% Get Tx
+Define get_T_var_pair : list constraint_pair -> tm -> list thy_pair -> list thy_pair -> prop by
+get_T_var_pair nil Var TIn TOut ;
+get_T_var_pair (cons Cs CsL) Var TIn TOut :=
+  (Cs = dedc_pair T (mp U1 U2) \/ Cs = mbsc_pair V T (mp U1 U2)) /\
+  split_thy T T1 T2 /\
+  _if (get_var_list_tm T1 nil TVars1 /\ _not(det_mem Var TVars1) /\ get_var U1 nil UVars1 /\ det_mem Var UVars1 /\
+       get_var_list_tm T2 nil TVars2 /\ _not(det_mem Var TVars2) /\ get_var U2 nil UVars2 /\ det_mem Var UVars2)
+    (
+      _if (TIn = nil \/ subset T TIn) (get_T_var_pair CsL Var T TOut) (get_T_var_pair CsL Var TIn TOut)
+    )
+    (get_T_var_pair CsL Var TVarIn TVarOut).
+
+% Check if a term is subterm of another term
+Define sub_term_pair : thy_pair -> thy_pair -> prop by
+sub_term_pair (mp (ct X) (ct Y)) (mp (ct X) (ct Y)) ;
+sub_term_pair (mp (nm X) (nm Y)) (mp (nm X) (nm Y)) ;
+sub_term_pair (mp (var X) (var Y)) (mp (var X) (var Y)) ;
+sub_term_pair T (mp (pr X1 Y1) (pr X2 Y2)) := T = mp (pr X1 Y1) (pr X2 Y2) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) ;
+sub_term_pair T (mp (en X1 Y1) (en X2 Y2)) := T = mp (en X1 Y1) (en X2 Y2) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) ;
+sub_term_pair T (mp (aen X1 Y1) (aen X2 Y2)) := T = (mp (aen X1 Y1) (aen X2 Y2)) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) ;
+sub_term_pair T (mp (pub X) (pub Y)) := T = mp (pub X) (pub Y) \/ sub_term_pair T (mp X Y) ;
+sub_term_pair T (mp (blind X1 Y1) (blind X2 Y2)) := T = mp (blind X1 Y1) (blind X2 Y2) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) ;
+sub_term_pair T (mp (sign X1 Y1) (sign X2 Y2)) := T = mp (sign X1 Y1) (sign X2 Y2) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) ;
+sub_term_pair T (mp (hs X) (hs Y)) := T = mp (hs X) (hs Y) \/ sub_term_pair T (mp X Y) ;
+sub_term_pair T (mp (mac X1 Y1) (mac X2 Y2)) := T = mp (mac X1 Y1) (mac X2 Y2) \/ sub_term_pair T (mp X1 X2) \/ sub_term_pair T (mp Y1 Y2) .
+
+% Check if a term is subterm in a list of term
+Define sub_term_list_pair : thy_pair -> list thy_pair -> prop by
+sub_term_list_pair S (cons T L) := sub_term_pair S T \/ sub_term_list_pair S L.
+
+%----------------------------------------------------------------------------------------------------------------------%
+% TRANSFORMATION RULES
+%----------------------------------------------------------------------------------------------------------------------%
+
+Define transformation_rule_loop_dedc_pair : constraint_pair -> list constraint_pair -> list constraint_pair ->
+list constraint_pair -> list constraint_pair -> subst_pair -> subst_pair -> list tm -> list constraint_pair ->
+list constraint_pair -> list tm -> prop by
+% Rf
+transformation_rule_loop_dedc_pair (dedc_pair T M) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  (M = mp (blind U1 V1) (blind U2 V2) \/ M = mp (sign U1 V1) (sign U2 V2) \/ M = mp (pr U1 V1) (pr U2 V2) \/ M = mp (en U1 V1) (en U2 V2) \/ M = mp (aen U1 V1) (aen U2 V2)) /\
+  _not(det_mem (dedc_pair T M) LoopIn) /\
+  LoopOut = cons (dedc_pair T M) LoopIn /\
+  Ds = cons (dedc_pair T (mp U1 U2)) (cons (dedc_pair T (mp V1 V2)) CsL)
+  %/\ printstr "\nRf Blind/Sign/Pair/Enc/Aenc\n"
+;
+% Rf
+%transformation_rule_loop_dedc_pair (dedc_pair T (mp (blind U1 V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) Vs Pre NewPre NewVs :=
+%  _not(det_mem (dedc_pair T (mp (blind U1 V1) RHS)) LoopIn) /\
+%  LoopOut = cons (dedc_pair T (mp (blind U1 V1) RHS)) LoopIn /\
+%  nabla y1, nabla y2,
+%    NewVs = cons (var y1) (cons (var y2) Vs) /\
+%    Subst = cons (sub (var Y) (blind (var y1) (var y2))) nil /\
+%    SubstOutL = cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInL) /\
+%    compose NewVs (cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInR)) Subst SubstOutR /\
+%    cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+%    cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+%    Ds = cons (dedc_pair T (mp U1 (var y1))) (cons (dedc_pair T (mp V1 (var y2))) CsLI)
+    %/\ printstr "\nRf Blind Var\n"
+%;
+% Rf
+%transformation_rule_loop_dedc_pair (dedc_pair T (mp (sign U1 V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) Vs Pre NewPre NewVs :=
+%  _not(det_mem (dedc_pair T (mp (sign U1 V1) RHS)) LoopIn) /\
+%  LoopOut = cons (dedc_pair T (mp (sign U1 V1) RHS)) LoopIn /\
+%  nabla y1, nabla y2,
+%    NewVs = cons (var y1) (cons (var y2) Vs) /\
+%    Subst = cons (sub (var Y) (sign (var y1) (var y2))) nil /\
+%    SubstOutL = cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInL) /\
+%    compose NewVs (cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInR)) Subst SubstOutR /\
+%    cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+%    cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+%    Ds = cons (dedc_pair T (mp U1 (var y1))) (cons (dedc_pair T (mp V1 (var y2))) CsLI)
+    %/\ printstr "\nRf Sign Var\n" /\ print_subst_pair (mpsub SubstOutL SubstOutR)
+%;
+% Rf
+%transformation_rule_loop_dedc_pair (dedc_pair T (mp (pr U1 V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) Vs Pre NewPre NewVs :=
+%  _not(det_mem (dedc_pair T (mp (pr U1 V1) RHS)) LoopIn) /\
+%  LoopOut = cons (dedc_pair T (mp (pr U1 V1) RHS)) LoopIn /\
+%  nabla y1, nabla y2, NewVs = cons (var y1) (cons (var y2) Vs) /\
+%    Subst = cons (sub (var Y) (pr (var y1) (var y2))) nil /\
+%    SubstOutL = cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInL) /\
+%    compose NewVs (cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInR)) Subst SubstOutR /\
+%    cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+%    cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+%    Ds = cons (dedc_pair T (mp U1 (var y1))) (cons (dedc_pair T (mp V1 (var y2))) CsLI)
+    %/\ printstr "\nRf Pair Var\n"
+%;
+% Rf
+%transformation_rule_loop_dedc_pair (dedc_pair T (mp (en U1 V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) Vs Pre NewPre NewVs :=
+%  _not(det_mem (dedc_pair T (mp (en U1 V1) RHS)) LoopIn) /\
+%  LoopOut = cons (dedc_pair T (mp (en U1 V1) RHS)) LoopIn /\
+%  nabla y1, nabla y2,
+%    NewVs = cons (var y1) (cons (var y2) Vs) /\
+%    Subst = cons (sub (var Y) (en (var y1) (var y2))) nil /\
+%    SubstOutL = cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInL) /\
+%    compose NewVs (cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInR)) Subst SubstOutR /\
+%    cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+%    cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+%    Ds = cons (dedc_pair T (mp U1 (var y1))) (cons (dedc_pair T (mp V1 (var y2))) CsLI)
+    %/\ printstr "\nRf Enc Var\n"
+%;
+% Rf
+%transformation_rule_loop_dedc_pair (dedc_pair T (mp (aen U1 V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) Vs Pre NewPre NewVs :=
+%  _not(det_mem (dedc_pair T (mp (aen U1 V1) RHS)) LoopIn) /\
+%  LoopOut = cons (dedc_pair T (mp (aen U1 V1) RHS)) LoopIn /\
+%  nabla y1, nabla y2,
+%    NewVs = cons (var y1) (cons (var y2) Vs) /\
+%    Subst = cons (sub (var Y) (aen (var y1) (var y2))) nil /\
+%    SubstOutL = cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInL) /\
+%    compose NewVs (cons (sub (var y1) (var y1)) (cons (sub (var y2) (var y2)) SubstInR)) Subst SubstOutR /\
+%    cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+%    cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+%    Ds = cons (dedc_pair T (mp U1 (var y1))) (cons (dedc_pair T (mp V1 (var y2))) CsLI)
+    %/\ printstr "\nRf Aenc Var\n"
+%;
+% Rf
+transformation_rule_loop_dedc_pair (dedc_pair T (mp M1 M2)) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  (
+    (M1 = pub V1 /\ M2 = pub V2) \/ (M1 = hs V1 /\ M2 = hs V2)
+  ) /\
+  _not (det_mem (dedc_pair T (mp M1 RHS)) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp M1 M2)) LoopIn /\
+  Ds = cons (dedc_pair T (mp V1 V2)) CsL
+  %/\ printstr "\nRf Pub/Hash\n"
+;
+% Rf
+transformation_rule_loop_dedc_pair (dedc_pair T (mp (pub V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstInL SubstOutR) Vs Pre NewPre Vs :=
+  % We do not care about RHS in LoopIn/LoopOut
+  _not (det_mem (dedc_pair T (mp (pub V1) RHS)) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (pub V1) (var Y))) LoopIn /\
+  % (var Y) -> pub (var Y) U2
+  Subst = (cons (sub (var Y) (pub (var Y))) nil) /\
+  compose Vs SubstInR Subst SubstOutR /\
+  % This rule is related to the RHS therefore we need to do substitution to both side, CsL and Pre
+  cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+  cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+  Ds = cons (dedc_pair T (mp V1 (var Y))) CsLI
+  %/\ printstr "\nRf Pub Var\n"
+;
+% Rf
+transformation_rule_loop_dedc_pair (dedc_pair T (mp (hs V1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstInL SubstOutR) Vs Pre NewPre Vs :=
+  % We do not care about RHS in LoopIn/LoopOut
+  _not (det_mem (dedc_pair T (mp (hs V1) RHS)) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (hs V1) (var Y))) LoopIn /\
+  % (var Y) -> hs (var Y) U2
+  Subst = (cons (sub (var Y) (hs (var Y))) nil) /\
+  compose Vs SubstInR Subst SubstOutR /\
+  % This rule is related to the RHS therefore we need to do substitution to both side, CsL and Pre
+  cs_apply_list_pair (mpsub nil Subst) Pre NewPre /\
+  cs_apply_list_pair (mpsub nil Subst) CsL CsLI /\
+  Ds = cons (dedc_pair T (mp V1 (var Y))) CsLI
+  %/\ printstr "\nRf Hash Var\n" /\ print_cst_pair (dedc_pair T (mp (hs V1) (var Y))) /\ print_cst_pair_list Ds
+;
+% Rbd
+transformation_rule_loop_dedc_pair (dedc_pair T (mp V1 V2)) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  _distinct(sub_term_list_pair (mp (blind V1 U1) (blind V2 U2)) T) /\
+  Ds = cons (dedc_pair T (mp (blind V1 U1) (blind V2 U2))) (cons (dedc_pair T (mp U1 U2)) CsL)
+  %/\ printstr "\nRbd 1\n"
+;
+% Rpair
+transformation_rule_loop_dedc_pair (dedc_pair T (mp U1 U2)) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  _distinct(sub_term_list_pair (mp (pr M1 N1) (pr M2 N2)) T) /\ ((U1 = M1 /\ U2 = M2) \/ (U1 = N1 /\ U2 = N2)) /\
+  _not(det_mem (dedc_pair T (mp (pr M1 N1) (pr M2 N2))) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (pr M1 N1) (pr M2 N2))) LoopIn /\
+  Ds = cons (dedc_pair T (mp (pr M1 N1) (pr M2 N2))) CsL
+  %/\ printstr "\nRpair 1\n"
+;
+% Rdec
+transformation_rule_loop_dedc_pair (dedc_pair T (mp V1 V2)) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  _distinct(sub_term_list_pair (mp (en V1 U1) (en V2 U2)) T) /\
+  _not(det_mem (dedc_pair T (mp (en V1 U1) (en V2 U2))) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (en V1 U1) (en V2 U2))) LoopIn /\
+  Ds = cons (dedc_pair T (mp (en V1 U1) (en V2 U2))) (cons (dedc_pair T (mp U1 U2)) CsL)
+  %/\ printstr "\nRdec 1\n"
+;
+% Radec
+transformation_rule_loop_dedc_pair (dedc_pair T (mp V1 V2)) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre Vs :=
+  _distinct(sub_term_list_pair (mp (aen V1 (pub U1)) (aen V2 (pub U2))) T) /\
+  _not(det_mem (dedc_pair T (mp (aen V1 (pub U1)) (aen V2 (pub U2)))) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (aen V (pub U)) (aen V2 (pub U2)))) LoopIn /\
+  Ds = cons (dedc_pair T (mp (aen V1 (pub U1)) (aen V2 (pub U2)))) (cons (dedc_pair T (mp U1 U2)) CsL) 
+  %/\ printstr "\nRadec 1\n"
+.
+
+%----------------------------------------------------------------------------------------------------------------------%
+% TRANSFORMATION RULES - MEMBERSHIP CONSTRAINT CREATION
+%----------------------------------------------------------------------------------------------------------------------%
+
+Define transformation_rule_loop_mbsc_pair : constraint_pair -> list constraint_pair -> list constraint_pair -> list constraint_pair ->
+list constraint_pair -> subst_pair -> subst_pair -> list tm -> list constraint_pair -> list constraint_pair -> prop by
+% Rbdsgn
+transformation_rule_loop_mbsc_pair (dedc_pair T (mp (sign V1 U1) (sign V2 U2))) CsL Ds LoopIn LoopOut SubstIn SubstIn Vs Pre Pre :=
+  _distinct(sub_term_list_pair (mp (sign W1 U1) (sign W2 U2)) T) /\
+  % Check condition on the LHS
+  % Note: In loop checking, we don't care about the RHS
+  _not(V1 = W1 \/ det_mem (dedc_pair T (mp (sign V1 U1) RHS)) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (sign V1 U1) (sign V2 U2))) LoopIn /\
+  Ds = cons (dedc_pair T (mp (sign W1 U1) (sign W2 U2))) (cons (mbsc_pair (mp W1 W2) T (mp V1 V2)) CsL) 
+  %/\ printstr "\nRbdsgn 1\n"
+;
+
+% Notice that we got U1 U2 , V1 but not V2, We need to unify Y with sign V2 U2
+% How to get V2?
+% Consider the case when RHS is a variable then substitute Y with sign Y U2
+transformation_rule_loop_mbsc_pair (dedc_pair T (mp (sign V1 U1) (var Y))) CsL Ds LoopIn LoopOut (mpsub SubstInL SubstInR) (mpsub SubstInL SubstOutR) Vs Pre NewPre :=
+  _distinct(sub_term_list_pair (mp (sign W1 U1) (sign W2 U2)) T) /\
+  % Check condition on the LHS - In loop checking, we don't care about the RHS
+  _not(V1 = W1 \/ det_mem (dedc_pair T (mp (sign V1 U1) RHS)) LoopIn) /\
+  LoopOut = cons (dedc_pair T (mp (sign V1 U1) (sign (var Y) U2))) LoopIn /\
+  % (var Y) -> sign (var Y) U2
+  SubstR = (cons (sub (var Y) (sign (var Y) U2)) nil) /\
+  compose Vs SubstInR SubstR SubstOutR /\
+  % This rule is related to the RHS therefore we need to do substitution to both side, CsL and Pre
+  cs_apply_list_pair (mpsub nil SubstR) Pre NewPre /\
+  cs_apply_list_pair (mpsub nil SubstR) CsL CsLI /\
+  Ds = cons (dedc_pair T (mp (sign W1 U1) (sign W2 U2))) (cons (mbsc_pair (mp W1 W2) T (mp V1 (var Y))) CsLI) 
+  %/\ printstr "\nRbdsgn 2\n" /\ print_cst_pair_list (cons (dedc_pair T (mp (sign V1 U1) (var Y))) CsL) /\ print_cst_pair_list Ds /\ print_subst_pair (mpsub SubstInL SubstOutR)
+.
+
+Define transformation_rule_pair : nat -> list constraint_pair -> list constraint_pair -> prop by
+% Ra
+transformation_rule_pair 7 Cs Ds :=
+  select Cs (mbsc_pair (mp (var X) (var X)) T' V) CsI /\ select CsI (dedc_pair T (mp (var X) (var X))) CsII /\
+  _not(T = T') /\ subset T T' /\
+  Ds = cons (dedc_pair T V) (cons (mbsc_pair (mp (var X) (var X)) T V) CsI)
+  %/\ printstr "\nRa\n"
+;
+% Rb
+transformation_rule_pair 8 Cs Ds :=
+  select Cs (mbsc_pair (mp (var X) (var X)) T' V) CsI /\ select CsI (dedc_pair T (mp (var X) (var X))) CsII /\
+  _not(T = T') /\ subset T T' /\ _distinct(sub_term_list_pair W T) /\ 
+  Ds = cons (dedc_pair T W) (cons (mbsc_pair (mp (var X) (var X)) T W) (cons (mbsc_pair W T' V) CsI))
+  %/\ printstr "\nRb\n" /\ print_cst_pair_list Cs /\ print_cst_pair_list Ds
+;
+% Rc
+transformation_rule_pair 9 Cs Ds :=
+  select Cs (mbsc_pair (mp (var X) (var X)) T V') CsI /\ select CsI (mbsc_pair (mp (var X) (var X)) T V) CsII /\ select CsII (dedc_pair T (mp (var X) (var X))) CsIII /\
+  get_T_var_pair Cs (var X) nil TVar /\ subset T TVar /\
+  Ds = cons (mbsc_pair V T V') CsI
+  %/\ printstr "\nRc\n"
+.
+
+Define separate_pair : list constraint_pair -> list constraint_pair -> list constraint_pair -> prop by
+separate_pair nil nil nil ;
+separate_pair (cons Cs CsL) Pre Post :=
+  separate_pair CsL NewPre NewPost /\
+  _if (Cs = dedc_pair T (mp (var X) (var Y)) \/ Cs = mbsc_pair V T U)
+    (Pre = cons Cs NewPre /\ Post = NewPost)
+    (Pre = NewPre /\ Post = cons Cs NewPost).
+
+% Solved Form
+Define cs_solved_form_pair : list constraint_pair -> prop by
+cs_solved_form_pair nil ;
+cs_solved_form_pair CsL := _not (CsL = nil) /\
+  _not (
+    member (dedc_pair T (mp U1 U2)) CsL /\
+    _not (U1 = var X /\ U2 = var X)
+  ) /\
+  _not (
+    select CsL (mbsc_pair (mp V1 V2) T (mp U1 U2)) CsLI /\
+    (
+      _not (V1 = var X /\ V2 = var X) \/
+      _not (member (dedc_pair T (mp V1 V2)) CsLI) \/
+      member (mbsc_pair (mp V1 V2) T' (mp U1' U2')) CsLI
+    )
+  ).
+
+% Simplication rules for membership constraints
+% Note: In a set of constraints in simplified form, each membership constraint is of the form mbsc (var X) T U
+Define simplication_rule_pair : list constraint_pair -> list constraint_pair -> list constraint_pair -> subst_pair -> subst_pair -> list tm -> prop by
+simplication_rule_pair CsIn nil CsIn SubstIn SubstIn Vs ;
+
+% Sax
+simplication_rule_pair Processed (cons (mbsc_pair (mp V1 V2) T (mp U1 U2)) CsL) CsOut SubstIn SubstOut Vs :=
+  % Check the apply condition on the left hand side
+  _not (V1 = U1 \/ V1 = blind M1 N1 \/ V1 = pr M1 N1) /\
+  %printstr "\nSax 1\n" /\ print_cst_pair_list CsL /\ print_subst_pair SubstIn /\
+  _if (_cut(select CsL (mbsc_pair (mp V1 V2) T (mp U1 U2)) CsLI))
+    (simplication_rule_pair Processed CsL CsOut SubstIn SubstOut Vs)
+    (
+      _not(V1 = en M1 N1 \/ V1 = aen M1 N1 \/ V1 = sign M1 N1 \/ V1 = mac M1 N1 \/ V1 = pub M1 \/ V1 = hs M1 ) /\ simplication_rule_pair (cons (mbsc_pair (mp V1 V2) T (mp U1 U2)) Processed) CsL CsOut SubstIn SubstOut Vs
+    ) ;
+simplication_rule_pair Processed (cons (mbsc_pair (mp U1 Y1) T (mp U1 Y2)) CsL) CsOut (mpsub SubstInL SubstInR) SubstOut Vs :=
+  unify nil Y1 Y2 Vs SubstR /\
+  compose Vs SubstInR SubstR SubstInRI /\
+  cs_apply_list_pair (mpsub nil SubstR) Processed NewProcessed /\
+  cs_apply_list_pair (mpsub nil SubstR) CsL NewCsL /\
+  % Note: We only care about the LHS, therefore the differences in substitution in RHS do not affect the rules
+  %printstr "\nSax 2\n" /\ print_cst_pair_list NewCsL /\
+  simplication_rule_pair NewProcessed NewCsL CsOut (mpsub SubstInL SubstInRI) SubstOut Vs;
+
+% Sbd
+simplication_rule_pair Processed (cons (mbsc_pair (mp (blind U1 V1) (blind U2 V2)) T (mp W1 W2)) CsL) CsOut SubstIn SubstOut Vs :=
+  _not (W1 = blind U1 V1 \/ W2 = blind U2 V2) /\
+  append Processed (cons (dedc_pair T (mp V1 V2)) (cons (mbsc_pair (mp U1 U2) T (mp W1 W2)) CsL)) CsIn /\
+  %printstr "\nSbd\n" /\
+  simplication_rule_pair nil CsIn CsOut SubstIn SubstOut Vs ;
+
+% Sbd - Unify
+simplication_rule_pair Processed (cons (mbsc_pair (mp U1 U2) T (mp W1 W2)) CsL) CsOut (mpsub SubstInL SubstInR) SubstOut Vs :=
+  _not (U1 = W1 \/ U1 = var X) /\
+  unify nil U1 W1 Vs SubstL /\ unify nil U2 W2 Vs SubstR /\
+  compose Vs SubstInL SubstL SubstInLI /\ compose Vs SubstInR SubstR SubstInRI /\
+  append Processed CsL CsLI /\
+  cs_apply_list_pair (mpsub SubstL SubstR) CsLI Ds /\
+  %printstr "\nSbd-Unify\n" /\
+  simplication_rule_pair nil Ds CsOut (mpsub SubstInLI SubstInRI) SubstOut Vs ;
+% Sleft
+simplication_rule_pair Processed (cons (mbsc_pair (mp (pr U1 V1) (pr U2 V2)) T (mp W1 W2)) CsL) CsOut SubstIn SubstOut Vs :=
+  _not (pr U1 V1 = W1 \/ pr U2 V2 = W2) /\
+  append Processed (cons (mbsc_pair (mp U1 U2) T (mp W1 W2)) CsL) CsIn /\
+  %printstr "\nSleft\n" /\
+  simplication_rule_pair nil CsIn CsOut SubstIn SubstOut Vs ;
+% Sright
+simplication_rule_pair Processed (cons (mbsc_pair (mp (pr U1 V1) (pr U2 V2)) T (mp W1 W2)) CsL) CsOut SubstIn SubstOut Vs :=
+  _not (pr U1 V1 = W1 \/ pr U2 V2 = W2) /\
+  append Processed (cons (mbsc_pair (mp V1 V2) T (mp W1 W2)) CsL) CsIn /\
+  %printstr "\nSright\n" /\
+  simplication_rule_pair nil CsIn CsOut SubstIn SubstOut Vs ;
+% Rax
+simplication_rule_pair Processed (cons (dedc_pair T (mp U1 U2)) CsL) CsOut (mpsub SubstInL SubstInR) SubstOut Vs :=
+  (
+    (det_mem (mp U1 Y) T /\ unify nil Y U2 Vs SubstR) \/
+    (U1 = ct M /\ unify nil (ct M) U2 Vs SubstR)
+  ) /\
+  compose Vs SubstInR SubstR SubstInRI /\
+  cs_apply_list_pair (mpsub nil SubstR) Processed NewProcessed /\
+  cs_apply_list_pair (mpsub nil SubstR) CsL NewCsL /\
+  % Note: We only care about the LHS, therefore the differences in substitution in RHS do not affect the rules
+  %printstr "\nRax\n" /\ print_cst_pair_list NewCsL /\
+  simplication_rule_pair NewProcessed NewCsL CsOut (mpsub SubstInL SubstInRI) SubstOut Vs ;
+% Special case
+simplication_rule_pair Processed (cons (dedc_pair T (mp (var X1) (var Y1))) CsL) CsOut (mpsub SubstInL SubstInR) SubstOut Vs :=
+  _not(X1 = Y1) /\ SubstR = cons (sub (var Y1) (var X1)) nil /\
+  compose Vs SubstInR SubstR SubstInRI /\
+  cs_apply_list_pair (mpsub nil SubstR) Processed NewProcessed /\
+  cs_apply_list_pair (mpsub nil SubstR) CsL NewCsL /\
+  % Note: We only care about the LHS, therefore the differences in substitution in RHS do not affect the rules
+  %printstr "\nRax\n" /\ print_cst_pair_list NewCsL /\
+  simplication_rule_pair NewProcessed (cons (dedc_pair T (mp (var X1) (var X1))) NewCsL) CsOut (mpsub SubstInL SubstInRI) SubstOut Vs ;
+% Rtriv
+simplication_rule_pair Processed (cons (dedc_pair T (mp U1 U2)) CsL) CsOut SubstIn SubstOut Vs :=
+  _not (det_mem (mp U1 RHS) T \/ U1 = ct M) /\ _not(U1 = var X /\ _not(U1 = U2)) /\
+  append Processed CsL CsIn /\
+  _if (_cut(select CsIn (dedc_pair T' (mp U1 U2)) CsLI))
+    (
+      _if (subset T T')
+	(
+	  %printstr "\nRtriv\n" /\
+	  simplication_rule_pair (cons (dedc_pair T (mp U1 U2)) nil) CsLI CsOut SubstIn SubstOut Vs
+	)
+	(
+	  %printstr "\nRtriv\n" /\
+	  simplication_rule_pair Processed CsL CsOut SubstIn SubstOut Vs
+	)
+    )
+    (
+      simplication_rule_pair (cons (dedc_pair T (mp U1 U2)) Processed) CsL CsOut SubstIn SubstOut Vs
+    ) .
+% Sf is not necessary to check
+% Need to check Scycle
+
+Define unify_list_pair : list tm -> list thy_pair -> thy_pair -> list sub_pair -> list sub_pair -> prop by 
+unify_list_pair Vs (cons (mp X1 X2) L) (mp Y1 Y2) SubstL SubstR := 
+  (unify nil X1 Y1 Vs SubstL /\ unify nil X2 Y2 Vs SubstR) \/
+  unify_list_pair Vs L (mp Y1 Y2) SubstL SubstR.
+
+%----------------------------------------------------------------------------------------------------------------------%
+% UNIFICATION RULES
+%----------------------------------------------------------------------------------------------------------------------%
+
+Define unify_constraint_pair : list tm -> list constraint_pair -> constraint_pair -> list constraint_pair -> list constraint_pair -> subst_pair -> subst_pair -> prop by
+unify_constraint_pair Vs Pre (dedc_pair T U) Post Ds (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) :=
+  U = mp U1 U2 /\ _not (U1 = sign M1 N1) /\ unify_list_pair Vs T U SubstL SubstR /\
+  compose Vs SubstInL SubstL SubstOutL /\ compose Vs SubstInR SubstR SubstOutR /\
+  append Pre Post CsL /\
+  cs_apply_list_pair (mpsub SubstL SubstR) CsL Ds
+  %/\ printstr "\nUnification Rule 1\n"
+;
+unify_constraint_pair Vs Pre (dedc_pair T (mp V1 V2)) Post Ds (mpsub SubstInL SubstInR) (mpsub SubstOutL SubstOutR) := 
+  _cut(sub_term_list_pair (mp (aen V1 (var X1)) (aen V2 (var X2))) T) /\
+  SubstL = (cons (sub (var X1) (pub (var X1))) nil) /\ SubstR = (cons (sub (var X2) (pub (var X2))) nil) /\
+  compose Vs SubstInL SubstL SubstOutL /\ compose Vs SubstInR SubstR SubstOutR /\
+  append Pre (cons (dedc_pair T V) Post) CsL /\
+  cs_apply_list_pair (mpsub SubstL SubstR) CsL Ds
+  %/\ printstr "\nUnification Rule 2\n"
+.
+
+%----------------------------------------------------------------------------------------------------------------------%
+% CHECK Scycle
+% Construct the increasing set of variables until we got two similar set
+% If the final set equals to set of all the variables, we got the variable cycle
+% Cannot initialize the first set (Cannot assure all vertices are connected)
+%----------------------------------------------------------------------------------------------------------------------%
+
+%Define separate_mbsc_pair : list constraint_pair -> list constraint_pair -> prop by
+%separate_mbsc_pair nil nil;
+%separate_mbsc_pair (cons (mbsc_pair (mp (var X) RHS) T U) CsLIn) (cons (mbsc_pair (mp (var X) RHS) T U) CsLOut) := separate_mbsc_pair CsLIn CsLOut ;
+%separate_mbsc_pair (cons (dedc_pair T U) CsLIn) CsLOut := separate_mbsc_pair CsLIn CsLOut .
+
+%Define merge : list A -> list A -> list A -> prop by
+%merge nil L L;
+%merge (cons X L1) L2 L3 := merge L1 L2 L4 /\ insert X L4 L3.
+
+%Define find_all_variable : list constraint_pair -> list tm -> prop by
+%find_all_variable nil nil ;
+%find_all_variable (cons (mbsc_pair (mp (var X) RHS) T U) CsLIn) VarOut :=
+%  find_all_variable CsLIn VarOutI /\
+%  split_thy T S1 S2 /\
+%  get_var_list_tm S1 nil TVar /\
+%  insert (var X) TVar TVarI /\
+%  merge TVarI VarOutI VarOut.
+
+%Define construct_variable_list : list constraint_pair -> list tm -> list tm -> prop by
+%construct_variable_list nil VarIn VarIn ;
+%construct_variable_list (cons (mbsc_pair (mp (var X) RHS) T U) CsLIn) VarIn VarOut :=
+%  split_thy T S1 S2 /\
+%  get_var_list_tm S1 nil TVar /\
+%  _if (det_mem (var X) VarIn) (
+%    construct_variable_list CsLIn VarIn VarOutI /\
+%    merge TVar VarIn VarOut
+%  )
+%  (construct_variable_list CsLIn VarIn VarOut).
+  
+%Define find_variable_list : list constraint_pair -> list tm -> list tm -> prop by
+%find_variable_list CsL VarIn VarOut :=
+%  construct_variable_list CsL VarIn VarInI /\ print_list VarIn /\ print_list VarInI /\
+%  _if (VarInI = VarIn) (VarOut = VarIn)
+%  (find_variable_list CsL VarInI VarOut).
+
+%Define check_cycle : list constraint_pair -> prop by
+%check_cycle CsLIn :=
+%  separate_mbsc_pair CsLIn CsL /\
+%  find_all_variable CsL AllVars /\
+%  _if (AllVars = nil) (true)
+%  (
+%    find_variable_list CsL nil VarOut /\
+%    _not(subset AllVars VarOut)
+%  ).
+
+Define check_cycle : list constraint_pair -> prop by  
+check_cycle CsL := 
+  _not (member (mbsc_pair (mp (var X) RHS1) T (mp VX RHS2) ) CsL /\ get_var VX nil VarList /\ member (var X) VarList).
+
+%----------------------------------------------------------------------------------------------------------------------%
+% MAIN FUNCTION
+%----------------------------------------------------------------------------------------------------------------------%
+% Important note: Substitution might need to applied to LoopMbsc and LoopDedc
+Define cs_solve_pair : list tm -> list constraint_pair -> list constraint_pair -> subst_pair -> subst_pair ->
+list constraint_pair -> list constraint_pair -> list constraint_pair -> prop by
+cs_solve_pair Vs Pre Post SubstInX SubstOut LoopDedcIn LoopMbscIn SolvedForm :=
+  append Pre Post PreCsL /\
+  check_cycle PreCsL /\  
+  %printstr "\nBefore Simplification: " /\ print_cst_pair_list PreCsL /\ print_subst_pair SubstInX /\
+  simplication_rule_pair nil PreCsL CsL SubstInX SubstIn Vs /\
+  %printstr "\nAfter Simplification: " /\ print_cst_pair_list CsL /\ print_subst_pair SubstIn /\
+  _if (cs_solved_form_pair CsL) ( SubstOut = SubstIn /\ SolvedForm = CsL)
+    (
+      separate_pair CsL PreI NewPost /\
+      _if (NewPost = nil) (transformation_rule_pair TR CsL Ds /\ cs_solve_pair Vs nil Ds SubstIn SubstOut LoopDedcIn LoopMbscIn SolvedForm)
+      (
+	NewPost = cons Cs PostII /\
+	(
+	  (unify_constraint_pair Vs PreI Cs PostII Ds SubstIn NewSubst /\ NewPre = nil /\ LoopDedcOut = LoopDedcIn /\ LoopMbscOut = LoopMbscIn /\ NewVs = Vs) \/
+	  (transformation_rule_loop_dedc_pair Cs PostII Ds LoopDedcIn LoopDedcOut SubstIn NewSubst Vs PreI NewPre NewVs /\ LoopMbscOut = LoopMbscIn) \/
+	  (transformation_rule_loop_mbsc_pair Cs PostII Ds LoopMbscIn LoopMbscOut SubstIn NewSubst Vs PreI NewPre /\ LoopDedcOut = LoopDedcIn /\ NewVs = Vs)
+	) /\
+	cs_solve_pair NewVs NewPre Ds NewSubst SubstOut LoopDedcOut LoopMbscOut SolvedForm
+      )
+    ) .
+
+% Two constraint system pair share the same variable list
+Define cs_solve_constraints_pair : list tm -> list constraint_pair -> subst_pair -> list constraint_pair -> prop by
+cs_solve_constraints_pair Vs CsL Subst SolvedForm :=
+  id_subst Vs IdSubst /\
+  cs_solve_pair Vs nil CsL (mpsub IdSubst IdSubst) Subst nil nil SolvedForm.

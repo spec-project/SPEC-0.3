@@ -1,0 +1,256 @@
+#include "src/defs/obsthy.def".
+#include "src/defs/constraint-system.def".
+
+Type a name.
+Type b name.
+Type c name.
+Type d name.
+Type ed name.
+Type k name.
+Type l name.
+Type n name.
+Type r name.
+Type r1 name.
+Type r2 name.
+Type s name.
+Type u name.
+Type v name.
+Type x name.
+Type y name.
+
+Define init_pair : nat -> list tm -> list constraint_pair -> prop by
+init_pair 1 Vars CsL :=
+  T = mp (nm n) (nm n) /\
+  TL = cons T nil /\
+  Cs = dedc_pair TL (mp (var x) (var x)) /\
+  CsL = cons Cs nil /\
+  Vars = cons (var x) nil ;
+
+init_pair 2 Vars CsL :=
+  T1 = cons (mp (nm n) (nm n)) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (nm n) (nm k)) (sign (nm n) (nm k))) /\
+  Vars = cons (var x) nil /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init_pair 3 Vars CsL :=
+  T1 = cons (mp (nm n) (nm n)) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (var x) (nm k)) (sign (blind (var x) (nm n)) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (nm n) (nm k)) (sign (blind (nm n) (nm n)) (nm k))) /\
+  Vars = cons (var x) nil /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init_pair 4 Vars CsL :=
+  T1 = cons (mp (nm n) (nm n)) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (blind (blind (var x) (nm n)) (nm n)) (nm k)) (sign (blind (blind (blind (var x) (nm n)) (nm n)) (nm n)) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (blind (blind (nm n) (nm n)) (nm n)) (nm k)) (sign (blind (blind (blind (nm n) (nm n)) (nm n)) (nm n)) (nm k))) /\
+  Vars = cons (var x) nil /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init_pair 5 Vars CsL :=
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (hs (nm n)) (nm k)) (sign (hs (hs (nm n))) (nm k))) /\
+  Vars = cons (var x) nil /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+%----------------------------------------------------------------------------------------------------------------------%
+% MAIN TESTS
+%----------------------------------------------------------------------------------------------------------------------%
+
+init_pair 6 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (en (var x) (nm k)) (en (var x) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (en (hs (nm n)) (nm k)) (var y)) /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init_pair 7 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (hs (nm n)) (nm k)) (var y)) /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+%
+% LACK SOLUTIONS
+%
+
+init_pair 8 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (mp (nm n) (nm n)) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (blind (blind (var x) (nm n)) (nm n)) (nm k)) (sign (blind (blind (blind (var x) (nm n)) (nm n)) (nm n)) (nm k))) T1  /\
+  Cs2 = dedc_pair T2 (mp (sign (blind (blind (nm n) (nm n)) (nm n)) (nm k)) (var y)) /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+% Need to implement Scycle
+
+init_pair 9 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  Cs2 = dedc_pair T1 (mp (var y) (var y)) /\
+  T2 = cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) (cons (mp (sign (var y) (nm k)) (sign (var y) (nm k))) T1)  /\
+  Cs3 = dedc_pair T2 (mp (sign (hs (nm n)) (nm k)) (sign (hs (hs (nm n))) (nm k))) /\
+  Cs4 = dedc_pair T2 (mp (sign (hs (var x)) (nm k)) (sign (hs (var x)) (nm k))) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 (cons Cs4 nil))) ;
+
+init_pair 10 Vars CsL :=
+  Vars = cons (var x) (cons (var y) (cons (var u) (cons (var v) nil))) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  Cs2 = dedc_pair T1 (mp (var y) (var y)) /\
+  T2 = cons (mp (sign (var y) (nm k)) (sign (var y) (nm k))) (cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1)  /\
+  Cs3 = dedc_pair T2 (mp (sign (hs (nm n)) (nm k)) (var u)) /\
+  Cs4 = dedc_pair T2 (mp (sign (hs (var x)) (nm k)) (var v)) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 (cons Cs4 nil))) ;
+
+init_pair 11 Vars CsL :=
+  Vars = cons (var x) (cons (var y) (cons (var u) (cons (var v) nil))) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  Cs2 = dedc_pair T1 (mp (var y) (var y)) /\
+  T2 = cons (mp (sign (var y) (nm k)) (sign (var y) (nm k))) (cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1)  /\
+  Cs3 = dedc_pair T2 (mp (sign (hs (nm n)) (nm k)) (var u)) /\
+  Cs4 = dedc_pair T2 (mp (sign (var x) (nm k)) (var v)) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 (cons Cs4 nil))) ;
+
+% Wrong solution
+
+init_pair 12 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2 = cons (mp (sign (var x) (var x)) (sign (var x) (var x))) T1  /\
+  Cs2 = dedc_pair T1 (mp (sign (hs (nm n)) (hs (nm n))) (var y)) /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init_pair 13 Vars CsL :=
+  Vars = cons (var x) (cons (var y) (cons (var u) nil)) /\
+  T1  = cons (mp (hs (nm n)) (hs (hs (nm n)))) nil /\
+  Cs1 = dedc_pair T1 (mp (var x) (var x)) /\
+  T2  = cons (mp (sign (var x) (nm k)) (sign (var x) (nm k))) T1 /\
+  Cs2 = dedc_pair T2 (mp (var y) (var y)) /\
+  T3  = cons (mp (sign (var y) (nm k)) (sign (var y) (nm k))) T2 /\
+  Cs3 = dedc_pair T3 (mp (sign (sign (hs (nm n)) (nm k)) (nm k)) (var u)) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 nil)) ;
+
+init_pair 14 Vars CsL :=
+  Vars = cons (var s) (cons (var r) (cons (var r1) nil)) /\
+  T1 = cons (mp (pub (nm ed)) (pub (nm ed))) nil /\
+  Cs1 = dedc_pair T1 (mp (aen (var s) (pub (nm ed))) (aen (var s) (pub (nm ed)))) /\
+  T2 = cons (mp (sign (var s) (nm l)) (sign (var s) (nm l))) T1 /\
+  Cs2 = dedc_pair T2 (mp (aen (pr (var r) (sign (hs (var r)) (nm l))) (pub (nm ed))) (aen (pr (var r) (sign (hs (var r)) (nm l))) (pub (nm ed)))) /\
+  Cs3 = dedc_pair T2 (mp (aen (pr (var r1) (sign (hs (var r1)) (nm l))) (pub (nm ed))) (aen (pr (var r) (sign (hs (var r)) (nm l))) (pub (nm ed)))) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 nil)) ;
+
+init_pair 15 Vars CsL :=
+  Vars = cons (var s) (cons (var r) (cons (var r1) nil)) /\
+  T1 = cons (mp (pub (nm ed)) (pub (nm ed))) nil /\
+  Cs1 = dedc_pair T1 (mp (aen (hs (var r)) (pub (nm ed))) (aen (var s) (pub (nm ed)))) /\
+  T2 = cons (mp (sign (hs (var r)) (nm l)) (sign (var s) (nm l))) T1 /\
+  Cs2 = dedc_pair T2 (mp (aen (pr (var r) (sign (hs (var r)) (nm l))) (pub (nm ed))) (aen (pr (var r) (sign (hs (var r)) (nm l))) (pub (nm ed)))) /\
+  Cs3 = dedc_pair T2 (mp (aen (pr (var r1) (sign (hs (var r1)) (nm l))) (pub (nm ed))) (aen (pr (var r1) (sign (hs (var r1)) (nm l))) (pub (nm ed)))) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 nil)) ;
+
+init_pair 16 Vars CsL :=
+  Vars = cons (var s) (cons (var r2) (cons (var r) (cons (var r1) nil))) /\
+  T1 = cons (mp (pub (nm ed)) (pub (nm ed))) nil /\
+  Cs1 = dedc_pair T1 (mp (aen (var s) (pub (nm ed))) (aen (var s) (pub (nm ed)))) /\
+  T2 = cons (mp (sign (var s) (nm l)) (sign (var s) (nm l))) T1 /\
+  Cs2 = dedc_pair T2 (mp (aen (pr (var r) (sign (var r) (nm l))) (pub (nm ed))) (aen (pr (var r) (sign (var r) (nm l))) (pub (nm ed)))) /\
+  Cs3 = dedc_pair T2 (mp (aen (pr (var r1) (sign (var r1) (nm l))) (pub (nm ed))) (aen (pr (var r1) (sign (var r1) (nm l))) (pub (nm ed)))) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 nil)) ;
+
+init_pair 17 Vars CsL :=
+  Vars = cons (var s) (cons (var r2) (cons (var r) (cons (var r1) nil))) /\
+  T1 = cons (mp (pub (nm ed)) (pub (nm ed))) nil /\
+  Cs1 = dedc_pair T1 (mp (aen (var s) (pub (nm ed))) (aen (var s) (pub (nm ed)))) /\
+  T2 = cons (mp (sign (var s) (nm l)) (sign (var s) (nm l))) T1 /\
+  Cs2 = dedc_pair T2 (mp (aen (pr (var r) (sign (var r) (nm l))) (pub (nm ed))) (aen (pr (var r) (sign (var r) (nm l))) (pub (nm ed)))) /\
+  Cs3 = dedc_pair T2 (mp (aen (pr (var r1) (sign (var r1) (nm l))) (pub (nm ed))) (aen (pr (var r1) (sign (var r1) (nm l))) (pub (nm ed)))) /\
+  Cs4 = dedc_pair T2 (mp (aen (pr (var r2) (sign (var r2) (nm l))) (pub (nm ed))) (aen (pr (var r2) (sign (var r2) (nm l))) (pub (nm ed)))) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 (cons Cs4 nil))) 
+.
+
+Define test : nat -> prop by
+test N := 
+  init_pair N Vars CsL /\
+  print_cst_pair_list CsL /\ printstr "\n\n" /\
+  _distinct(cs_solve_constraints_pair Vars CsL Subst SolvedForm) /\
+  print_cst_pair_list SolvedForm /\
+  print_subst_pair Subst /\
+  printstr " " .
+
+Define init : nat -> list tm -> list constraint -> prop by
+init 1 Vars CsL :=
+  T = cons (nm n) nil /\
+  CsL = cons (dedc T (var x)) nil /\
+  Vars = cons (var x) nil ;
+
+init 5 Vars CsL :=
+  Vars = cons (var x) nil /\
+  T1 = cons (hs (nm n)) nil /\
+  Cs1 = dedc T1 (var x) /\
+  T2 = cons (sign (var x) (nm k)) T1 /\
+  Cs2 = dedc T2 (sign (hs (nm n)) (nm k)) /\
+  CsL = cons Cs1 (cons Cs2 nil) ;
+
+init 9 Vars CsL :=
+  Vars = cons (var x) (cons (var y) nil) /\
+  T1 = cons (hs (nm n)) nil /\
+  Cs1 = dedc T1 (var x) /\
+  Cs2 = dedc T2 (var y) /\
+  T2 = cons (sign (var y) (nm k)) (cons (sign (var x) (nm k)) T1) /\
+  Cs3 = dedc T2 (sign (hs (nm n)) (nm k)) /\
+  Cs4 = dedc T2 (sign (hs (var x)) (nm k)) /\
+  CsL = cons Cs1 (cons Cs2 (cons Cs3 (cons Cs4 nil)))
+.
+
+Define example : nat -> prop by
+example N :=
+  init N Vars Cs /\
+  printstr "\nLeft constraint system: " /\ cs_print_list_cst Cs /\
+  init_pair N Vars CsL /\
+  printstr "\nConstraint System: " /\ print_cst_pair_list CsL /\
+  printstr "\n------------------------------------------------------------------------------------------------------------------------\n" /\
+  _distinct(cs_solve_constraints Vars Cs SubstL) /\
+  printstr "\nLeft substitution: " /\ print_subst SubstL /\
+  print_cst_pair_list CsL /\
+  _distinct(cs_solve_constraints_pair Vars CsL (mpsub SubstL SubstR) SolvedForm) /\
+  print_subst_pair (mpsub SubstL SubstR) /\
+  printstr " " .
+
+Define sol : prop by
+sol := init 9 Vars Cs /\ _distinct(cs_solve_constraints Vars Cs SubstL) /\ print_subst SubstL.
+
+
+
+
+
+
+Kind tm_ctx type.
+Type stop tm -> tm_ctx.
+Type bind (tm -> tm_ctx) -> tm_ctx.
+
+%Define push :  tm_ctx -> tm_ctx -> prop by
+%push (stop X) (stop SX) ;
+%push (bind x\ T x) (bind x\ T' x) :=
+%  nabla x, push (T x) (T' x).
+
+Define rep : tm_ctx -> tm_ctx -> prop by
+rep (stop (ct "zero")) T :=
+  T = bind x\ stop x ;
+%rep (stop (hs X)) T :=
+%  rep (stop X) T' /\ push T' T;
+rep (bind T) (bind T') :=
+ nabla z, rep (T z) (T' z).
+
+% rep (bind q\ bind x\ (stop (ct "zero"))) Z.

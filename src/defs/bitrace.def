@@ -312,3 +312,65 @@ by
 bt_consistent H := 
   bt_consistent_iter nil nil H.
 
+%
+%
+%
+%
+%
+
+Define inductive bt_cst_aux_l : list bt_pair -> list thy_pair -> prop by 
+bt_cst_aux_l H Thy :=
+  thy_red_consistent_l Thy /\ 
+  (forall H1 Thy1, apply_RC H Thy H1 Thy1 -> bt_cst_aux_l H1 Thy1) /\ 
+  (forall H1 Thy1, apply_RS H Thy H1 Thy1 -> bt_cst_aux_l H1 Thy1).
+
+Define inductive bt_cst_aux_r : list bt_pair -> list thy_pair -> prop by 
+bt_cst_aux_r H Thy :=
+  thy_red_consistent_r Thy /\ 
+  (forall H1 Thy1, apply_RC H Thy H1 Thy1 -> bt_cst_aux_r H1 Thy1) /\ 
+  (forall H1 Thy1, apply_RS H Thy H1 Thy1 -> bt_cst_aux_r H1 Thy1).
+
+Define bt_consistent_iter_l : list bt_pair -> list thy_pair -> list bt_pair -> prop 
+by 
+
+bt_consistent_iter_l Bt_Pre Thy_Pre nil ;
+
+bt_consistent_iter_l Bt_Pre Thy_Pre (cons (in M N) H) :=
+  deduce_r Thy_Pre M N /\
+  append Bt_Pre (cons (in M N) nil) NewBt /\ 
+  bt_consistent_iter_l NewBt Thy_Pre H ;  
+
+bt_consistent_iter_l Bt_Pre Thy_Pre (cons (out M N) H) :=
+  reduce (cons (mp M N) Thy_Pre) NewThy /\ 
+  bt_cst_aux_l Bt_Pre NewThy /\
+  append Bt_Pre (cons (out M N) nil) NewBt /\ 
+  bt_consistent_iter_l NewBt NewThy H.
+
+Define bt_consistent_iter_r : list bt_pair -> list thy_pair -> list bt_pair -> prop 
+by 
+
+bt_consistent_iter_r Bt_Pre Thy_Pre nil ;
+
+bt_consistent_iter_r Bt_Pre Thy_Pre (cons (in M N) H) :=
+  deduce_r Thy_Pre M N /\
+  append Bt_Pre (cons (in M N) nil) NewBt /\ 
+  bt_consistent_iter_r NewBt Thy_Pre H ;  
+
+bt_consistent_iter_r Bt_Pre Thy_Pre (cons (out M N) H) :=
+  reduce (cons (mp M N) Thy_Pre) NewThy /\ 
+  bt_cst_aux_r Bt_Pre NewThy /\
+  append Bt_Pre (cons (out M N) nil) NewBt /\ 
+  bt_consistent_iter_r NewBt NewThy H.
+
+Define bt_consistent_l : list bt_pair -> prop
+by 
+bt_consistent_l H := 
+  bt_consistent_iter_l nil nil H.
+
+Define bt_consistent_r : list bt_pair -> prop
+by 
+bt_consistent_r H := 
+  bt_consistent_iter_r nil nil H.
+
+
+
